@@ -1,0 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Syne", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFRound, monospace;
+}
+
+@layer base {
+  body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    @apply bg-[#0a0a0a] text-[#f0f0f0] font-mono;
+  }
+}
