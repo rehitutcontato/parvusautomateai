@@ -11,8 +11,8 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // --- GENERIC SECURITY SERVER-SIDE AI API PROXY ---
-function getCleanApiKey(userKey: string | undefined): string | undefined {
-  let apiKey = userKey || process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY;
+function getCleanApiKey(userKey: string | undefined, envKeyName: string): string | undefined {
+  let apiKey = userKey || process.env[envKeyName] || process.env.GEMINI_API_KEY || process.env.NVIDIA_API_KEY;
   if (!apiKey) return undefined;
   apiKey = apiKey.toString().trim().replace(/['"]/g, '').replace('Bearer ', '');
   if (apiKey === 'SUA_CHAVE_AQUI' || apiKey === 'YOUR_API_KEY_HERE') return undefined;
@@ -22,17 +22,18 @@ function getCleanApiKey(userKey: string | undefined): string | undefined {
 app.post("/api/ai/generate-iot", async (req, res) => {
   try {
     const { prompt, placa } = req.body;
-    const apiKey = getCleanApiKey(req.headers['x-gemini-key'] as string);
-    if (!apiKey) return res.status(400).json({ success: false, error: 'Chave API não configurada' });
+    const userKey = req.headers['x-gemini-key'] as string;
     
     let aiText = "";
     let errorLog: string[] = [];
 
     try {
+      const geminiKey = getCleanApiKey(userKey, 'GEMINI_API_KEY');
+      if (!geminiKey) throw new Error("Sem chave Gemini");
       const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
       const geminiResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: {
           temperature: 0.2,
@@ -43,11 +44,13 @@ app.post("/api/ai/generate-iot", async (req, res) => {
     } catch (geminiError: any) {
       errorLog.push("Gemini: " + geminiError.message);
       try {
+        const nvidiaKey = getCleanApiKey(userKey, 'NVIDIA_API_KEY');
+        if (!nvidiaKey) throw new Error("Sem chave Nvidia");
         const { default: OpenAI } = await import('openai');
-        const openai = new OpenAI({ apiKey, baseURL: "https://integrate.api.nvidia.com/v1" });
+        const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
         
         const response = await openai.chat.completions.create({
-          model: 'nvidia/nemotron-3-ultra-550b-a55b',
+          model: 'meta/llama-3.1-405b-instruct',
           messages: [{ role: "user", content: prompt }],
           temperature: 0.2,
           response_format: { type: "json_object" }
@@ -71,8 +74,7 @@ app.post("/api/ai/generate-iot", async (req, res) => {
 app.post("/api/ai/simulate-iot", async (req, res) => {
   try {
     const { codigo, linguagem, placa } = req.body;
-    const apiKey = getCleanApiKey(req.headers['x-gemini-key'] as string);
-    if (!apiKey) return res.status(400).json({ success: false, error: 'Chave API não configurada' });
+    const userKey = req.headers['x-gemini-key'] as string;
     
     const prompt = `Você é um emulador de ${placa}. Execute este código de ${linguagem} e simule o output do Serial Monitor/console por 10 ciclos de execução.
 
@@ -93,10 +95,12 @@ Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.
     let errorLog: string[] = [];
 
     try {
+      const geminiKey = getCleanApiKey(userKey, 'GEMINI_API_KEY');
+      if (!geminiKey) throw new Error("Sem chave Gemini");
       const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
       const geminiResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: {
           temperature: 0.4
@@ -106,11 +110,13 @@ Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.
     } catch (geminiError: any) {
       errorLog.push("Gemini: " + geminiError.message);
       try {
+        const nvidiaKey = getCleanApiKey(userKey, 'NVIDIA_API_KEY');
+        if (!nvidiaKey) throw new Error("Sem chave Nvidia");
         const { default: OpenAI } = await import('openai');
-        const openai = new OpenAI({ apiKey, baseURL: "https://integrate.api.nvidia.com/v1" });
+        const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
         
         const response = await openai.chat.completions.create({
-          model: 'nvidia/nemotron-3-ultra-550b-a55b',
+          model: 'meta/llama-3.1-405b-instruct',
           messages: [{ role: "user", content: prompt }],
           temperature: 0.4
         });
@@ -134,22 +140,17 @@ app.post("/api/ai/generate", async (req, res) => {
       return res.status(400).json({ success: false, error: 'O prompt ou conteúdo é obrigatório.' });
     }
 
-    const apiKey = getCleanApiKey(req.headers['x-gemini-key'] as string);
-    if (!apiKey) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Chave de API não configurada no servidor e nenhuma fornecida nas configurações.' 
-      });
-    }
-
+    const userKey = req.headers['x-gemini-key'] as string;
     let aiText = "";
     let errorLog: string[] = [];
     
     try {
+      const geminiKey = getCleanApiKey(userKey, 'GEMINI_API_KEY');
+      if (!geminiKey) throw new Error("Sem chave Gemini");
       const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
       const geminiResponse = await ai.models.generateContent({
-        model: model || 'gemini-2.5-flash',
+        model: model === 'gemini-2.5-flash' ? 'gemini-2.0-flash' : (model || 'gemini-2.0-flash'),
         contents: contents,
         config: {
           temperature: config?.temperature,
@@ -161,11 +162,13 @@ app.post("/api/ai/generate", async (req, res) => {
     } catch (geminiError: any) {
       errorLog.push("Gemini: " + geminiError.message);
       try {
+        const nvidiaKey = getCleanApiKey(userKey, 'NVIDIA_API_KEY');
+        if (!nvidiaKey) throw new Error("Sem chave Nvidia");
         const { default: OpenAI } = await import('openai');
-        const openai = new OpenAI({ apiKey, baseURL: "https://integrate.api.nvidia.com/v1" });
+        const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
         
         let openAiConfig: any = {
-          model: 'nvidia/nemotron-3-ultra-550b-a55b',
+          model: 'meta/llama-3.1-70b-instruct',
           messages: [{ role: "user", content: contents }]
         };
 
