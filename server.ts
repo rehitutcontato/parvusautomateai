@@ -28,10 +28,9 @@ app.post("/api/ai/generate-iot", async (req, res) => {
     const ai = new GoogleGenAI({ apiKey });
     
     const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
-        tools: [{ googleSearch: {} }],
         temperature: 0.2,
         responseMimeType: "application/json"
       }
@@ -71,7 +70,7 @@ Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.
     const ai = new GoogleGenAI({ apiKey });
     
     const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         temperature: 0.4
@@ -111,15 +110,17 @@ app.post("/api/ai/generate", async (req, res) => {
       }
     });
 
-    // Use gemini-3.5-flash by default if model is not set/invalid or of deprecated versions
-    let selectedModel = model || 'gemini-3.5-flash';
+    // Use gemini-2.5-flash by default if model is not set/invalid or of deprecated versions
+    let selectedModel = model || 'gemini-2.5-flash';
     if (
       selectedModel.includes('gemini-1.5') || 
       selectedModel.includes('gemini-2.0') || 
+      selectedModel.includes('gemini-3.5') ||
+      selectedModel.includes('gemini-3.1') ||
       selectedModel === 'gemini-pro'
     ) {
-      // Upgrade deprecated/prohibited models to gemini-3.5-flash or gemini-3.1-pro-preview based on task
-      selectedModel = model?.includes('pro') ? 'gemini-3.1-pro-preview' : 'gemini-3.5-flash';
+      // Direct models to gemini-2.5-flash or gemini-2.5-pro to prevent quota depletion
+      selectedModel = model?.includes('pro') ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
     }
 
     const response = await ai.models.generateContent({

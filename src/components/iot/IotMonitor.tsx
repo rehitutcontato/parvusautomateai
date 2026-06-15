@@ -12,6 +12,38 @@ const PLACAS = [
   { id: 'http', name: 'HTTP Genérico' },
 ];
 
+const normalizeProject = (savedData: any, hardware: string, nome: string, descricao_tecnica?: string) => {
+  if (!savedData) return null;
+  
+  // If it's a legacy saved structure
+  if (savedData.esquema && !savedData.esquema_ligacao) {
+    return {
+      titulo: nome || 'Projeto IoT',
+      descricao_tecnica: descricao_tecnica || 'Projeto gerado com sucesso.',
+      placa: hardware,
+      imagem_placa_url: '',
+      analise_briefing: 'Projeto recuperado do histórico.',
+      decisoes_pinagem: [],
+      alertas_tecnicos: [],
+      componentes: savedData.componentes || [],
+      preco_total_estimado_brl: savedData.preco_total || 0,
+      esquema_ligacao: savedData.esquema || { descricao_textual: '', conexoes: [], pinout_svg: '' },
+      codigo: savedData.codigo || { linguagem: 'C++', arquivo_principal: 'main.cpp', codigo_completo: '', dependencias: [], instrucoes_upload: '' },
+      avisos_seguranca: [],
+      referencias: savedData.referencias || [],
+      proximos_passos: []
+    };
+  }
+  
+  // If it's a newer saved structure, make sure it has title/hardware
+  return {
+    ...savedData,
+    titulo: savedData.titulo || nome || 'Projeto IoT',
+    placa: savedData.placa || hardware,
+    descricao_tecnica: savedData.descricao_tecnica || descricao_tecnica || 'Projeto gerado com sucesso.',
+  };
+};
+
 export function IotMonitor() {
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
@@ -395,6 +427,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
             hardware: data.placa || selectedPlaca,
             descricao: data.descricao_tecnica,
             dados_atuais: {
+              ...data,
               componentes: data.componentes,
               codigo: data.codigo,
               esquema: data.esquema_ligacao,
@@ -1230,10 +1263,10 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                  <div className="flex items-start justify-between mb-2">
                     <h4 className="text-white font-bold text-sm truncate pr-2 flex items-center gap-2"><Cpu size={14} className="text-[#00d4ff] shrink-0" /> {p.nome}</h4>
                  </div>
-                 <div className="text-xs text-gray-400 mb-3">{p.hardware} · <span className="text-[#00ff88]">R$ {p.dados_atuais?.preco_total?.toFixed(2)}</span></div>
+                 <div className="text-xs text-gray-400 mb-3">{p.hardware} · <span className="text-[#00ff88]">R$ {(p.dados_atuais?.preco_total || p.dados_atuais?.preco_total_estimado_brl || 0).toFixed(2)}</span></div>
                  <div className="text-[10px] text-gray-600 mb-3 uppercase tracking-wider">Criado em: {new Date(p.created_at).toLocaleDateString()}</div>
                  <div className="flex gap-2">
-                    <button onClick={() => { setProjeto(p.dados_atuais); setActiveTab('VISÃO GERAL'); setSelectedPlaca(p.hardware); setShowSidebar(false); }} className="flex-1 border border-[#00d4ff]/30 text-[#00d4ff] hover:bg-[#00d4ff]/10 py-2 rounded text-xs transition-colors uppercase font-bold tracking-wider">Carregar</button>
+                    <button onClick={() => { setProjeto(normalizeProject(p.dados_atuais, p.hardware, p.nome, p.descricao)); setActiveTab('VISÃO GERAL'); setSelectedPlaca(p.hardware); setShowSidebar(false); }} className="flex-1 border border-[#00d4ff]/30 text-[#00d4ff] hover:bg-[#00d4ff]/10 py-2 rounded text-xs transition-colors uppercase font-bold tracking-wider">Carregar</button>
                     <button onClick={() => deleteProjeto(p.id)} className="px-3 border border-[#ff4444]/30 text-[#ff4444] hover:bg-[#ff4444]/10 rounded transition-colors"><Trash2 size={14}/></button>
                  </div>
                </div>
