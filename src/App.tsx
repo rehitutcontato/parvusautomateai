@@ -94,7 +94,13 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
   });
 
   if (!response.ok) {
-    const errData = await response.json();
+    const errText = await response.text();
+    let errData: any = {};
+    try {
+      errData = JSON.parse(errText);
+    } catch(e) {
+      throw new Error(`Erro HTTP ${response.status}: ${errText.substring(0, 100)}`);
+    }
     throw new Error(errData.error || `Erro HTTP ${response.status}`);
   }
 
