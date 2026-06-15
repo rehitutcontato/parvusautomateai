@@ -25,17 +25,41 @@ app.post("/api/ai/generate-iot", async (req, res) => {
     const apiKey = getCleanApiKey(req.headers['x-gemini-key'] as string);
     if (!apiKey) return res.status(400).json({ success: false, error: 'Chave API não configurada' });
     
-    const { default: OpenAI } = await import('openai');
-    const openai = new OpenAI({ apiKey, baseURL: "https://integrate.api.nvidia.com/v1" });
-    
-    const response = await openai.chat.completions.create({
-      model: 'nvidia/nemotron-3-ultra-550b-a55b',
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2,
-      response_format: { type: "json_object" }
-    });
+    let aiText = "";
+    let errorLog: string[] = [];
 
-    let aiText = response.choices[0].message?.content || "{}";
+    try {
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({ apiKey });
+      const geminiResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          temperature: 0.2,
+          responseMimeType: 'application/json'
+        }
+      });
+      aiText = geminiResponse.text || "{}";
+    } catch (geminiError: any) {
+      errorLog.push("Gemini: " + geminiError.message);
+      try {
+        const { default: OpenAI } = await import('openai');
+        const openai = new OpenAI({ apiKey, baseURL: "https://integrate.api.nvidia.com/v1" });
+        
+        const response = await openai.chat.completions.create({
+          model: 'nvidia/nemotron-3-ultra-550b-a55b',
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.2,
+          response_format: { type: "json_object" }
+        });
+
+        aiText = response.choices[0].message?.content || "{}";
+      } catch (nvidiaError: any) {
+         errorLog.push("Nvidia: " + nvidiaError.message);
+         throw new Error(`Falha em ambas as APIs: ${errorLog.join(' | ')}`);
+      }
+    }
+
     aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
     
     res.json(JSON.parse(aiText));
@@ -65,16 +89,39 @@ REGRAS:
 
 Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.`;
 
-    const { default: OpenAI } = await import('openai');
-    const openai = new OpenAI({ apiKey, baseURL: "https://integrate.api.nvidia.com/v1" });
-    
-    const response = await openai.chat.completions.create({
-      model: 'nvidia/nemotron-3-ultra-550b-a55b',
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.4
-    });
+    let aiText = "";
+    let errorLog: string[] = [];
 
-    res.json({ output: response.choices[0].message?.content });
+    try {
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({ apiKey });
+      const geminiResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          temperature: 0.4
+        }
+      });
+      aiText = geminiResponse.text || "";
+    } catch (geminiError: any) {
+      errorLog.push("Gemini: " + geminiError.message);
+      try {
+        const { default: OpenAI } = await import('openai');
+        const openai = new OpenAI({ apiKey, baseURL: "https://integrate.api.nvidia.com/v1" });
+        
+        const response = await openai.chat.completions.create({
+          model: 'nvidia/nemotron-3-ultra-550b-a55b',
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.4
+        });
+        aiText = response.choices[0].message?.content || "";
+      } catch (nvidiaError: any) {
+        errorLog.push("Nvidia: " + nvidiaError.message);
+        throw new Error(`Falha em ambas as APIs: ${errorLog.join(' | ')}`);
+      }
+    }
+
+    res.json({ output: aiText });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -95,34 +142,57 @@ app.post("/api/ai/generate", async (req, res) => {
       });
     }
 
-    const { default: OpenAI } = await import('openai');
-    const openai = new OpenAI({ apiKey, baseURL: "https://integrate.api.nvidia.com/v1" });
+    let aiText = "";
+    let errorLog: string[] = [];
     
-    // Convert gemini config schema to openai
-    let openAiConfig: any = {
-      model: 'nvidia/nemotron-3-ultra-550b-a55b',
-      messages: [{ role: "user", content: contents }]
-    };
+    try {
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({ apiKey });
+      const geminiResponse = await ai.models.generateContent({
+        model: model || 'gemini-2.5-flash',
+        contents: contents,
+        config: {
+          temperature: config?.temperature,
+          responseMimeType: config?.responseMimeType,
+          responseSchema: config?.responseSchema
+        }
+      });
+      aiText = geminiResponse.text || "";
+    } catch (geminiError: any) {
+      errorLog.push("Gemini: " + geminiError.message);
+      try {
+        const { default: OpenAI } = await import('openai');
+        const openai = new OpenAI({ apiKey, baseURL: "https://integrate.api.nvidia.com/v1" });
+        
+        let openAiConfig: any = {
+          model: 'nvidia/nemotron-3-ultra-550b-a55b',
+          messages: [{ role: "user", content: contents }]
+        };
 
-    if (config?.temperature !== undefined) openAiConfig.temperature = config.temperature;
-    
-    // Check if JSON format is requested
-    if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
-      openAiConfig.response_format = { type: "json_object" };
-      let systemPrompt = "You must output JSON format only.";
-      if (config?.responseSchema) {
-        systemPrompt += ` The JSON must strictly adhere to this schema: ${JSON.stringify(config.responseSchema)}`;
+        if (config?.temperature !== undefined) openAiConfig.temperature = config.temperature;
+        
+        if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
+          openAiConfig.response_format = { type: "json_object" };
+          let systemPrompt = "You must output JSON format only.";
+          if (config?.responseSchema) {
+            systemPrompt += ` The JSON must strictly adhere to this schema: ${JSON.stringify(config.responseSchema)}`;
+          }
+          openAiConfig.messages = [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: contents }
+          ];
+        }
+
+        const response = await openai.chat.completions.create(openAiConfig);
+        aiText = response.choices[0].message?.content || "";
+      } catch (nvidiaError: any) {
+        errorLog.push("Nvidia: " + nvidiaError.message);
+        throw new Error(`Falha em ambas as APIs: ${errorLog.join(' | ')}`);
       }
-      openAiConfig.messages = [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: contents }
-      ];
     }
 
-    const response = await openai.chat.completions.create(openAiConfig);
-
     res.json({
-      text: response.choices[0].message?.content,
+      text: aiText,
     });
   } catch (error: any) {
     console.error("Erro na chamada de IA no servidor:", error);
