@@ -1,6 +1,8 @@
 {
-  "name": "",
-  "description": "",
+  "name": "Parvus Automate",
+  "description": "Plataforma de automações e workflows visuais inteligentes com construtor de fluxo visual (React Flow) e integrador IoT.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

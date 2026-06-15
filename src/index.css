@@ -15,3 +15,30 @@
     @apply bg-[#0a0a0a] text-[#f0f0f0] font-mono;
   }
 }
+
+:root {
+  --iot-accent: #00d4ff;
+  --iot-accent-2: #00ff88;
+  --iot-alert: #ff4444;
+  --iot-warning: #ffaa00;
+  --iot-glow: rgba(0,212,255,0.2);
+  --iot-border: rgba(0,212,255,0.15);
+}
+
+@keyframes ping-radar {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.animate-ping-radar {
+  animation: ping-radar 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes flash-red {
+  0%, 100% { border-color: rgba(255, 68, 68, 0.2); }
+  50% { border-color: rgba(255, 68, 68, 0.8); box-shadow: 0 0 15px rgba(255, 68, 68, 0.3); }
+}
+
+.animate-flash-red {
+  animation: flash-red 1s ease-in-out infinite;
+}
