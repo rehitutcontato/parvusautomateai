@@ -132,6 +132,10 @@ app.post("/api/ai/generate", async (req, res) => {
 
 // Vite middleware for development
 async function startServer() {
+  if (process.env.VERCEL) {
+     return; // Vercel handles serving and listening
+  }
+
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
@@ -153,3 +157,5 @@ async function startServer() {
 }
 
 startServer();
+
+export default app;
