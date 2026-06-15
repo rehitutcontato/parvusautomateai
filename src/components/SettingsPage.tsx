@@ -4,7 +4,6 @@ import { useGenerationLimit } from '../lib/hooks/useGenerationLimit';
 import { 
   Settings, 
   Save, 
-  LogOut, 
   CheckCircle2, 
   User, 
   Building2, 
@@ -273,12 +272,12 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
             </div>
 
             <form onSubmit={handleSaveProfile} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 
                 {/* Full name */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <User size={12} /> Nome Completo
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 justify-start">
+                    <User size={13} className="text-[#00ff88]" /> Nome Completo
                   </label>
                   <input 
                     type="text" 
@@ -286,28 +285,28 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
                     value={profile?.nome || ''} 
                     onChange={e => setProfile({...profile, nome: e.target.value})}
                     placeholder="Seu nome"
-                    className="w-full bg-[#070707] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-all"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-all"
                   />
                 </div>
 
                 {/* Company */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <Building2 size={12} /> Empresa / Organização
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 justify-start">
+                    <Building2 size={13} className="text-[#00ff88]" /> Empresa
                   </label>
                   <input 
                     type="text" 
                     value={profile?.empresa || ''} 
                     onChange={e => setProfile({...profile, empresa: e.target.value})}
                     placeholder="Sua empresa"
-                    className="w-full bg-[#070707] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-all"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-all"
                   />
                 </div>
 
                 {/* WhatsApp */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <Phone size={12} /> WhatsApp / Telefone
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 justify-start">
+                    <Phone size={13} className="text-[#00ff88]" /> WhatsApp
                   </label>
                   <input 
                     type="text" 
@@ -315,14 +314,14 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
                     placeholder="(DD) 99999-9999"
                     value={profile?.whatsapp_contato || ''} 
                     onChange={e => setProfile({...profile, whatsapp_contato: e.target.value})}
-                    className="w-full bg-[#070707] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-all"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-all"
                   />
                 </div>
 
                 {/* Email Address */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <Mail size={12} /> endereço de E-mail
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 justify-start">
+                    <Mail size={13} className="text-[#00ff88]" /> Endereço de E-mail
                   </label>
                   <input 
                     type="email" 
@@ -330,15 +329,15 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
                     value={newEmail} 
                     onChange={e => setNewEmail(e.target.value)}
                     placeholder="novo@email.com"
-                    className="w-full bg-[#070707] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-all"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-all"
                   />
                 </div>
 
                 {/* Custom API Key (Available to everyone directly in custom key layout) */}
-                <div className="space-y-2 md:col-span-2 pt-4 border-t border-white/5">
-                  <label className="text-xs font-semibold text-[#00ff88] uppercase tracking-widest flex items-center justify-between">
-                    <span className="flex items-center gap-1.5"><KeyRound size={12} /> Gemini API Key Própria</span>
-                    <span className="text-[9px] bg-[#00ff88]/10 text-[#00ff88] px-2 py-0.5 rounded border border-[#00ff88]/20 font-bold uppercase">Opcional</span>
+                <div className="space-y-2 sm:col-span-2 pt-4 border-t border-white/5">
+                  <label className="text-xs font-bold text-[#00ff88] uppercase tracking-wider flex items-center justify-between">
+                    <span className="flex items-center gap-1.5"><KeyRound size={13} /> Gemini API Key Própria</span>
+                    <span className="text-[9px] bg-[#00ff88]/10 text-[#00ff88] px-2.5 py-0.5 rounded border border-[#00ff88]/20 font-bold uppercase">Opcional</span>
                   </label>
                   <p className="text-[11px] text-gray-400 leading-normal mb-2">
                     Oferecemos limites generosos por padrão. No entanto, você pode inserir sua própria chave de API do Google AI Studio para ignorar todas as franquias de uso e ter requisições ilimitadas.
@@ -348,7 +347,7 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
                     placeholder="AIzaSy... (Sua chave pessoal da API Gemini)"
                     value={profile?.gemini_key_propria || ''} 
                     onChange={e => setProfile({...profile, gemini_key_propria: e.target.value})}
-                    className="w-full bg-[#070707] border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-all"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-all"
                   />
                 </div>
               </div>
@@ -371,7 +370,7 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
                 <button 
                   type="submit"
                   disabled={saving}
-                  className="w-full sm:w-auto bg-gradient-to-r from-[#00ff88] to-[#00d4ff] hover:brightness-110 text-black font-extrabold uppercase text-xs tracking-wider py-3.5 px-8 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#00ff88]/10"
+                  className="w-full sm:w-auto bg-gradient-to-r from-[#00ff88] to-[#00d4ff] hover:brightness-110 text-black font-extrabold uppercase text-xs tracking-wider py-3.5 px-8 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#00ff88]/10 animate-fade-in"
                 >
                   {saving ? (
                     <span className="animate-pulse">Salvando dados...</span>
@@ -394,7 +393,7 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
             </div>
 
             <form onSubmit={handleUpdateSecurity} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 
                 {/* New Password */}
                 <div className="space-y-2 relative">
@@ -403,7 +402,7 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
                     <button 
                       type="button" 
                       onClick={() => setShowPassword(!showPassword)}
-                      className="text-[10px] text-gray-400 hover:text-white transition-colors flex items-center gap-1 normal-case"
+                      className="text-[10px] text-gray-400 hover:text-white transition-colors flex items-center gap-1 normal-case cursor-pointer"
                     >
                       {showPassword ? <EyeOff size={11} /> : <Eye size={11} />} {showPassword ? 'Ocultar' : 'Visualizar'}
                     </button>
@@ -413,19 +412,19 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
-                    className="w-full bg-[#070707] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#00d4ff] focus:ring-1 focus:ring-[#00d4ff] transition-all"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#00d4ff] focus:ring-1 focus:ring-[#00d4ff] transition-all"
                   />
                 </div>
 
                 {/* Confirm Password */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Confirmar Senha</label>
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest block text-left">Confirmar Senha</label>
                   <input 
                     type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     placeholder="Repita a nova senha"
-                    className="w-full bg-[#070707] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#00d4ff] focus:ring-1 focus:ring-[#00d4ff] transition-all"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#00d4ff] focus:ring-1 focus:ring-[#00d4ff] transition-all"
                   />
                 </div>
               </div>
@@ -471,7 +470,7 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
             </div>
             <button 
               onClick={onLogout}
-              className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs uppercase font-extrabold tracking-wider px-5 py-3 rounded-xl transition-all border border-red-500/20"
+              className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs uppercase font-extrabold tracking-wider px-5 py-3 rounded-xl transition-all border border-red-500/20 cursor-pointer"
             >
               Sair da Conta
             </button>

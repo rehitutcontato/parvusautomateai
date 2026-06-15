@@ -981,7 +981,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                           <div className="border border-[#333] bg-[#0a0a0a] rounded-lg p-6 mb-8 text-center relative overflow-hidden group">
                             <span className="text-[#00d4ff] font-bold text-xl uppercase font-syne z-10 relative block mb-4">{projeto.placa}</span>
                             {projeto.imagem_placa_url && (
-                              <img src={projeto.imagem_placa_url} alt={projeto.placa} className="w-full max-w-[200px] h-[150px] object-contain mx-auto mix-blend-screen opacity-70 group-hover:opacity-100 transition-opacity" />
+                              <img src={projeto.imagem_placa_url} alt={projeto.placa} onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=400&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'; }} className="w-full max-w-[200px] h-[150px] object-contain mx-auto mix-blend-screen opacity-70 group-hover:opacity-100 transition-opacity" />
                             )}
                           </div>
                        </div>

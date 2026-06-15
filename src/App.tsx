@@ -383,7 +383,7 @@ DIRETRIZES DE PERGUNTAS:
 Analise o problem abaixo e retorne APENAS um JSON válido seguindo estritamente esse modelo.
 Problema: ${problemDescription}`;
 
-      const response = await callGeminiApi('gemini-2.0-flash', prompt, {
+      const response = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', prompt, {
         temperature: 0.1,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -512,7 +512,7 @@ REGRAS ABSOLUTAS:
 - ⚡ OBRIGATÓRIO: Inclua um "Modo Demo" robusto por padrão (com toggle explícito). O modo demo deve estar preenchido com dados realistas (leads, agenda ou msgs).
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, construa o código 100% white-label, profissional, pronto para ser vendido ou repassado para o cliente final. Não inclua logos do gerador, utilize placeholders flexíveis e adicione um painel de "Configurações da Agência" se aplicável.\n' : ''}`;
 
-      const responseHtml = await callGeminiApi('gemini-3.1-pro-preview', frontendPrompt, {
+      const responseHtml = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', frontendPrompt, {
         temperature: 0.2
       });
       
@@ -566,7 +566,7 @@ REGRAS:
 - Não omita nada. Código de produção.
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, construa o código 100% white-label, profissional, pronto para ser vendido ou repassado para o cliente final.\n' : ''}`;
 
-      const responseNode = await callGeminiApi('gemini-3.1-pro-preview', backendPrompt, {
+      const responseNode = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', backendPrompt, {
         temperature: 0.2,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -611,7 +611,7 @@ REGRAS:
 - 'pdf_pecas', 'pdf_montagem', 'pdf_documentacao', 'pdf_setup' devem ser detalhados seguindo as regras do PARVUS AUTOMATE (Listas de materiais com preços em reais, PDF manuais com diagramas ASCII rigorosos, alertas de 110V/220V quando necessário).
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos nomes originais e adicione logomarcas ou nomenclaturas genéricas de agência (ou placeholders), código white-label pronto para revenda de hardware.\n' : ''}`;
 
-        const responseIoT = await callGeminiApi('gemini-3.1-pro-preview', iotPrompt, {
+        const responseIoT = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', iotPrompt, {
           temperature: 0.2,
           responseMimeType: 'application/json',
           responseSchema: {
@@ -939,63 +939,217 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
     
     setEntryFlow('ai');
     setPhase('generating');
+    setGeneratingProgress(15);
+    setLogs([]);
     setCurrentProjectId(null);
     setProblemDescription(`Template: ${template.nome}\nRespostas: ${JSON.stringify(answers)}`);
+    
+    // Normalize HÍBRIDO vs HIBRIDO
+    const normalizedTipo = template.tipo === 'HÍBRIDO' ? 'HIBRIDO' : template.tipo;
+    
     setClassification({
-      tipo: template.tipo,
-      complexidade: template.complexidade,
+      tipo: normalizedTipo,
+      complexidade: template.complexidade === 'BÁSICO' ? 'BASICO' : (template.complexidade === 'MÉDIO' ? 'INTERMEDIARIO' : 'AVANCADO'),
       resumo: template.descricao,
       tecnologias: template.tecnologias,
       perguntas_necessarias: []
     });
+
+    addLog('> Iniciando geração baseada no Modelo Avançado...', 'done');
     
-    // Simulate generation with placeholders replaced
-    setTimeout(async () => {
-      let code = template.arquivos_template.server_js || "";
-      let html = template.arquivos_template.frontend_html || "<div>Generated Template</div>";
-      let nodeStr = "";
+    try {
+      const answersText = Object.entries(answers).map(([k, v]) => {
+        const q = template.perguntas_customizacao?.find((q: any) => q.id === k);
+        return `${q?.pergunta || k}: ${v}`;
+      }).join('\n');
+
+      let currentHtml = '';
+      let currentNode: GeneratedNode | null = null;
+
+      // 1. Generate Frontend with AI
+      setGeneratingProgress(35);
+      addLog('> Arquitetando solução de interface do template com IA...', 'active');
       
-      // Simple string replace for placeholders
-      Object.keys(answers).forEach(key => {
-        const regex = new RegExp(`{{${key}}}`, 'g');
-        const val = answers[key];
-        code = code.replace(regex, val);
-        html = html.replace(regex, val);
+      const frontendPrompt = `Você é um desenvolvedor frontend sênior do Parvus Automate. Gere o código HTML/CSS/JS completo para customizar o template "${template.nome}" (${template.descricao}).
+      
+      PARÂMETROS DE CUSTOMIZAÇÃO DO USUÁRIO:
+      ${answersText}
+
+      TECNOLOGIAS USADAS: ${template.tecnologias.join(', ')}
+
+      ⚡ ANTES DE GERAR O CÓDIGO:
+      - Planeje mentalmente uma interface luxuosa, ultra-moderna e totalmente interativa no frontend (modo demo completo e realista).
+      - Não dependa de chaves de API reais no client-side; simule a operação em tempo real com dados fictícios dinâmicos de forma realista.
+      - Para WhatsApp/E-mails: Simule um editor de fluxo visual e painéis de logs de envio ativos.
+      - Para IoT: Crie um dashboard espetacular com gráficos simulados em tempo real atualizando via timers.
+
+      REGRAS ABSOLUTAS:
+      - Retorne APENAS HTML, nada de blocos markdown!
+      - Deve iniciar com <!DOCTYPE html>
+      - Código 100% funcional, zero placeholders
+      - HTML único com script e style integrados
+      - Use Tailwind CSS via CDN (<script src="https://unpkg.com/@tailwindcss/browser@4"></script>)
+      - Visual magnífico e moderno (tema dark profundo por padrão, contraste apurado, layouts limpos)
+      - Responsivo (mobile-first)
+      - ⚡ OBRIGATÓRIO: Inclua um "Modo Demo" robusto por padrão (com toggle explícito). O modo demo deve estar preenchido com dados realistas.
+      ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências à Parvus Automate, use white-label e inclua painel administrativo fictício.\n' : ''}`;
+
+      const responseHtml = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', frontendPrompt, {
+        temperature: 0.2
       });
       
-      setGeneratedHtml(html);
-      setGeneratedNode({
-         "package.json": template.arquivos_template.package_json || '{"name":"template-app"}',
-         "server.js": code,
-         "README.md": template.arquivos_template.readme_md || ""
-      });
+      let finalHtml = responseHtml.text || '';
+      if (finalHtml.startsWith('```html')) finalHtml = finalHtml.replace(/```html\n?/g, '');
+      if (finalHtml.startsWith('```')) finalHtml = finalHtml.replace(/```\n?/g, '');
+      finalHtml = finalHtml.replace(/\n?```$/g, '');
+      finalHtml = finalHtml.trim();
+
+      currentHtml = finalHtml;
+      setGeneratedHtml(finalHtml);
+      updateLog('> Arquitetando solução de interface do template com IA...', 'done');
+
+      // 2. Generate Backend Node.js
+      setGeneratingProgress(75);
+      addLog('> Projetando microsserviço de backend customizado...', 'active');
       
-      setPhase('done');
+      const backendPrompt = `Você é um desenvolvedor backend sênior do Parvus Automate. Gere o projeto Node.js / Express completo para o template "${template.nome}" (${template.descricao}).
       
-      // Save project
-      if (session?.user) {
-        try {
-          const { data, error } = await supabase.from('projects').insert([{
-            user_id: session.user.id,
-            titulo: template.nome,
-            problema: `Template: ${template.nome}`,
-            tipo: template.tipo,
-            complexidade: template.complexidade,
-            tecnologias: template.tecnologias,
-            html_gerado: html,
-            node_gerado: { "server.js": code },
-            respostas: answers
-          }]).select();
-          if (data && data.length > 0) {
-            setCurrentProjectId(data[0].id);
-            await incrementGenerationCount(session.user.id, supabase);
-            generationLimit.refreshLimit();
-          }
-        } catch (e) {
-          console.error(e);
+      PARÂMETROS DE CUSTOMIZAÇÃO DO USUÁRIO:
+      ${answersText}
+
+      TECNOLOGIAS USADAS: ${template.tecnologias.join(', ')}
+
+      REGRAS:
+      - Express.js como framework
+      - Comentários em português
+      - Tratamento de erros em português
+      - Esquema do banco de dados (ex: Postgres/Supabase) ou instruções de instalação no README
+      - .env.example completo com as variáveis customizadas
+      - Código 100% real de produção sem placeholders
+      ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências à Parvus Automate para manter whitelabel.\n' : ''}`;
+
+      const responseNode = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', backendPrompt, {
+        temperature: 0.2,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            server_js: { type: Type.STRING },
+            package_json: { type: Type.STRING },
+            env_example: { type: Type.STRING },
+            readme_md: { type: Type.STRING },
+            arquitetura_ascii: { type: Type.STRING }
+          },
+          required: ['server_js', 'package_json', 'env_example', 'readme_md', 'arquitetura_ascii']
         }
+      });
+
+      let responseNodeText = responseNode.text || '{}';
+      const nodeStartObj = responseNodeText.indexOf('{');
+      const nodeEndObj = responseNodeText.lastIndexOf('}');
+      if (nodeStartObj >= 0 && nodeEndObj >= 0) {
+        responseNodeText = responseNodeText.substring(nodeStartObj, nodeEndObj + 1);
       }
-    }, 2000);
+
+      const nodeData = JSON.parse(responseNodeText) as GeneratedNode;
+      currentNode = nodeData;
+
+      updateLog('> Projetando microsserviço de backend customizado...', 'done');
+      
+      // 3. Optional Hardware parts
+      if (normalizedTipo === 'HARDWARE' || normalizedTipo === 'HIBRIDO') {
+        setGeneratingProgress(90);
+        addLog('> Gerando circuito eletrônico e documentação física...', 'active');
+        
+        const iotPrompt = `Você é um engenheiro de hardware e eletrônica sênior.
+        Gere os diagramas de fiação, lista de peças de hardware brasileiro com preços estimados, e códigos C++/Arduino prontos para gravação para o hardware "${template.nome}".
+        Customização: ${answersText}`;
+
+        const responseIoT = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', iotPrompt, {
+          temperature: 0.2,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              codigo_placa: { type: Type.STRING },
+              pdf_pecas: { type: Type.STRING },
+              pdf_montagem: { type: Type.STRING },
+              pdf_documentacao: { type: Type.STRING },
+              pdf_setup: { type: Type.STRING }
+            },
+            required: ['codigo_placa', 'pdf_pecas', 'pdf_montagem', 'pdf_documentacao', 'pdf_setup']
+          }
+        });
+        
+        let responseIoTText = responseIoT.text || '{}';
+        const iotStartObj = responseIoTText.indexOf('{');
+        const iotEndObj = responseIoTText.lastIndexOf('}');
+        if (iotStartObj >= 0 && iotEndObj >= 0) {
+          responseIoTText = responseIoTText.substring(iotStartObj, iotEndObj + 1);
+        }
+  
+        const iotData = JSON.parse(responseIoTText);
+        currentNode.codigo_placa = iotData.codigo_placa;
+        currentNode.pdf_pecas = iotData.pdf_pecas;
+        currentNode.pdf_montagem = iotData.pdf_montagem;
+        currentNode.pdf_documentacao = iotData.pdf_documentacao;
+        currentNode.pdf_setup = iotData.pdf_setup;
+        
+        updateLog('> Gerando circuito eletrônico e documentação física...', 'done');
+      }
+
+      setGeneratedNode(currentNode);
+      setGeneratingProgress(100);
+      addLog('> Automação gerada e compilada com sucesso!', 'done');
+
+      // Save to history and Database
+      const newHistoryItem: any = {
+        id: Date.now(),
+        titulo: template.nome,
+        tipo: normalizedTipo,
+        data: new Date().toLocaleString('pt-BR'),
+        htmlGerado: currentHtml,
+        nodeGerado: currentNode
+      };
+
+      if (supabase && session) {
+        const { data, error } = await supabase.from('projects').insert({
+          user_id: session.user.id,
+          titulo: template.nome,
+          problema: `Template: ${template.nome}`,
+          tipo: normalizedTipo,
+          complexidade: template.complexidade === 'BÁSICO' ? 'BASICO' : (template.complexidade === 'MÉDIO' ? 'INTERMEDIARIO' : 'AVANCADO'),
+          tecnologias: template.tecnologias,
+          html_gerado: currentHtml,
+          node_gerado: currentNode,
+          arquitetura_ascii: currentNode?.arquitetura_ascii || '',
+          respostas: answers,
+          status: 'gerado'
+        }).select().single();
+
+        if (data && !error) {
+          newHistoryItem.id = data.id;
+          setCurrentProjectId(data.id);
+        }
+      } else {
+        setCurrentProjectId(String(newHistoryItem.id));
+      }
+
+      setHistory(prev => [newHistoryItem, ...prev]);
+
+      if (session && supabase) {
+        await incrementGenerationCount(session.user.id, supabase);
+        generationLimit.refreshLimit();
+      }
+
+      setTimeout(() => setPhase('done'), 1000);
+
+    } catch (error) {
+      console.error(error);
+      updateLog(`> Falha na geração do template: ${error}`, 'done');
+      showToast("Falha ao gerar o projeto por inteligência artificial. Tente novamente.", "error");
+      setPhase('input');
+    }
   };
 
   const handleBriefingSubmit = async (briefingData: any) => {
@@ -2250,7 +2404,7 @@ Soluções Enterprise → R$ 2999+
 Calcule o preço com base na complexidade e nessas faixas. Arredonde para final .90 ou .00. 
 Sem markdown no retorno. Apenas o JSON válido.`;
          
-         const response = await callGeminiApi('gemini-2.0-flash', prompt, {
+         const response = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', prompt, {
            temperature: 0.2,
            responseMimeType: "application/json"
          });
