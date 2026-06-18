@@ -3,10 +3,12 @@ dotenv.config();
 
 import express from "express";
 import path from "path";
+import cors from "cors";
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
+app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -50,7 +52,7 @@ app.post("/api/ai/generate-iot", async (req, res) => {
         const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
         
         const response = await openai.chat.completions.create({
-          model: 'meta/llama-3.1-405b-instruct',
+          model: 'nvidia/nemotron-4-340b-instruct',
           messages: [{ role: "user", content: prompt }],
           temperature: 0.2,
           response_format: { type: "json_object" }
@@ -116,7 +118,7 @@ Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.
         const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
         
         const response = await openai.chat.completions.create({
-          model: 'meta/llama-3.1-405b-instruct',
+          model: 'nvidia/nemotron-4-340b-instruct',
           messages: [{ role: "user", content: prompt }],
           temperature: 0.4
         });
@@ -168,7 +170,7 @@ app.post("/api/ai/generate", async (req, res) => {
         const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
         
         let openAiConfig: any = {
-          model: 'meta/llama-3.1-70b-instruct',
+          model: 'nvidia/nemotron-4-340b-instruct',
           messages: [{ role: "user", content: contents }]
         };
 

@@ -402,7 +402,8 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
       }
 
       setLoadingMsg('Projetando esquema de ligação e simulando componentes...');
-      const req = await fetch('/api/ai/generate-iot', {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const req = await fetch(`${apiUrl}/api/ai/generate-iot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, placa: selectedPlaca })
@@ -455,7 +456,8 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
     setSimTerminal(['>_ Iniciando sistema IoT Emulator...', `>_ Target: ${projeto.placa}`, '>_ Compilando payload...']);
     
     try {
-      const req = await fetch('/api/ai/simulate-iot', {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const req = await fetch(`${apiUrl}/api/ai/simulate-iot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

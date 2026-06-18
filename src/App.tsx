@@ -80,7 +80,8 @@ type Tab = 'preview' | 'code' | 'architecture' | 'hardware';
 const callGeminiApi = async (model: string, contents: string, config?: any) => {
   const userKey = localStorage.getItem('parvus_key') || '';
   
-  const response = await fetch('/api/ai/generate', {
+  const apiUrl = import.meta.env.VITE_API_URL || '';
+  const response = await fetch(`${apiUrl}/api/ai/generate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -389,7 +390,7 @@ DIRETRIZES DE PERGUNTAS:
 Analise o problem abaixo e retorne APENAS um JSON válido seguindo estritamente esse modelo.
 Problema: ${problemDescription}`;
 
-      const response = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', prompt, {
+      const response = await callGeminiApi('gemini-2.0-flash', prompt, {
         temperature: 0.1,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -428,6 +429,7 @@ Problema: ${problemDescription}`;
       }
       
       const result = JSON.parse(jsonStr) as Classification;
+      if (!result.tecnologias) result.tecnologias = [];
       
       setClassification(result);
       
@@ -518,7 +520,7 @@ REGRAS ABSOLUTAS:
 - ⚡ OBRIGATÓRIO: Inclua um "Modo Demo" robusto por padrão (com toggle explícito). O modo demo deve estar preenchido com dados realistas (leads, agenda ou msgs).
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, construa o código 100% white-label, profissional, pronto para ser vendido ou repassado para o cliente final. Não inclua logos do gerador, utilize placeholders flexíveis e adicione um painel de "Configurações da Agência" se aplicável.\n' : ''}`;
 
-      const responseHtml = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', frontendPrompt, {
+      const responseHtml = await callGeminiApi('gemini-2.0-flash', frontendPrompt, {
         temperature: 0.2
       });
       
@@ -572,7 +574,7 @@ REGRAS:
 - Não omita nada. Código de produção.
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, construa o código 100% white-label, profissional, pronto para ser vendido ou repassado para o cliente final.\n' : ''}`;
 
-      const responseNode = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', backendPrompt, {
+      const responseNode = await callGeminiApi('gemini-2.0-flash', backendPrompt, {
         temperature: 0.2,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -617,7 +619,7 @@ REGRAS:
 - 'pdf_pecas', 'pdf_montagem', 'pdf_documentacao', 'pdf_setup' devem ser detalhados seguindo as regras do PARVUS AUTOMATE (Listas de materiais com preços em reais, PDF manuais com diagramas ASCII rigorosos, alertas de 110V/220V quando necessário).
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos nomes originais e adicione logomarcas ou nomenclaturas genéricas de agência (ou placeholders), código white-label pronto para revenda de hardware.\n' : ''}`;
 
-        const responseIoT = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', iotPrompt, {
+        const responseIoT = await callGeminiApi('gemini-2.0-flash', iotPrompt, {
           temperature: 0.2,
           responseMimeType: 'application/json',
           responseSchema: {
@@ -981,7 +983,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
       PARÂMETROS DE CUSTOMIZAÇÃO DO USUÁRIO:
       ${answersText}
 
-      TECNOLOGIAS USADAS: ${template.tecnologias.join(', ')}
+      TECNOLOGIAS USADAS: ${template.tecnologias?.join(', ')}
 
       ⚡ ANTES DE GERAR O CÓDIGO:
       - Planeje mentalmente uma interface luxuosa, ultra-moderna e totalmente interativa no frontend (modo demo completo e realista).
@@ -1000,7 +1002,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
       - ⚡ OBRIGATÓRIO: Inclua um "Modo Demo" robusto por padrão (com toggle explícito). O modo demo deve estar preenchido com dados realistas.
       ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências à Parvus Automate, use white-label e inclua painel administrativo fictício.\n' : ''}`;
 
-      const responseHtml = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', frontendPrompt, {
+      const responseHtml = await callGeminiApi('gemini-2.0-flash', frontendPrompt, {
         temperature: 0.2
       });
       
@@ -1034,7 +1036,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
       - Código 100% real de produção sem placeholders
       ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências à Parvus Automate para manter whitelabel.\n' : ''}`;
 
-      const responseNode = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', backendPrompt, {
+      const responseNode = await callGeminiApi('gemini-2.0-flash', backendPrompt, {
         temperature: 0.2,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -1071,7 +1073,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
         Gere os diagramas de fiação, lista de peças de hardware brasileiro com preços estimados, e códigos C++/Arduino prontos para gravação para o hardware "${template.nome}".
         Customização: ${answersText}`;
 
-        const responseIoT = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', iotPrompt, {
+        const responseIoT = await callGeminiApi('gemini-2.0-flash', iotPrompt, {
           temperature: 0.2,
           responseMimeType: 'application/json',
           responseSchema: {
@@ -1175,7 +1177,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
     `;
     
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1533,7 +1535,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
               </div>
               <div className="space-y-4">
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-[#888888] truncate pr-2 max-w-[80%]">{classification.tecnologias.join(', ')}</span>
+                  <span className="text-[#888888] truncate pr-2 max-w-[80%]">{classification.tecnologias?.join(', ')}</span>
                   <span className="text-[#00ff88]">100%</span>
                 </div>
                 <div className="h-1.5 w-full bg-[#0a0a0a] rounded-full overflow-hidden">
@@ -1770,8 +1772,8 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
 
             <div className="flex-1 min-w-0">
               <span className="text-[9px] uppercase text-[#888888] font-bold block mb-1 tracking-widest">Tecnologias</span>
-              <div className="text-xs font-mono text-white truncate" title={classification.tecnologias.join(' · ')}>
-                {classification.tecnologias.join(' · ')}
+              <div className="text-xs font-mono text-white truncate" title={classification.tecnologias?.join(' · ')}>
+                {classification.tecnologias?.join(' · ')}
               </div>
             </div>
 
@@ -2410,7 +2412,7 @@ Soluções Enterprise → R$ 2999+
 Calcule o preço com base na complexidade e nessas faixas. Arredonde para final .90 ou .00. 
 Sem markdown no retorno. Apenas o JSON válido.`;
          
-         const response = await callGeminiApi('nvidia/nemotron-3-ultra-550b-a55b', prompt, {
+         const response = await callGeminiApi('gemini-2.0-flash', prompt, {
            temperature: 0.2,
            responseMimeType: "application/json"
          });
