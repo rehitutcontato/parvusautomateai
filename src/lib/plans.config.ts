@@ -15,13 +15,13 @@ export const PLANS = {
     name: 'Pro',
     price: 247,
     generations: 20,
-    features: ['20 gerações/mês', 'Gemini Key própria', 'Suporte chat']
+    features: ['20 gerações/mês', 'NVIDIA Key própria', 'Suporte chat']
   },
   enterprise: {
     name: 'Enterprise',
     price: 497,
     generations: 100,
-    features: ['100 gerações/mês', 'Gemini Key própria', 'Suporte prioritário']
+    features: ['100 gerações/mês', 'NVIDIA Key própria', 'Suporte prioritário']
   },
   admin: {
     name: 'Admin',

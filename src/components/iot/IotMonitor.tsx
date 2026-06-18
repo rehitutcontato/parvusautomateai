@@ -408,7 +408,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          ...(userKey ? { 'x-gemini-key': userKey } : {})
+          ...(userKey ? { 'x-gemini-key': userKey, 'x-nvidia-key': userKey } : {})
         },
         body: JSON.stringify({ prompt, placa: selectedPlaca })
       });
@@ -454,7 +454,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
 
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || 'Falha na comunicação com a API Gemini.');
+      setErrorMsg(err.message || 'Falha na comunicação com a API NVIDIA.');
     } finally {
       setIsGenerating(false);
     }
@@ -472,7 +472,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          ...(userKey ? { 'x-gemini-key': userKey } : {})
+          ...(userKey ? { 'x-gemini-key': userKey, 'x-nvidia-key': userKey } : {})
         },
         body: JSON.stringify({ 
           codigo: projeto.codigo.codigo_completo,

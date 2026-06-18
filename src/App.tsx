@@ -76,7 +76,7 @@ interface HistoryItem {
 type Phase = 'input' | 'classifying' | 'questions' | 'inviavel' | 'generating' | 'done';
 type Tab = 'preview' | 'code' | 'architecture' | 'hardware';
 
-// Helper to bridge Gemini calls to server-side proxy
+// Helper to bridge AI calls to server-side proxy
 const callGeminiApi = async (model: string, contents: string, config?: any) => {
   const userKey = localStorage.getItem('parvus_key') || '';
   
@@ -85,7 +85,7 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(userKey ? { 'X-Gemini-Key': userKey } : {})
+      ...(userKey ? { 'X-Gemini-Key': userKey, 'X-Nvidia-Key': userKey } : {})
     },
     body: JSON.stringify({
       model,
@@ -2737,7 +2737,7 @@ Sem markdown no retorno. Apenas o JSON válido.`;
           <span>API_LATENCY: 42ms</span>
         </div>
         <div className="flex items-center gap-4 uppercase tracking-widest hidden sm:flex">
-          <span className="text-[#888888]">GEMINI_ENGINE</span>
+          <span className="text-[#888888]">NVIDIA_NIM_ENGINE</span>
           <span className="text-[#00ff88]">● READY</span>
         </div>
       </footer>
