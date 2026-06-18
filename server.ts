@@ -5,12 +5,13 @@ import express from "express";
 import path from "path";
 import cors from "cors";
 import OpenAI from "openai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 app.use(cors({
-  origin: '*', // Permite todas as origens (ou você pode especificar 'https://parvusautomateai.vercel.app' para mais segurança)
+  origin: '*', // Permite todas as origens
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-gemini-key', 'x-nvidia-key']
 }));
@@ -26,6 +27,119 @@ function getCleanApiKey(userKey: string | undefined, envKeyName: string): string
   return apiKey;
 }
 
+// Unified robust runner that tries the user preferred key/model, automatically falling back dynamically
+async function executeGenerativeTask(prompt: string, config: any, userKey?: string, reqId?: string): Promise<string> {
+  const geminiKey = getCleanApiKey(userKey, 'GEMINI_API_KEY') || process.env.GEMINI_API_KEY;
+  const nvidiaKey = getCleanApiKey(userKey, 'NVIDIA_API_KEY');
+
+  const isUserGeminiKey = userKey && (userKey.startsWith("AIzaSy") || userKey.startsWith("aizasy") || userKey.includes("AIzaSy"));
+
+  // 1. If key belongs to Gemini or Gemini is configured natively and NVIDIA isn't, use Gemini primary
+  if (isUserGeminiKey || (geminiKey && !nvidiaKey)) {
+    console.log(`[REQ ${reqId}] Direcionando requisição diretamente para o Gemini API pela excelente performance e latência reduzida...`);
+    try {
+      const ai = new GoogleGenAI({
+        apiKey: geminiKey,
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+      });
+      
+      const responseSchema = config?.responseSchema;
+      const model = 'gemini-3.5-flash';
+      
+      const genConfig: any = {
+        temperature: config?.temperature !== undefined ? config.temperature : 0.2,
+      };
+      
+      if (config?.responseMimeType === 'application/json' || responseSchema) {
+        genConfig.responseMimeType = 'application/json';
+        if (responseSchema) {
+          genConfig.responseSchema = responseSchema;
+        }
+      }
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: genConfig
+      });
+
+      return response.text || "";
+    } catch (err: any) {
+      console.error(`[REQ ${reqId}] Chamada direta ao Gemini falhou: ${err.message}. Tentando fallback/NVIDIA...`);
+    }
+  }
+
+  // 2. Try NVIDIA Llama (unless it's a Gemini key)
+  if (nvidiaKey && !nvidiaKey.startsWith("AIzaSy")) {
+    try {
+      console.log(`[REQ ${reqId}] Processando com API NVIDIA (Llama 3.1 70B)...`);
+      const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
+      
+      let openAiConfig: any = {
+        model: 'meta/llama-3.1-70b-instruct',
+        messages: [{ role: "user", content: prompt }]
+      };
+
+      if (config?.temperature !== undefined) openAiConfig.temperature = config.temperature;
+      
+      if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
+        openAiConfig.response_format = { type: "json_object" };
+        let systemPrompt = "You must output JSON format only.";
+        if (config?.responseSchema) {
+          systemPrompt += ` The JSON must strictly adhere to this schema: ${JSON.stringify(config.responseSchema)}`;
+        }
+        openAiConfig.messages = [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ];
+      }
+
+      const response = await openai.chat.completions.create(openAiConfig);
+      return response.choices[0].message?.content || "";
+    } catch (err: any) {
+      console.warn(`[REQ ${reqId}] Chamada NVIDIA falhou ou excedeu o limite de tempo: ${err.message}. Entrando em modo de contingência direta com o Gemini.`);
+    }
+  }
+
+  // 3. Fallback/Contingency mechanism using server-side Gemini key
+  if (geminiKey) {
+    console.log(`[REQ ${reqId}] Ativando Fallback de contingência para o Gemini (gemini-3.5-flash)...`);
+    try {
+      const ai = new GoogleGenAI({
+        apiKey: geminiKey,
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+      });
+      
+      const responseSchema = config?.responseSchema;
+      const model = 'gemini-3.5-flash';
+      
+      const genConfig: any = {
+        temperature: config?.temperature !== undefined ? config.temperature : 0.2,
+      };
+      
+      if (config?.responseMimeType === 'application/json' || responseSchema) {
+        genConfig.responseMimeType = 'application/json';
+        if (responseSchema) {
+          genConfig.responseSchema = responseSchema;
+        }
+      }
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: genConfig
+      });
+
+      return response.text || "";
+    } catch (geminiErr: any) {
+      console.error(`[REQ ${reqId}] Falha crítica em todos os provedores: ${geminiErr.message}`);
+      throw geminiErr;
+    }
+  }
+
+  throw new Error("Nenhum provedor de IA (NVIDIA ou Gemini) com chave válida foi localizado para esta transação.");
+}
+
 app.post("/api/ai/generate-iot", async (req, res) => {
   const reqId = Math.random().toString(36).substring(7);
   console.log(`[REQ ${reqId}] POST /api/ai/generate-iot - Recebendo pedido para placa: ${req.body?.placa}`);
@@ -34,28 +148,26 @@ app.post("/api/ai/generate-iot", async (req, res) => {
     const { prompt, placa } = req.body;
     const userKey = (req.headers['x-gemini-key'] || req.headers['x-nvidia-key']) as string;
     
-    let aiText = "";
-    
-    const nvidiaKey = getCleanApiKey(userKey, 'NVIDIA_API_KEY');
-    if (!nvidiaKey) {
-      throw new Error("NVIDIA_API_KEY não configurada no servidor e nenhuma chave própria fornecida.");
-    }
+    const config = {
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          codigo_placa: { type: Type.STRING },
+          pdf_pecas: { type: Type.STRING },
+          pdf_montagem: { type: Type.STRING },
+          pdf_documentacao: { type: Type.STRING },
+          pdf_setup: { type: Type.STRING }
+        },
+        required: ['codigo_placa', 'pdf_pecas', 'pdf_montagem', 'pdf_documentacao', 'pdf_setup']
+      }
+    };
 
-    console.log(`[REQ ${reqId}] Processando com API NVIDIA (Llama 3.1 70B)...`);
-    const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
+    const aiText = await executeGenerativeTask(prompt, config, userKey, reqId);
+    let cleanedText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
     
-    const response = await openai.chat.completions.create({
-      model: 'meta/llama-3.1-70b-instruct',
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2,
-      response_format: { type: "json_object" }
-    });
-
-    aiText = response.choices[0].message?.content || "{}";
-    aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
-    
-    console.log(`[REQ ${reqId}] Sucesso na geração IoT usando NVIDIA Llama. Tamanho do payload: ${aiText.length} chars.`);
-    res.json(JSON.parse(aiText));
+    console.log(`[REQ ${reqId}] Sucesso na geração IoT usando broker unificado. Tamanho: ${cleanedText.length}`);
+    res.json(JSON.parse(cleanedText));
   } catch (error: any) {
     console.error(`[REQ ${reqId}] Erro 500 retornado ao cliente: ${error.message}`);
     res.status(500).json({ success: false, error: error.message });
@@ -85,25 +197,9 @@ REGRAS:
 
 Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.`;
 
-    let aiText = "";
+    const aiText = await executeGenerativeTask(prompt, { temperature: 0.4 }, userKey, reqId);
 
-    const nvidiaKey = getCleanApiKey(userKey, 'NVIDIA_API_KEY');
-    if (!nvidiaKey) {
-      throw new Error("NVIDIA_API_KEY não configurada no servidor e nenhuma chave própria fornecida.");
-    }
-
-    console.log(`[REQ ${reqId}] Processando simulação com API NVIDIA (Llama 3.1 70B)...`);
-    const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
-    
-    const response = await openai.chat.completions.create({
-      model: 'meta/llama-3.1-70b-instruct',
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.4
-    });
-    
-    aiText = response.choices[0].message?.content || "";
-
-    console.log(`[REQ ${reqId}] Sucesso na simulação IoT usando NVIDIA Llama. Tamanho do payload: ${aiText.length} chars.`);
+    console.log(`[REQ ${reqId}] Sucesso na simulação IoT usando broker unificado. Tamanho do payload: ${aiText.length} chars.`);
     res.json({ output: aiText });
   } catch (error: any) {
     console.error(`[REQ ${reqId}] Erro 500 retornado ao cliente: ${error.message}`);
@@ -123,39 +219,9 @@ app.post("/api/ai/generate", async (req, res) => {
 
     const userKey = (req.headers['x-gemini-key'] || req.headers['x-nvidia-key']) as string;
     
-    let aiText = "";
-    
-    const nvidiaKey = getCleanApiKey(userKey, 'NVIDIA_API_KEY');
-    if (!nvidiaKey) {
-      throw new Error("NVIDIA_API_KEY não configurada no servidor e nenhuma chave própria fornecida.");
-    }
+    const aiText = await executeGenerativeTask(contents, config, userKey, reqId);
 
-    console.log(`[REQ ${reqId}] Processando com API NVIDIA (Llama 3.1 70B)...`);
-    const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
-    
-    let openAiConfig: any = {
-      model: 'meta/llama-3.1-70b-instruct',
-      messages: [{ role: "user", content: contents }]
-    };
-
-    if (config?.temperature !== undefined) openAiConfig.temperature = config.temperature;
-    
-    if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
-      openAiConfig.response_format = { type: "json_object" };
-      let systemPrompt = "You must output JSON format only.";
-      if (config?.responseSchema) {
-        systemPrompt += ` The JSON must strictly adhere to this schema: ${JSON.stringify(config.responseSchema)}`;
-      }
-      openAiConfig.messages = [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: contents }
-      ];
-    }
-
-    const response = await openai.chat.completions.create(openAiConfig);
-    aiText = response.choices[0].message?.content || "";
-
-    console.log(`[REQ ${reqId}] Sucesso na geração geral usando NVIDIA Llama. Tamanho do payload: ${aiText.length} chars.`);
+    console.log(`[REQ ${reqId}] Sucesso na geração geral usando broker de IA. Tamanho: ${aiText.length} chars.`);
     res.json({
       text: aiText,
     });
