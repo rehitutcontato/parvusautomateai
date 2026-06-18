@@ -14,7 +14,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // --- GENERIC SECURITY SERVER-SIDE AI API PROXY ---
 function getCleanApiKey(userKey: string | undefined, envKeyName: string): string | undefined {
-  let apiKey = userKey || process.env[envKeyName] || process.env.GEMINI_API_KEY || process.env.NVIDIA_API_KEY;
+  let apiKey = userKey || process.env[envKeyName];
   if (!apiKey) return undefined;
   apiKey = apiKey.toString().trim().replace(/['"]/g, '').replace('Bearer ', '');
   if (apiKey === 'SUA_CHAVE_AQUI' || apiKey === 'YOUR_API_KEY_HERE') return undefined;
@@ -25,12 +25,14 @@ app.post("/api/ai/generate-iot", async (req, res) => {
   try {
     const { prompt, placa } = req.body;
     const userKey = req.headers['x-gemini-key'] as string;
+    const isUserKeyNvidia = userKey && userKey.startsWith('nvapi-');
+    const isUserKeyGemini = userKey && !isUserKeyNvidia;
     
     let aiText = "";
     let errorLog: string[] = [];
 
     try {
-      const geminiKey = getCleanApiKey(userKey, 'GEMINI_API_KEY');
+      const geminiKey = getCleanApiKey(isUserKeyGemini ? userKey : undefined, 'GEMINI_API_KEY');
       if (!geminiKey) throw new Error("Sem chave Gemini");
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey: geminiKey });
@@ -46,13 +48,13 @@ app.post("/api/ai/generate-iot", async (req, res) => {
     } catch (geminiError: any) {
       errorLog.push("Gemini: " + geminiError.message);
       try {
-        const nvidiaKey = getCleanApiKey(userKey, 'NVIDIA_API_KEY');
+        const nvidiaKey = getCleanApiKey(isUserKeyNvidia ? userKey : undefined, 'NVIDIA_API_KEY');
         if (!nvidiaKey) throw new Error("Sem chave Nvidia");
         const { default: OpenAI } = await import('openai');
         const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
         
         const response = await openai.chat.completions.create({
-          model: 'nvidia/nemotron-4-340b-instruct',
+          model: 'meta/llama-3.1-70b-instruct',
           messages: [{ role: "user", content: prompt }],
           temperature: 0.2,
           response_format: { type: "json_object" }
@@ -77,6 +79,8 @@ app.post("/api/ai/simulate-iot", async (req, res) => {
   try {
     const { codigo, linguagem, placa } = req.body;
     const userKey = req.headers['x-gemini-key'] as string;
+    const isUserKeyNvidia = userKey && userKey.startsWith('nvapi-');
+    const isUserKeyGemini = userKey && !isUserKeyNvidia;
     
     const prompt = `Você é um emulador de ${placa}. Execute este código de ${linguagem} e simule o output do Serial Monitor/console por 10 ciclos de execução.
 
@@ -97,7 +101,7 @@ Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.
     let errorLog: string[] = [];
 
     try {
-      const geminiKey = getCleanApiKey(userKey, 'GEMINI_API_KEY');
+      const geminiKey = getCleanApiKey(isUserKeyGemini ? userKey : undefined, 'GEMINI_API_KEY');
       if (!geminiKey) throw new Error("Sem chave Gemini");
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey: geminiKey });
@@ -112,13 +116,13 @@ Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.
     } catch (geminiError: any) {
       errorLog.push("Gemini: " + geminiError.message);
       try {
-        const nvidiaKey = getCleanApiKey(userKey, 'NVIDIA_API_KEY');
+        const nvidiaKey = getCleanApiKey(isUserKeyNvidia ? userKey : undefined, 'NVIDIA_API_KEY');
         if (!nvidiaKey) throw new Error("Sem chave Nvidia");
         const { default: OpenAI } = await import('openai');
         const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
         
         const response = await openai.chat.completions.create({
-          model: 'nvidia/nemotron-4-340b-instruct',
+          model: 'meta/llama-3.1-70b-instruct',
           messages: [{ role: "user", content: prompt }],
           temperature: 0.4
         });
@@ -143,11 +147,14 @@ app.post("/api/ai/generate", async (req, res) => {
     }
 
     const userKey = req.headers['x-gemini-key'] as string;
+    const isUserKeyNvidia = userKey && userKey.startsWith('nvapi-');
+    const isUserKeyGemini = userKey && !isUserKeyNvidia;
+    
     let aiText = "";
     let errorLog: string[] = [];
     
     try {
-      const geminiKey = getCleanApiKey(userKey, 'GEMINI_API_KEY');
+      const geminiKey = getCleanApiKey(isUserKeyGemini ? userKey : undefined, 'GEMINI_API_KEY');
       if (!geminiKey) throw new Error("Sem chave Gemini");
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey: geminiKey });
@@ -164,13 +171,13 @@ app.post("/api/ai/generate", async (req, res) => {
     } catch (geminiError: any) {
       errorLog.push("Gemini: " + geminiError.message);
       try {
-        const nvidiaKey = getCleanApiKey(userKey, 'NVIDIA_API_KEY');
+        const nvidiaKey = getCleanApiKey(isUserKeyNvidia ? userKey : undefined, 'NVIDIA_API_KEY');
         if (!nvidiaKey) throw new Error("Sem chave Nvidia");
         const { default: OpenAI } = await import('openai');
         const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
         
         let openAiConfig: any = {
-          model: 'nvidia/nemotron-4-340b-instruct',
+          model: 'meta/llama-3.1-70b-instruct',
           messages: [{ role: "user", content: contents }]
         };
 
