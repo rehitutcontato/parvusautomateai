@@ -4,6 +4,7 @@ dotenv.config();
 import express from "express";
 import path from "path";
 import cors from "cors";
+import { GoogleGenAI } from '@google/genai';
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
@@ -43,7 +44,6 @@ app.post("/api/ai/generate-iot", async (req, res) => {
       console.log(`[REQ ${reqId}] Tentando API Gemini...`);
       const geminiKey = getCleanApiKey(isUserKeyGemini ? userKey : undefined, 'GEMINI_API_KEY');
       if (!geminiKey) throw new Error("Sem chave Gemini");
-      const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       const geminiResponse = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
@@ -122,7 +122,6 @@ Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.
       console.log(`[REQ ${reqId}] Tentando API Gemini...`);
       const geminiKey = getCleanApiKey(isUserKeyGemini ? userKey : undefined, 'GEMINI_API_KEY');
       if (!geminiKey) throw new Error("Sem chave Gemini");
-      const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       const geminiResponse = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
@@ -186,7 +185,6 @@ app.post("/api/ai/generate", async (req, res) => {
       console.log(`[REQ ${reqId}] Tentando API Gemini...`);
       const geminiKey = getCleanApiKey(isUserKeyGemini ? userKey : undefined, 'GEMINI_API_KEY');
       if (!geminiKey) throw new Error("Sem chave Gemini");
-      const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       const geminiResponse = await ai.models.generateContent({
         model: model === 'gemini-2.5-flash' ? 'gemini-2.0-flash' : (model || 'gemini-2.0-flash'),

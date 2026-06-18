@@ -403,12 +403,22 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
 
       setLoadingMsg('Projetando esquema de ligação e simulando componentes...');
       const apiUrl = import.meta.env.VITE_API_URL || '';
+      const userKey = localStorage.getItem('parvus_key') || '';
       const req = await fetch(`${apiUrl}/api/ai/generate-iot`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(userKey ? { 'x-gemini-key': userKey } : {})
+        },
         body: JSON.stringify({ prompt, placa: selectedPlaca })
       });
-      const data = await req.json();
+      
+      let data;
+      try {
+        data = await req.json();
+      } catch (jsonErr) {
+        throw new Error("Erro de comunicação com o servidor. A API retornou uma resposta inválida (não JSON). Verifique sua chave da API ou tente novamente.");
+      }
       
       if (!data || data.error) {
         throw new Error(data?.error || "Erro ao gerar o projeto com a IA.");
@@ -457,16 +467,26 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
     
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '';
+      const userKey = localStorage.getItem('parvus_key') || '';
       const req = await fetch(`${apiUrl}/api/ai/simulate-iot`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(userKey ? { 'x-gemini-key': userKey } : {})
+        },
         body: JSON.stringify({ 
           codigo: projeto.codigo.codigo_completo,
           linguagem: projeto.codigo.linguagem,
           placa: projeto.placa 
         })
       });
-      const data = await req.json();
+      
+      let data;
+      try {
+        data = await req.json();
+      } catch (e) {
+        throw new Error("Resposta inválida do servidor.");
+      }
       
       if (data && data.output) {
         const lines = data.output.split('\n');
