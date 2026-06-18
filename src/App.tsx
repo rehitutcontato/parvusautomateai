@@ -397,17 +397,20 @@ export default function App() {
     addLog('> Analisando problema...', 'active');
     
     try {
-      const prompt = `Você é um classificador de problemas de automação sênior.
-Sua missão é realizar uma auditoria profunda do que o usuário realmente pede vs. o que ele precisa.
-Ao invés de gerar perguntas genéricas, faça até 3 perguntas críticas específicas para guiar a arquitetura do banco e regras de negócio.
+      const prompt = `Você é um classificador de problemas de automação sênior e arquiteto de software de elite.
+Sua missão é realizar uma auditoria profunda do que o usuário realmente pede vs. o que ele precisa para criar um software de excelência.
+Ao invés de gerar perguntas genéricas, selecione de 2 a 3 perguntas críticas específicas para guiar as variáveis do sistema, as regras de negócio mais finas e a estrutura técnica desse escopo.
 
-DIRETRIZES DE PERGUNTAS:
-- Se for um CRM: Pergunte qual o KPI principal (Conversão, Acompanhamento, Retenção). Perguntas dinâmicas (ex: Quantas etapas no funil, integrações).
-- Se for Agenda/Calendário: Pergunte o tipo de agendamento (interno/cliente/ambos), duração padrão da sessão, e regras de lembretes.
-- Se for Automação WhatsApp: Pergunte qual o trigger (novo lead, agendamento, etc), qual a sequência de mensagens (1 mensagem vs fluxo), e se precisa de rastreamento (entrega/vista/resposta).
-- Explicite a arquitetura necessária antes de aprovar (banco, permissões, integrações).
+DIRETRIZES DE PERGUNTAS DE ACORDO COM O DOMÍNIO DA SOLUÇÃO:
+- Se for um CRM/Pipelines: Pergunte qual o KPI principal (Conversão, Acompanhamento, Retenção), quantidade de etapas no funil, e se há integrações externas específicas.
+- Se for Agenda/Calendário/Reservas: Pergunte o tipo de agendamento (interno/cliente/ambos), duração padrão da sessão, e regras de colisão de horários.
+- Se for Automação WhatsApp/Cobrança/Robôs de Conversa: Pergunte qual o gatilho exato (ex: novo lead, fatura pendente), a sequência de mensagens, e se precisa de logs de rastreio de leitura.
+- Se for Calculadoras de Comissão/Impostos, Conversores de Dados, Ferramentas Financeiras ou Utilitários Administrativos: Pergunte sobre as regras de cálculo e fórmulas de negócio (porcentagem fixa, bônus progressivo, taxas dinâmicas), quais campos de entrada o usuário deseja fornecer para processar, e qual a visualização/relatório ideal (gráficos interativos, tabelas exportáveis, etc.).
+- Se for Dashboards/IoT/Painéis de Dados: Pergunte de onde vêm os registros em tempo real (dados manuais simulados, webhooks de sensores físicos, banco local), os limites críticos para alertas, e quais atuadores controlar.
 
-Analise o problem abaixo e retorne APENAS um JSON válido seguindo estritamente esse modelo.
+Obrigatoriedade de Perguntas: Para QUALQUER cenário, selecione e crie de 2 a 3 perguntas precisas que se adaptem perfeitamente ao problema. Não retorne um array de perguntas vazio; faça as perguntas necessárias para que a geração do código backend e da interface fique impecavelmente fiel ao que o usuário precisa.
+
+Analise o problema abaixo e retorne APENAS um JSON válido seguindo estritamente esse modelo.
 Problema: ${descToUse}`;
 
       const response = await callGeminiApi('gemini-2.0-flash', prompt, {
@@ -516,14 +519,14 @@ RESPOSTAS: \n${answersText}
 
 ⚡ ARQUITETURA DA INTERFACE (COMPONENTES OBRIGATÓRIOS):
 - HEADER HIGH-TECH: Logo bonita do sistema, indicador ativo com animação pulsante ("● SIMULAÇÃO DE FLUXO ATIVA"), latência simulada (ex: 22ms) e contador de novos eventos ou notificações.
-- SIDEBAR DE NAVEGAÇÃO: Abas navegáveis (como "Dashboard", "Gerenciamento Real", "Métricas & logs", "Automações & Webhooks").
-- CARDS DE MÉTRICAS / KPI (MÍNIMO 3 CARDS): Mostre dados em tempo real (ex: taxa de conversão %, novos leads na última hora, mensagens enviadas com sucesso, logs processados). Inclua mini-charts visuais usando SVG.
-- ÁREA DE TRABALHO CENTRAL (TOTALMENTE INTERATIVA):
+- SIDEBAR DE NAVEGAÇÃO: Abas navegáveis adaptadas ao domínio (ex: se for CRM, use "Kanban, Métricas, Leads"; se for Calculadora ou Utilitário, use "Painel de Cálculo, Histórico, Configurações de Fórmulas"; de forma geral crie abas que façam sentido para o problema do usuário!).
+- CARDS DE MÉTRICAS / KPI (MÍNIMO 3 CARDS): Mostre dados em tempo real ou simulações relevantes à aplicação (ex: taxa de conversão %, total de comissões calculadas, ou transações criadas, alertas emitidos). Inclua mini-charts visuais usando SVG.
+- ÁREA DE TRABALHO CENTRAL (TOTALMENTE INTERATIVA E FUNCIONAL):
   - Se for CRM/Pipelines: Quadro Kanban real com colunas estilizadas. Permita arrastar leads de um estágio para outro, criar novos leads através de modal com campos detalhados, e abrir detalhes do lead para editar e salvar! 
   - Se for Agenda/Calendário: Visualizador de agenda em grid mensal ou semanal. Mostre slots brilhando e permita clicar num horário livre para agendar verdadeiramente (abre modal, define dados, adiciona à lista com som visual de sucesso).
   - Se for WhatsApp / Automações de Chat / Robôs: Um editor de fluxos gráfico interativo na tela (caixas conectáveis simulando nós ou sequência lógica), um chat de simulação ao vivo (onde é possível digitar algo e ver o chatbot simulado responder imediatamente), e um histórico de logs rolável.
   - Se for Dashboards / Painéis Industriais / IoT: Gráficos de telemetria SVG dinâmicos que se atualizam sozinhos a cada 2 segundos. Toggle botões para ligar/desligar atuadores/relés virtuais com animação e som visual realista.
-  - Se for Finanças, Pagamentos ou Checkout: Gráficos de receitas acumuladas, faturas pendentes, gerador de link de pagamento com cópia automática (Clipboards) e logs de transações.
+  - Se for Finanças, Pagamentos, Checkout ou Calculadoras Técnicas: Simulador e processador dinâmico de cálculos/fórmulas matemáticas ou link de faturamento de forma 100% interativa. Adicione formulários interativos para preenchimento de dados de simulação (como valor da venda, metas, descontos, alíquotas), recalcule e plote instantaneamente gráficos SVG de pizza ou barras com o resultado dividido! Ofereça controles para salvar simulações na tabela do histórico, editar taxas diretamente no painel e simular relatório.
 - CONSOLE DE LOGS DO SISTEMA: Um painel no rodapé ou na lateral direita simulando a recepção de webhooks em tempo real e processamento do sistema (ex: "[WEBHOOK] Novo lead de Mariana Silveira (marianasilveira@email.com) recebido", "[DISPARO] Automatização 'Boas-vindas' executada com sucesso", etc.). Use um timer para injetar novos logs a cada poucos segundos!
 - SUPORTE A MODO DEMO ROBUSTO (COM CONTROLES DE SIMULAÇÃO): Inclua um painel explícito ("Painel de Simulação") com botões rápidos como: "Simular Entrada de Webhook", "Gerar Novo Lead Aleatório", "Disparar Alerta de Teste", "Limpar Histórico". Isso faz com que a interface pareça viva e 100% testável logo de cara!
 
@@ -539,10 +542,27 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
       });
       
       // Clean markdown formatting if present
+      // Hyper-robust markdown and explanatory text cleaning
       let finalHtml = responseHtml.text || '';
-      if (finalHtml.startsWith('```html')) finalHtml = finalHtml.replace(/```html\n?/g, '');
-      if (finalHtml.startsWith('```')) finalHtml = finalHtml.replace(/```\n?/g, '');
-      finalHtml = finalHtml.replace(/\n?```$/g, '');
+      const htmlBlockRegex = /```html([\s\S]*?)```/;
+      const matchHtml = finalHtml.match(htmlBlockRegex);
+      if (matchHtml && matchHtml[1]) {
+        finalHtml = matchHtml[1].trim();
+      } else {
+        const anyBlockRegex = /```([\s\S]*?)```/;
+        const matchAny = finalHtml.match(anyBlockRegex);
+        if (matchAny && matchAny[1]) {
+          finalHtml = matchAny[1].trim();
+        }
+      }
+      
+      if (finalHtml.includes('<html') || finalHtml.includes('<!DOCTYPE')) {
+        const htmlStartIndex = finalHtml.indexOf('<!DOCTYPE') !== -1 ? finalHtml.indexOf('<!DOCTYPE') : finalHtml.indexOf('<html');
+        const htmlEndIndex = finalHtml.lastIndexOf('</html>');
+        if (htmlStartIndex !== -1 && htmlEndIndex !== -1 && htmlEndIndex > htmlStartIndex) {
+          finalHtml = finalHtml.substring(htmlStartIndex, htmlEndIndex + 7);
+        }
+      }
       finalHtml = finalHtml.trim();
 
       currentHtml = finalHtml;
@@ -581,9 +601,9 @@ INSTRUÇÕES ESPECÍFICAS DE ACORDO COM O TIPO DE SISTEMA:
 - Para Dashboards / Painéis Industriais / IoT:
   - Banco (README): Tabelas (devices, telemetry_logs, system_alerts).
   - APIs: POST /api/telemetry para receber dados brutos de sensores IoT com verificação de limites (dispara Alerta se valor de temperatura/pressão for crítico), GET /api/alerts para listar alertas ativos, GET /api/devices para status de atuadores.
-- Para Finanças, Pagamentos ou Checkout:
-  - Banco (README): Tabelas (transactions, invoices, Payment_links, subscriptions).
-  - APIs: POST /api/payments/checkout para criar link de pagamento fictício, GET /api/transactions para faturamento, POST /api/webhooks/stripe para simular conciliação bancária automática com Webhook de sucesso.
+- Para Finanças, Pagamentos, Checkout, Calculadoras Técnicas, Utilitários Administrativos ou Ferramentas de Produtividade:
+  - Banco (README): Tabelas (calculation_logs, users, formulas_config, sales_targets, transactions, invoices).
+  - APIs: GET /api/calculations para obter o histórico de execuções de fórmulas/simulações, POST /api/calculations para salvar e processar um novo cálculo em lote (validando as fórmulas matemáticas e limites de taxas no servidor de forma matemática e segura), PUT /api/formulas para atualizar as porcentagens, descontos e regras de negócio das fórmulas. Ofereça também endpoints de faturamento fictício e logs de transações.
 
 ⚡ REGRAS DE RETORNO DO JSON:
 - No README: Detalhe o diagrama de arquitetura do sistema em arte ASCII e liste os passos exatos de deploy (Railway, Vercel ou VPS Ubuntu).
@@ -1008,13 +1028,18 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
     
     // Normalize HÍBRIDO vs HIBRIDO
     const normalizedTipo = template.tipo === 'HÍBRIDO' ? 'HIBRIDO' : template.tipo;
+    const isBasic = template.complexidade === 'BÁSICO';
+    const isMedium = template.complexidade === 'MÉDIO';
+    const estMinutes = isBasic ? 35 : (isMedium ? 70 : 120);
     
     setClassification({
       tipo: normalizedTipo,
-      complexidade: template.complexidade === 'BÁSICO' ? 'BASICO' : (template.complexidade === 'MÉDIO' ? 'INTERMEDIARIO' : 'AVANCADO'),
+      viabilidade: 'VIAVEL',
+      complexidade: isBasic ? 'BASICO' : (isMedium ? 'INTERMEDIARIO' : 'AVANCADO'),
       resumo: template.descricao,
-      tecnologias: template.tecnologias,
-      perguntas_necessarias: []
+      tecnologias: template.tecnologias || [],
+      perguntas_necessarias: [],
+      estimativa_minutos: estMinutes
     });
 
     addLog('> Iniciando geração baseada no Modelo Avançado...', 'done');
@@ -1048,14 +1073,14 @@ TECNOLOGIAS USADAS: ${template.tecnologias?.join(', ')}
 
 ⚡ ARQUITETURA DA INTERFACE (COMPONENTES OBRIGATÓRIOS TEMPLATE):
 - HEADER HIGH-TECH: Logo bonita do sistema customizado, indicador ativo com animação pulsante ("● SIMULAÇÃO DE FLUXO ATIVA"), latência simulada (ex: 18ms) e contador de novos eventos ou notificações.
-- SIDEBAR DE NAVEGAÇÃO: Abas navegáveis (como "Dashboard", "Gerenciamento Real", "Métricas & logs", "Automações & Webhooks").
-- CARDS DE MÉTRICAS / KPI (MÍNIMO 3 CARDS): Mostre dados em tempo real (ex: taxa de conversão %, novos leads na última hora, mensagens enviadas com sucesso, logs processados). Inclua mini-charts visuais usando SVG.
-- ÁREA DE TRABALHO CENTRAL (TOTALMENTE INTERATIVA):
+- SIDEBAR DE NAVEGAÇÃO: Abas navegáveis adaptadas ao domínio (ex: se for CRM, use "Kanban, Métricas, Leads"; se for Calculadora ou Utilitário, use "Painel de Cálculo, Histórico, Configurações de Fórmulas"; de forma geral crie abas que façam sentido para o problema do usuário!).
+- CARDS DE MÉTRICAS / KPI (MÍNIMO 3 CARDS): Mostre dados em tempo real ou simulações relevantes à aplicação (ex: taxa de conversão %, total de comissões calculadas, ou transações criadas, alertas emitidos). Inclua mini-charts visuais usando SVG.
+- ÁREA DE TRABALHO CENTRAL (TOTALMENTE INTERATIVA E FUNCIONAL):
   - Se for CRM/Pipelines: Quadro Kanban real com colunas estilizadas. Permita arrastar leads de um estágio para outro, criar novos leads através de modal com campos detalhados, e abrir detalhes do lead para editar e salvar! 
   - Se for Agenda/Calendário: Visualizador de agenda em grid mensal ou semanal. Mostre slots brilhando e permita clicar num horário livre para agendar verdadeiramente (abre modal, define dados, adiciona à lista com som visual de sucesso).
   - Se for WhatsApp / Automações de Chat / Robôs: Um editor de fluxos gráfico interativo na tela (caixas conectáveis simulando nós ou sequência lógica), um chat de simulação ao vivo (onde é possível digitar algo e ver o chatbot simulado responder imediatamente), e um histórico de logs rolável.
   - Se for Dashboards / Painéis Industriais / IoT: Gráficos de telemetria SVG dinâmicos que se atualizam solos a cada 2 segundos. Toggle botões para ligar/desligar atuadores/relés virtuais com animação e som visual realista.
-  - Se for Finanças, Pagamentos ou Checkout: Gráficos de receitas acumuladas, faturas pendentes, gerador de link de pagamento com cópia automática (Clipboards) e logs de transações.
+  - Se for Finanças, Pagamentos, Checkout ou Calculadoras Técnicas: Simulador e processador dinâmico de cálculos/fórmulas matemáticas ou link de faturamento de forma 100% interativa. Adicione formulários interativos para preenchimento de dados de simulação (como valor da venda, metas, descontos, alíquotas), recalcule e plote instantaneamente gráficos SVG de pizza ou barras com o resultado dividido! Ofereça controles para salvar simulações na tabela do histórico, editar taxas diretamente no painel e simular relatório.
 - CONSOLE DE LOGS DO SISTEMA: Um painel no rodapé ou na lateral direita simulando a recepção de webhooks em tempo real e processamento do sistema (ex: "[WEBHOOK] Novo lead de Mariana Silveira (marianasilveira@email.com) recebido", "[DISPARO] Automatização 'Boas-vindas' executada com sucesso", etc.). Use um timer para injetar novos logs a cada poucos segundos!
 - SUPORTE A MODO DEMO ROBUSTO (COM CONTROLES DE SIMULAÇÃO): Inclua um painel explícito ("Painel de Simulação") com botões rápidos como: "Simular Entrada de Webhook", "Gerar Novo Lead Aleatório", "Disparar Alerta de Teste", "Limpar Histórico". Isso faz com que a interface pareça viva e 100% testável logo de cara!
 
@@ -1070,10 +1095,27 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
         temperature: 0.2
       });
       
+      // Hyper-robust markdown and explanatory text cleaning
       let finalHtml = responseHtml.text || '';
-      if (finalHtml.startsWith('```html')) finalHtml = finalHtml.replace(/```html\n?/g, '');
-      if (finalHtml.startsWith('```')) finalHtml = finalHtml.replace(/```\n?/g, '');
-      finalHtml = finalHtml.replace(/\n?```$/g, '');
+      const htmlBlockRegex = /```html([\s\S]*?)```/;
+      const matchHtml = finalHtml.match(htmlBlockRegex);
+      if (matchHtml && matchHtml[1]) {
+        finalHtml = matchHtml[1].trim();
+      } else {
+        const anyBlockRegex = /```([\s\S]*?)```/;
+        const matchAny = finalHtml.match(anyBlockRegex);
+        if (matchAny && matchAny[1]) {
+          finalHtml = matchAny[1].trim();
+        }
+      }
+      
+      if (finalHtml.includes('<html') || finalHtml.includes('<!DOCTYPE')) {
+        const htmlStartIndex = finalHtml.indexOf('<!DOCTYPE') !== -1 ? finalHtml.indexOf('<!DOCTYPE') : finalHtml.indexOf('<html');
+        const htmlEndIndex = finalHtml.lastIndexOf('</html>');
+        if (htmlStartIndex !== -1 && htmlEndIndex !== -1 && htmlEndIndex > htmlStartIndex) {
+          finalHtml = finalHtml.substring(htmlStartIndex, htmlEndIndex + 7);
+        }
+      }
       finalHtml = finalHtml.trim();
 
       currentHtml = finalHtml;
