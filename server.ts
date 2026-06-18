@@ -26,6 +26,9 @@ function getCleanApiKey(userKey: string | undefined, envKeyName: string): string
 }
 
 app.post("/api/ai/generate-iot", async (req, res) => {
+  const reqId = Math.random().toString(36).substring(7);
+  console.log(`[REQ ${reqId}] POST /api/ai/generate-iot - Recebendo pedido para placa: ${req.body?.placa}`);
+  
   try {
     const { prompt, placa } = req.body;
     const userKey = req.headers['x-gemini-key'] as string;
@@ -34,8 +37,10 @@ app.post("/api/ai/generate-iot", async (req, res) => {
     
     let aiText = "";
     let errorLog: string[] = [];
+    let providerUsed = "";
 
     try {
+      console.log(`[REQ ${reqId}] Tentando API Gemini...`);
       const geminiKey = getCleanApiKey(isUserKeyGemini ? userKey : undefined, 'GEMINI_API_KEY');
       if (!geminiKey) throw new Error("Sem chave Gemini");
       const { GoogleGenAI } = await import('@google/genai');
@@ -49,8 +54,10 @@ app.post("/api/ai/generate-iot", async (req, res) => {
         }
       });
       aiText = geminiResponse.text || "{}";
+      providerUsed = "Gemini";
     } catch (geminiError: any) {
       errorLog.push("Gemini: " + geminiError.message);
+      console.log(`[REQ ${reqId}] Fallback para Nvidia - Falha na Gemini: ${geminiError.message}`);
       try {
         const nvidiaKey = getCleanApiKey(isUserKeyNvidia ? userKey : undefined, 'NVIDIA_API_KEY');
         if (!nvidiaKey) throw new Error("Sem chave Nvidia");
@@ -65,21 +72,27 @@ app.post("/api/ai/generate-iot", async (req, res) => {
         });
 
         aiText = response.choices[0].message?.content || "{}";
+        providerUsed = "Nvidia (Llama 3.1)";
       } catch (nvidiaError: any) {
          errorLog.push("Nvidia: " + nvidiaError.message);
+         console.error(`[REQ ${reqId}] Falha crítica em todas as APIs. Logs: ${errorLog.join(' | ')}`);
          throw new Error(`Falha em ambas as APIs: ${errorLog.join(' | ')}`);
       }
     }
 
     aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
-    
+    console.log(`[REQ ${reqId}] Sucesso na geração IoT usando: ${providerUsed}. Tamanho do payload: ${aiText.length} chars.`);
     res.json(JSON.parse(aiText));
   } catch (error: any) {
+    console.error(`[REQ ${reqId}] Erro 500 retornado ao cliente: ${error.message}`);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 app.post("/api/ai/simulate-iot", async (req, res) => {
+  const reqId = Math.random().toString(36).substring(7);
+  console.log(`[REQ ${reqId}] POST /api/ai/simulate-iot - Recebendo pedido de simulação para placa: ${req.body?.placa}`);
+  
   try {
     const { codigo, linguagem, placa } = req.body;
     const userKey = req.headers['x-gemini-key'] as string;
@@ -103,8 +116,10 @@ Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.
 
     let aiText = "";
     let errorLog: string[] = [];
+    let providerUsed = "";
 
     try {
+      console.log(`[REQ ${reqId}] Tentando API Gemini...`);
       const geminiKey = getCleanApiKey(isUserKeyGemini ? userKey : undefined, 'GEMINI_API_KEY');
       if (!geminiKey) throw new Error("Sem chave Gemini");
       const { GoogleGenAI } = await import('@google/genai');
@@ -117,8 +132,10 @@ Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.
         }
       });
       aiText = geminiResponse.text || "";
+      providerUsed = "Gemini";
     } catch (geminiError: any) {
       errorLog.push("Gemini: " + geminiError.message);
+      console.log(`[REQ ${reqId}] Fallback para Nvidia - Falha na Gemini: ${geminiError.message}`);
       try {
         const nvidiaKey = getCleanApiKey(isUserKeyNvidia ? userKey : undefined, 'NVIDIA_API_KEY');
         if (!nvidiaKey) throw new Error("Sem chave Nvidia");
@@ -131,22 +148,29 @@ Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.
           temperature: 0.4
         });
         aiText = response.choices[0].message?.content || "";
+        providerUsed = "Nvidia (Llama 3.1)";
       } catch (nvidiaError: any) {
         errorLog.push("Nvidia: " + nvidiaError.message);
+        console.error(`[REQ ${reqId}] Falha crítica em todas as APIs. Logs: ${errorLog.join(' | ')}`);
         throw new Error(`Falha em ambas as APIs: ${errorLog.join(' | ')}`);
       }
     }
 
+    console.log(`[REQ ${reqId}] Sucesso na simulação IoT usando: ${providerUsed}. Tamanho do payload: ${aiText.length} chars.`);
     res.json({ output: aiText });
   } catch (error: any) {
+    console.error(`[REQ ${reqId}] Erro 500 retornado ao cliente: ${error.message}`);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 app.post("/api/ai/generate", async (req, res) => {
+  const reqId = Math.random().toString(36).substring(7);
+  console.log(`[REQ ${reqId}] POST /api/ai/generate - Recebendo pedido geral de IA.`);
   try {
     const { model, contents, config } = req.body;
     if (!contents) {
+      console.warn(`[REQ ${reqId}] Pedido recusado: sem contents (prompt).`);
       return res.status(400).json({ success: false, error: 'O prompt ou conteúdo é obrigatório.' });
     }
 
@@ -156,8 +180,10 @@ app.post("/api/ai/generate", async (req, res) => {
     
     let aiText = "";
     let errorLog: string[] = [];
+    let providerUsed = "";
     
     try {
+      console.log(`[REQ ${reqId}] Tentando API Gemini...`);
       const geminiKey = getCleanApiKey(isUserKeyGemini ? userKey : undefined, 'GEMINI_API_KEY');
       if (!geminiKey) throw new Error("Sem chave Gemini");
       const { GoogleGenAI } = await import('@google/genai');
@@ -172,8 +198,10 @@ app.post("/api/ai/generate", async (req, res) => {
         }
       });
       aiText = geminiResponse.text || "";
+      providerUsed = "Gemini";
     } catch (geminiError: any) {
       errorLog.push("Gemini: " + geminiError.message);
+      console.log(`[REQ ${reqId}] Fallback para Nvidia - Falha na Gemini: ${geminiError.message}`);
       try {
         const nvidiaKey = getCleanApiKey(isUserKeyNvidia ? userKey : undefined, 'NVIDIA_API_KEY');
         if (!nvidiaKey) throw new Error("Sem chave Nvidia");
@@ -201,17 +229,20 @@ app.post("/api/ai/generate", async (req, res) => {
 
         const response = await openai.chat.completions.create(openAiConfig);
         aiText = response.choices[0].message?.content || "";
+        providerUsed = "Nvidia (Llama 3.1)";
       } catch (nvidiaError: any) {
         errorLog.push("Nvidia: " + nvidiaError.message);
+        console.error(`[REQ ${reqId}] Falha crítica em todas as APIs. Logs: ${errorLog.join(' | ')}`);
         throw new Error(`Falha em ambas as APIs: ${errorLog.join(' | ')}`);
       }
     }
 
+    console.log(`[REQ ${reqId}] Sucesso na geração geral usando: ${providerUsed}. Tamanho do payload: ${aiText.length} chars.`);
     res.json({
       text: aiText,
     });
   } catch (error: any) {
-    console.error("Erro na chamada de IA no servidor:", error);
+    console.error(`[REQ ${reqId}] Erro 500 retornado ao cliente: ${error.message}`);
     res.status(500).json({ success: false, error: error.message || String(error) });
   }
 });
