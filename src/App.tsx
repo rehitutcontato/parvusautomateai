@@ -431,6 +431,7 @@ Problema: ${descToUse}`;
       
       const result = JSON.parse(jsonStr) as Classification;
       if (!result.tecnologias) result.tecnologias = [];
+      if (!result.perguntas_necessarias) result.perguntas_necessarias = [];
       
       setClassification(result);
       
@@ -598,7 +599,20 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         responseNodeText = responseNodeText.substring(nodeStartObj, nodeEndObj + 1);
       }
 
-      const nodeData = JSON.parse(responseNodeText) as GeneratedNode;
+      let nodeData: GeneratedNode;
+      try {
+        nodeData = JSON.parse(responseNodeText) as GeneratedNode;
+      } catch (parseErr: any) {
+        console.error("JSON PARSE ERROR:", parseErr, responseNodeText);
+        addLog('> Aviso: Falha ao interpretar estrutura Node.js retornada pela IA.', 'error');
+        nodeData = {
+          server_js: "// Falha na geração Node.js\n// " + String(parseErr),
+          package_json: "{}",
+          env_example: "PORT=3000",
+          readme_md: "Houve uma falha na montagem do projeto Node.",
+          arquitetura_ascii: ""
+        };
+      }
       currentNode = nodeData;
 
       updateLog('> Arquitetando solução backend...', 'done');
@@ -643,7 +657,20 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
           responseIoTText = responseIoTText.substring(iotStartObj, iotEndObj + 1);
         }
   
-        const iotData = JSON.parse(responseIoTText);
+        let iotData: any;
+        try {
+          iotData = JSON.parse(responseIoTText);
+        } catch (parseErr: any) {
+          console.error("JSON PARSE ERROR IOT:", parseErr, responseIoTText);
+          iotData = {
+            codigo_placa: "// Falha ao gerar código da placa\n" + String(parseErr),
+            pdf_pecas: "Falha na geração.",
+            pdf_montagem: "",
+            pdf_documentacao: "",
+            pdf_setup: ""
+          };
+        }
+        
         currentNode.codigo_placa = iotData.codigo_placa;
         currentNode.pdf_pecas = iotData.pdf_pecas;
         currentNode.pdf_montagem = iotData.pdf_montagem;
@@ -1060,7 +1087,20 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
         responseNodeText = responseNodeText.substring(nodeStartObj, nodeEndObj + 1);
       }
 
-      const nodeData = JSON.parse(responseNodeText) as GeneratedNode;
+      let nodeData: GeneratedNode;
+      try {
+        nodeData = JSON.parse(responseNodeText) as GeneratedNode;
+      } catch (parseErr: any) {
+        console.error("JSON PARSE ERROR:", parseErr, responseNodeText);
+        addLog('> Aviso: Falha ao interpretar estrutura Node.js retornada pela IA.', 'error');
+        nodeData = {
+          server_js: "// Falha na geração Node.js\n// " + String(parseErr),
+          package_json: "{}",
+          env_example: "PORT=3000",
+          readme_md: "Houve uma falha na montagem do projeto Node.",
+          arquitetura_ascii: ""
+        };
+      }
       currentNode = nodeData;
 
       updateLog('> Projetando microsserviço de backend customizado...', 'done');
@@ -1097,7 +1137,20 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
           responseIoTText = responseIoTText.substring(iotStartObj, iotEndObj + 1);
         }
   
-        const iotData = JSON.parse(responseIoTText);
+        let iotData: any;
+        try {
+          iotData = JSON.parse(responseIoTText);
+        } catch (parseErr: any) {
+          console.error("JSON PARSE ERROR IOT:", parseErr, responseIoTText);
+          iotData = {
+            codigo_placa: "// Falha ao gerar código da placa\n" + String(parseErr),
+            pdf_pecas: "Falha na geração.",
+            pdf_montagem: "",
+            pdf_documentacao: "",
+            pdf_setup: ""
+          };
+        }
+        
         currentNode.codigo_placa = iotData.codigo_placa;
         currentNode.pdf_pecas = iotData.pdf_pecas;
         currentNode.pdf_montagem = iotData.pdf_montagem;
