@@ -464,13 +464,7 @@ Problema: ${descToUse}`;
         return;
       }
 
-      if (result.tipo === 'ENTERPRISE' || result.complexidade === 'ENTERPRISE') {
-        setPhase('generating'); // Skip questions directly to result
-        setTimeout(() => setPhase('done'), 1500); // Mock processing time for enterprise
-      } else if (result.tipo === 'HARDWARE' || result.tipo === 'HIBRIDO') {
-        setPhase('generating'); // Skip questions directly to result for IoT pivot
-        setTimeout(() => setPhase('done'), 1500);
-      } else if (result.perguntas_necessarias && result.perguntas_necessarias.length > 0) {
+      if (result.perguntas_necessarias && result.perguntas_necessarias.length > 0) {
         setPhase('questions');
       } else {
         handleGenerate(result, {});
@@ -482,6 +476,46 @@ Problema: ${descToUse}`;
       setPhase('input');
       showToast("Ocorreu um erro ao analisar o problema. Verifique sua API Key ou tente novamente.", "error");
     }
+  };
+
+  const cleanAndExtractHtml = (rawText: string): string => {
+    let cleaned = rawText.trim();
+    
+    // 1. Try to find the start of the HTML code block
+    const htmlBlockIndicator = "```html";
+    const anyBlockIndicator = "```";
+    
+    if (cleaned.includes(htmlBlockIndicator)) {
+      const startIndex = cleaned.indexOf(htmlBlockIndicator) + htmlBlockIndicator.length;
+      cleaned = cleaned.substring(startIndex).trim();
+      if (cleaned.includes("```")) {
+        cleaned = cleaned.substring(0, cleaned.lastIndexOf("```")).trim();
+      }
+    } else if (cleaned.includes(anyBlockIndicator)) {
+      const startIndex = cleaned.indexOf(anyBlockIndicator) + anyBlockIndicator.length;
+      cleaned = cleaned.substring(startIndex).trim();
+      if (cleaned.includes("```")) {
+        cleaned = cleaned.substring(0, cleaned.lastIndexOf("```")).trim();
+      }
+    }
+    
+    // 2. Extra safeguard: extract strictly from <!DOCTYPE or <html to </html> or end of string
+    const lower = cleaned.toLowerCase();
+    let startIdx = lower.indexOf('<!doctype html');
+    if (startIdx === -1) {
+      startIdx = lower.indexOf('<html');
+    }
+    
+    if (startIdx !== -1) {
+      let endIdx = lower.lastIndexOf('</html>');
+      if (endIdx !== -1) {
+        cleaned = cleaned.substring(startIdx, endIdx + 7);
+      } else {
+        cleaned = cleaned.substring(startIdx);
+      }
+    }
+    
+    return cleaned.trim();
   };
 
   const handleGenerate = async (classData: Classification, userAnswers: Record<string, string>) => {
@@ -531,7 +565,7 @@ RESPOSTAS: \n${answersText}
 - SUPORTE A MODO DEMO ROBUSTO (COM CONTROLES DE SIMULAÇÃO): Inclua um painel explícito ("Painel de Simulação") com botões rápidos como: "Simular Entrada de Webhook", "Gerar Novo Lead Aleatório", "Disparar Alerta de Teste", "Limpar Histórico". Isso faz com que a interface pareça viva e 100% testável logo de cara!
 
 REGRAS TÉCNICAS ABSOLUTAS:
-- Retorne APENAS o código HTML/JS/CSS limpo. NÃO inclua delimitadores markdown de bloco HTML (como as três crases com a palavra html) em hipótese alguma! Comece diretamente com <!DOCTYPE html>.
+- Retorne APENAS o código HTML/JS/CSS limpo. NÃO inclua delimitadores markdown de bloco HTML (como as três crases com a palavra html) in hipótese alguma! Comece diretamente com <!DOCTYPE html>.
 - O código Javascript inserido no script deve gerenciar de forma impecável todo o estado simulado em memória local (use arrays de objetos pré-carregados com pelo menos 10 registros fictícios detalhados para parecer preenchido).
 - Zero placeholders ou comentários do tipo "// adicione código aqui". Tudo precisa estar totalmente implementado e funcional de ponta a ponta.
 - Use Tailwind CSS via CDN (<script src="https://unpkg.com/@tailwindcss/browser@4"></script>).
@@ -541,29 +575,8 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
         temperature: 0.2
       });
       
-      // Clean markdown formatting if present
-      // Hyper-robust markdown and explanatory text cleaning
-      let finalHtml = responseHtml.text || '';
-      const htmlBlockRegex = /```html([\s\S]*?)```/;
-      const matchHtml = finalHtml.match(htmlBlockRegex);
-      if (matchHtml && matchHtml[1]) {
-        finalHtml = matchHtml[1].trim();
-      } else {
-        const anyBlockRegex = /```([\s\S]*?)```/;
-        const matchAny = finalHtml.match(anyBlockRegex);
-        if (matchAny && matchAny[1]) {
-          finalHtml = matchAny[1].trim();
-        }
-      }
-      
-      if (finalHtml.includes('<html') || finalHtml.includes('<!DOCTYPE')) {
-        const htmlStartIndex = finalHtml.indexOf('<!DOCTYPE') !== -1 ? finalHtml.indexOf('<!DOCTYPE') : finalHtml.indexOf('<html');
-        const htmlEndIndex = finalHtml.lastIndexOf('</html>');
-        if (htmlStartIndex !== -1 && htmlEndIndex !== -1 && htmlEndIndex > htmlStartIndex) {
-          finalHtml = finalHtml.substring(htmlStartIndex, htmlEndIndex + 7);
-        }
-      }
-      finalHtml = finalHtml.trim();
+      // Clean markdown formatting if present with hyper-robust utility
+      let finalHtml = cleanAndExtractHtml(responseHtml.text || '');
 
       currentHtml = finalHtml;
       setGeneratedHtml(finalHtml);
@@ -1095,28 +1108,8 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
         temperature: 0.2
       });
       
-      // Hyper-robust markdown and explanatory text cleaning
-      let finalHtml = responseHtml.text || '';
-      const htmlBlockRegex = /```html([\s\S]*?)```/;
-      const matchHtml = finalHtml.match(htmlBlockRegex);
-      if (matchHtml && matchHtml[1]) {
-        finalHtml = matchHtml[1].trim();
-      } else {
-        const anyBlockRegex = /```([\s\S]*?)```/;
-        const matchAny = finalHtml.match(anyBlockRegex);
-        if (matchAny && matchAny[1]) {
-          finalHtml = matchAny[1].trim();
-        }
-      }
-      
-      if (finalHtml.includes('<html') || finalHtml.includes('<!DOCTYPE')) {
-        const htmlStartIndex = finalHtml.indexOf('<!DOCTYPE') !== -1 ? finalHtml.indexOf('<!DOCTYPE') : finalHtml.indexOf('<html');
-        const htmlEndIndex = finalHtml.lastIndexOf('</html>');
-        if (htmlStartIndex !== -1 && htmlEndIndex !== -1 && htmlEndIndex > htmlStartIndex) {
-          finalHtml = finalHtml.substring(htmlStartIndex, htmlEndIndex + 7);
-        }
-      }
-      finalHtml = finalHtml.trim();
+      // Clean markdown formatting if present with hyper-robust utility
+      let finalHtml = cleanAndExtractHtml(responseHtml.text || '');
 
       currentHtml = finalHtml;
       setGeneratedHtml(finalHtml);
