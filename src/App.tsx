@@ -1177,16 +1177,8 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
     `;
     
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: promptInterpreter }] }],
-            generationConfig: { temperature: 0.4 }
-          })
-      });
-      const data = await response.json();
-      const generatedPrompt = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const response = await callGeminiApi('gemini-2.0-flash', promptInterpreter, { temperature: 0.4 });
+      const generatedPrompt = response.text;
       
       if (generatedPrompt) {
         setProblemDescription(generatedPrompt);
