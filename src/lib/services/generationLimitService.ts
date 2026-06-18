@@ -8,8 +8,8 @@ export async function checkGenerationLimit(userId: string, supabaseClient: any) 
 
     if (error) {
       if (error.code === 'PGRST116') {
-        // Retorno padrão caso perfil não exista
-        return { allowed: false, usedThisMonth: 0, limit: 0, plan: 'free', remaining: 0 };
+        // Retorno padrão caso perfil não exista: permite exactly 1 free geração
+        return { allowed: true, usedThisMonth: 0, limit: 1, plan: 'free', remaining: 1 };
       }
       throw error;
     }
@@ -42,8 +42,14 @@ export async function checkGenerationLimit(userId: string, supabaseClient: any) 
       profile.geracoes_usadas_mes = 0;
     }
 
-    // O limite padrão para contas free normalmente é 0. O profile pode vir sem essas colunas recém-criadas.
-    const limiteSeguro = typeof profile.geracoes_limite === 'number' ? profile.geracoes_limite : 0;
+    // Se o plano for grátis ('free' ou vazio), o limite é exatamente 1 geração grátis lifetime/mensal de teste.
+    const planoLimpo = profile.plano || 'free';
+    const isPaid = ['starter', 'pro', 'enterprise', 'admin'].includes(planoLimpo);
+
+    let limiteSeguro = 1;
+    if (isPaid) {
+      limiteSeguro = typeof profile.geracoes_limite === 'number' ? profile.geracoes_limite : 0;
+    }
     const usadasSeguras = typeof profile.geracoes_usadas_mes === 'number' ? profile.geracoes_usadas_mes : 0;
 
     // Verificar limite

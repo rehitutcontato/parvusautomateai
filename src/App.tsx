@@ -135,7 +135,21 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [previewProject, setPreviewProject] = useState<any>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const generationLimit = useGenerationLimit();
+
+  const handleSelectEntryFlow = (flow: 'ai' | 'templates' | 'briefing') => {
+    if (!generationLimit.loading && !generationLimit.allowed) {
+      if (!session) {
+        setShowLoginModal(true);
+        showToast("Você atingiu o limite de 1 geração de teste grátis como visitante. Faça login/cadastro para continuar!", "error");
+      } else {
+        setShowUpgradeModal(true);
+      }
+      return;
+    }
+    setEntryFlow(flow);
+  };
 
   const [agencyMode, setAgencyMode] = useState(false);
 
@@ -171,7 +185,7 @@ export default function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   
   // Generation state
-  const [logs, setLogs] = useState<{message: string, status: 'pending' | 'done' | 'active'}[]>([]);
+  const [logs, setLogs] = useState<{message: string, status: 'pending' | 'done' | 'active' | 'error'}[]>([]);
   const [generatingProgress, setGeneratingProgress] = useState(0);
   
   const consoleRef = useRef<HTMLDivElement>(null);
@@ -357,11 +371,11 @@ export default function App() {
     }
   }, [logs]);
 
-  const addLog = (message: string, status: 'pending' | 'done' | 'active' = 'active') => {
+  const addLog = (message: string, status: 'pending' | 'done' | 'active' | 'error' = 'active') => {
     setLogs(prev => [...prev.filter(l => l.message !== message), {message, status}]);
   };
 
-  const updateLog = (message: string, status: 'pending' | 'done' | 'active') => {
+  const updateLog = (message: string, status: 'pending' | 'done' | 'active' | 'error') => {
     setLogs(prev => prev.map(l => l.message === message ? {...l, status} : l));
   };
 
@@ -370,7 +384,12 @@ export default function App() {
     if (!descToUse.trim()) return;
 
     if (!generationLimit.loading && !generationLimit.allowed) {
-      setShowUpgradeModal(true);
+      if (!session) {
+        setShowLoginModal(true);
+        showToast("Você atingiu o limite de geração de teste gratuita como visitante. Faça login/cadastro para continuar!", "error");
+      } else {
+        setShowUpgradeModal(true);
+      }
       return;
     }
 
@@ -727,6 +746,10 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
       if (session && supabase) {
         await incrementGenerationCount(session.user.id, supabase);
         generationLimit.refreshLimit();
+      } else {
+        const guestCount = parseInt(localStorage.getItem('parvus_free_generations_done') || '0', 10);
+        localStorage.setItem('parvus_free_generations_done', String(guestCount + 1));
+        generationLimit.refreshLimit();
       }
 
       setTimeout(() => setPhase('done'), 1000);
@@ -969,7 +992,12 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
 
   const handleTemplateGenerate = async (template: any, answers: Record<string, string>) => {
     if (!generationLimit.loading && !generationLimit.allowed) {
-      setShowUpgradeModal(true);
+      if (!session) {
+        setShowLoginModal(true);
+        showToast("Você atingiu o limite de geração de teste gratuita como visitante. Faça login/cadastro para continuar!", "error");
+      } else {
+        setShowUpgradeModal(true);
+      }
       return;
     }
     
@@ -1202,6 +1230,10 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
       if (session && supabase) {
         await incrementGenerationCount(session.user.id, supabase);
         generationLimit.refreshLimit();
+      } else {
+        const guestCount = parseInt(localStorage.getItem('parvus_free_generations_done') || '0', 10);
+        localStorage.setItem('parvus_free_generations_done', String(guestCount + 1));
+        generationLimit.refreshLimit();
       }
 
       setTimeout(() => setPhase('done'), 1000);
@@ -1215,6 +1247,16 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
   };
 
   const handleBriefingSubmit = async (briefingData: any) => {
+    if (!generationLimit.loading && !generationLimit.allowed) {
+      if (!session) {
+        setShowLoginModal(true);
+        showToast("Você atingiu o limite de geração de teste gratuita como visitante. Faça login/cadastro para continuar!", "error");
+      } else {
+        setShowUpgradeModal(true);
+      }
+      return;
+    }
+
     // Show loading
     setEntryFlow('ai'); // Switch to AI area briefly
     setPhase('classifying');
@@ -1309,7 +1351,6 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
     });
   };
 
-  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // ...
 
@@ -1369,21 +1410,23 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
           </>
         )}
         
-        {session && (
-          <div className="text-white hidden lg:flex items-center gap-3 ml-4 border-l border-white/10 pl-6">
-            {!generationLimit.loading && (
-              <span className="text-gray-400">
-                Gerações: {generationLimit.plan === 'free' 
-                  ? <span className="text-[#ff3366]">0/0 — Plano inativo (atualize)</span>
-                  : generationLimit.plan === 'admin' 
-                  ? <span className="text-[#00ff88]">∞/∞</span>
-                  : <span className="text-[#00ff88]">{generationLimit.usedThisMonth}/{generationLimit.limit}</span>
-                }
-              </span>
-            )}
-            <span className="font-medium">{session.user?.user_metadata?.nome || session.user?.email}</span>
-          </div>
-        )}
+        <div className="text-white hidden lg:flex items-center gap-3 ml-4 border-l border-white/10 pl-6">
+          {!generationLimit.loading && (
+            <span className="text-gray-400">
+              Gerações: {generationLimit.plan === 'free' || !session
+                ? <span className={generationLimit.remainingGenerations > 0 ? "text-yellow-500 font-bold" : "text-[#ff3366] font-bold"}>
+                    {generationLimit.usedThisMonth}/1 Teste Grátis {generationLimit.remainingGenerations === 0 && " (Limite)"}
+                  </span>
+                : generationLimit.plan === 'admin' 
+                ? <span className="text-[#00ff88]">∞/∞</span>
+                : <span className="text-[#00ff88]">{generationLimit.usedThisMonth}/{generationLimit.limit}</span>
+              }
+            </span>
+          )}
+          {session && (
+            <span className="font-medium text-gray-300 border-l border-white/5 pl-3">{session.user?.user_metadata?.nome || session.user?.email}</span>
+          )}
+        </div>
         {isAdmin && (
           <div className="relative group">
             <button onClick={() => setCurrentView('admin')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest text-[#00ff88] ${currentView === 'admin' ? 'font-bold border-b border-[#00ff88]' : ''}`}>
@@ -1453,6 +1496,12 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
         {phase === 'input' && entryFlow === 'ai' && (
           <div className="space-y-6">
             
+            {!generationLimit.loading && (generationLimit.plan === 'free' || !session) && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 text-xs leading-relaxed text-yellow-200">
+                ⚠️ <strong>Teste Grátis Ativo:</strong> Você possui apenas <strong>1 geração grátis</strong> ({generationLimit.usedThisMonth}/1 utilizada). Faça login e assine um plano para salvar projetos e ter uso ilimitado!
+              </div>
+            )}
+
             <div className="space-y-3">
               <label className="text-[10px] text-[#888888] font-bold uppercase tracking-widest flex items-center gap-2 ml-1">
                 <div className="w-1 h-3 bg-[#00ff88] rounded-full"></div>
@@ -1901,10 +1950,11 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
                   <div className="mb-2 text-[#888888]">[SYSTEM_INITIALIZATION]</div>
                   {logs.map((log, i) => (
                     <div key={i} className="flex justify-between items-start gap-2 mb-1">
-                      <span className="text-white flex-1">{log.message}</span>
+                      <span className={log.status === 'error' ? "text-red-400 flex-1" : "text-white flex-1"}>{log.message}</span>
                       {log.status === 'done' && <span className="text-[#00ff88] font-bold shrink-0">DONE</span>}
                       {log.status === 'active' && <span className="text-[#0066ff] font-bold shrink-0 animate-pulse">WAIT</span>}
                       {log.status === 'pending' && <span className="text-[#888888] font-bold shrink-0">...</span>}
+                      {log.status === 'error' && <span className="text-red-500 font-bold shrink-0">FAIL</span>}
                     </div>
                   ))}
                   {generatingProgress < 100 && (
@@ -2649,7 +2699,7 @@ Sem markdown no retorno. Apenas o JSON válido.`;
           <>
             {entryFlow === 'ai' && renderLeftPanel()}
             {entryFlow === 'selection' ? (
-              <EntrySelection onSelect={setEntryFlow as any} />
+              <EntrySelection onSelect={handleSelectEntryFlow} />
             ) : entryFlow === 'templates' ? (
               <TemplatesFlow 
                 onBack={() => setEntryFlow('selection')}

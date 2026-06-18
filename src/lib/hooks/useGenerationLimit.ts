@@ -24,14 +24,32 @@ export function useGenerationLimit() {
   const refreshLimit = async () => {
     setStatus(prev => ({ ...prev, loading: true }));
     if (!supabase) {
-      setStatus(prev => ({ ...prev, allowed: true, loading: false }));
+      const guestCount = parseInt(localStorage.getItem('parvus_free_generations_done') || '0', 10);
+      const allowed = guestCount < 1;
+      setStatus({
+        allowed,
+        usedThisMonth: guestCount,
+        limit: 1,
+        plan: 'free',
+        remainingGenerations: allowed ? 1 - guestCount : 0,
+        loading: false,
+      });
       return;
     }
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        setStatus(prev => ({ ...prev, allowed: true, loading: false }));
+        const guestCount = parseInt(localStorage.getItem('parvus_free_generations_done') || '0', 10);
+        const allowed = guestCount < 1;
+        setStatus({
+          allowed,
+          usedThisMonth: guestCount,
+          limit: 1,
+          plan: 'free',
+          remainingGenerations: allowed ? 1 - guestCount : 0,
+          loading: false,
+        });
         return;
       }
 

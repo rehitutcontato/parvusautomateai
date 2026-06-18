@@ -1,12 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Brain, Package, ClipboardList, Sparkles, Zap, FileText, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useGenerationLimit } from '../../lib/hooks/useGenerationLimit';
+import { supabase } from '../../lib/supabase';
 
 interface EntrySelectionProps {
   onSelect: (flow: 'ai' | 'templates' | 'briefing') => void;
 }
 
 export function EntrySelection({ onSelect }: EntrySelectionProps) {
+  const { plan, usedThisMonth, remainingGenerations, loading } = useGenerationLimit();
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setHasSession(!!session);
+      });
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setHasSession(!!session);
+      });
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, []);
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -37,6 +56,21 @@ export function EntrySelection({ onSelect }: EntrySelectionProps) {
         variants={containerVariants}
         className="max-w-6xl w-full relative z-10 m-auto py-8 sm:py-12"
       >
+        {!loading && (plan === 'free' || !hasSession) && (
+          <motion.div 
+            variants={itemVariants}
+            className="mb-8 max-w-2xl mx-auto bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/30 p-4 rounded-xl flex items-start gap-4 shadow-[0_0_30px_rgba(245,158,11,0.05)] text-left"
+          >
+            <span className="text-xl">⚠️</span>
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-yellow-500 font-mono">LIMITE DE USO ATIVO</h4>
+              <p className="text-xs text-[#ababab] leading-relaxed">
+                Visitantes e usuários sem plano ativo possuem apenas <strong>1 geração de teste grátis</strong> ({usedThisMonth}/1 utilizada). Faça login e assine um plano para obter gerações ilimitadas e salvar seus projetos com segurança!
+              </p>
+            </div>
+          </motion.div>
+        )}
+
         <motion.div variants={itemVariants} className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-black mb-6 tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/50">
             Como você quer começar?
