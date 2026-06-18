@@ -340,7 +340,7 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
                     <span className="text-[9px] bg-[#00ff88]/10 text-[#00ff88] px-2.5 py-0.5 rounded border border-[#00ff88]/20 font-bold uppercase">Opcional</span>
                   </label>
                   <p className="text-[11px] text-gray-400 leading-normal mb-2">
-                    Oferecemos limites generosos por padrão. No entanto, você pode inserir sua própria chave de API do Google AI Studio para ignorar todas as franquias de uso e ter requisições ilimitadas.
+                    Oferecemos limites generosos por padrão. No entanto, você pode inserir sua própria chave de API do Gemini para ignorar todas as franquias de uso e ter requisições ilimitadas.
                   </p>
                   <input 
                     type="password" 
