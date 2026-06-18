@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// --- GENERIC SECURITY SERVER-SIDE AI API PROXY ---
+// --- AI API PROXY MANAGER ---
 function getCleanApiKey(userKey: string | undefined, envKeyName: string): string | undefined {
   let apiKey = userKey || process.env[envKeyName];
   if (!apiKey) return undefined;
