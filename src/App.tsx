@@ -365,8 +365,8 @@ export default function App() {
     setLogs(prev => prev.map(l => l.message === message ? {...l, status} : l));
   };
 
-  const handleAnalyze = async (overrideDescription?: string) => {
-    const descToUse = overrideDescription || problemDescription;
+  const handleAnalyze = async (overrideDescription?: string | any) => {
+    const descToUse = typeof overrideDescription === 'string' ? overrideDescription : problemDescription;
     if (!descToUse.trim()) return;
 
     if (!generationLimit.loading && !generationLimit.allowed) {
@@ -1484,7 +1484,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
             )}
 
             <button 
-              onClick={handleAnalyze}
+              onClick={() => handleAnalyze()}
               disabled={!problemDescription.trim()}
               className="w-full py-4 rounded-xl bg-white text-black font-black text-sm tracking-widest uppercase shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(0,255,136,0.3)] hover:bg-[#00ff88] transition-all disabled:opacity-30 disabled:hover:bg-white disabled:hover:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
