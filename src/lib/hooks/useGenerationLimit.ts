@@ -13,7 +13,7 @@ export interface GenerationLimitStatus {
 
 export function useGenerationLimit() {
   const [status, setStatus] = useState<GenerationLimitStatus>({
-    allowed: false,
+    allowed: true, // Default to true so users without session can generate
     usedThisMonth: 0,
     limit: 0,
     plan: 'free',
@@ -24,14 +24,14 @@ export function useGenerationLimit() {
   const refreshLimit = async () => {
     setStatus(prev => ({ ...prev, loading: true }));
     if (!supabase) {
-      setStatus(prev => ({ ...prev, loading: false }));
+      setStatus(prev => ({ ...prev, allowed: true, loading: false }));
       return;
     }
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        setStatus(prev => ({ ...prev, loading: false }));
+        setStatus(prev => ({ ...prev, allowed: true, loading: false }));
         return;
       }
 

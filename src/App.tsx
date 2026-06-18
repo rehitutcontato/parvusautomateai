@@ -365,8 +365,9 @@ export default function App() {
     setLogs(prev => prev.map(l => l.message === message ? {...l, status} : l));
   };
 
-  const handleAnalyze = async () => {
-    if (!problemDescription.trim()) return;
+  const handleAnalyze = async (overrideDescription?: string) => {
+    const descToUse = overrideDescription || problemDescription;
+    if (!descToUse.trim()) return;
 
     if (!generationLimit.loading && !generationLimit.allowed) {
       setShowUpgradeModal(true);
@@ -388,7 +389,7 @@ DIRETRIZES DE PERGUNTAS:
 - Explicite a arquitetura necessária antes de aprovar (banco, permissões, integrações).
 
 Analise o problem abaixo e retorne APENAS um JSON válido seguindo estritamente esse modelo.
-Problema: ${problemDescription}`;
+Problema: ${descToUse}`;
 
       const response = await callGeminiApi('gemini-2.0-flash', prompt, {
         temperature: 0.1,
@@ -1182,8 +1183,8 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
       
       if (generatedPrompt) {
         setProblemDescription(generatedPrompt);
-        setPhase('input'); // allow user to edit
-        // Optionally would put this into an 'approval' state, but 'input' serves as the text edit approval Phase.
+        // Automatically proceed to classification
+        await handleAnalyze(generatedPrompt);
       } else {
         setPhase('input');
         setProblemDescription(JSON.stringify(briefingData, null, 2));
@@ -1255,6 +1256,10 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
     });
   };
 
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // ...
+
   if (checkingAuth) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-[#00ff88]">
@@ -1263,8 +1268,20 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
     );
   }
 
-  if (!session && supabase) {
-    return <Auth onSession={setSession} />;
+  // Remove forced Auth wall:
+  // if (!session && supabase) {
+  //   return <Auth onSession={setSession} />;
+  // }
+
+  if (!session && supabase && showLoginModal) {
+     return (
+       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+         <div className="relative w-full max-w-md">
+           <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-white z-50">✕</button>
+           <Auth onSession={(s) => { setSession(s); setShowLoginModal(false); }} />
+         </div>
+       </div>
+     );
   }
 
   const renderTopbar = () => (
@@ -1284,16 +1301,20 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
         <button onClick={() => setCurrentView('app')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest whitespace-nowrap ${currentView === 'app' ? 'text-white font-bold border-b border-[#00ff88]' : ''}`}>
           GERADOR
         </button>
-        <button onClick={() => setCurrentView('marketplace')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest flex items-center gap-1 whitespace-nowrap ${currentView === 'marketplace' ? 'text-white font-bold border-b border-[#00ff88]' : ''}`}>
-          MARKETPLACE
-        </button>
-        <button onClick={() => setCurrentView('purchases')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest whitespace-nowrap ${currentView === 'purchases' ? 'text-white font-bold border-b border-[#00ff88]' : ''}`}>
-          MINHAS COMPRAS
-        </button>
-        <button onClick={() => setCurrentView('iot')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest whitespace-nowrap flex items-center gap-1 ${currentView === 'iot' ? 'text-white font-bold border-b border-[#00d4ff]' : ''}`}>
-          <Network size={16} className={currentView === 'iot' ? 'text-[#00d4ff]' : ''} />
-          IOT MONITOR <span className="px-1.5 py-0.5 rounded bg-[#00d4ff]/10 text-[#00d4ff] text-[8px] font-bold">NOVO</span>
-        </button>
+        {session && (
+          <>
+            <button onClick={() => setCurrentView('marketplace')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest flex items-center gap-1 whitespace-nowrap ${currentView === 'marketplace' ? 'text-white font-bold border-b border-[#00ff88]' : ''}`}>
+              MARKETPLACE
+            </button>
+            <button onClick={() => setCurrentView('purchases')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest whitespace-nowrap ${currentView === 'purchases' ? 'text-white font-bold border-b border-[#00ff88]' : ''}`}>
+              MINHAS COMPRAS
+            </button>
+            <button onClick={() => setCurrentView('iot')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest whitespace-nowrap flex items-center gap-1 ${currentView === 'iot' ? 'text-white font-bold border-b border-[#00d4ff]' : ''}`}>
+              <Network size={16} className={currentView === 'iot' ? 'text-[#00d4ff]' : ''} />
+              IOT MONITOR <span className="px-1.5 py-0.5 rounded bg-[#00d4ff]/10 text-[#00d4ff] text-[8px] font-bold">NOVO</span>
+            </button>
+          </>
+        )}
         
         {session && (
           <div className="text-white hidden lg:flex items-center gap-3 ml-4 border-l border-white/10 pl-6">
@@ -1322,10 +1343,17 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova referências da interface aos no
             CONFIGURAÇÕES
           </button>
         </div>
-        {session && supabase && (
+        
+        {session && supabase ? (
           <button onClick={handleLogout} className="hover:text-white cursor-pointer transition-colors uppercase tracking-widest text-[#ff6600]">
             SAIR
           </button>
+        ) : (
+          supabase && (
+            <button onClick={() => setShowLoginModal(true)} className="hover:text-white cursor-pointer transition-colors uppercase tracking-widest text-[#00ff88]">
+              ENTRAR / CADASTRO
+            </button>
+          )
         )}
         <div className="text-[#00ff88] border border-[#00ff88]/30 px-3 py-1 bg-[#00ff88]/5 tracking-widest hidden xl:block">
           PRO VERSION
