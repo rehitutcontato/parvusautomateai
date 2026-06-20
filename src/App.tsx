@@ -2789,7 +2789,7 @@ Sem markdown no retorno. Apenas o JSON válido.`;
           <span>API_LATENCY: 42ms</span>
         </div>
         <div className="flex items-center gap-4 uppercase tracking-widest hidden sm:flex">
-          <span className="text-[#888888]">NVIDIA_NIM_ENGINE</span>
+          <span className="text-[#888888]">GLM_5.1_THINKING_ENGINE</span>
           <span className="text-[#00ff88]">● READY</span>
         </div>
       </footer>

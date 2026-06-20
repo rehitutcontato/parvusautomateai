@@ -69,18 +69,20 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
     }
   }
 
-  // 2. Try NVIDIA Llama (unless it's a Gemini key)
+  // 2. Try NVIDIA GLM 5.1 (unless it's a Gemini key)
   if (nvidiaKey && !nvidiaKey.startsWith("AIzaSy")) {
     try {
-      console.log(`[REQ ${reqId}] Processando com API NVIDIA (Llama 3.1 70B)...`);
+      console.log(`[REQ ${reqId}] Processando com API NVIDIA (z-ai/glm-5.1)...`);
       const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
       
       let openAiConfig: any = {
-        model: 'meta/llama-3.1-70b-instruct',
-        messages: [{ role: "user", content: prompt }]
+        model: "z-ai/glm-5.1",
+        messages: [{ role: "user", content: prompt }],
+        temperature: config?.temperature !== undefined ? config.temperature : 1.0,
+        top_p: 1,
+        max_tokens: 16384,
+        chat_template_kwargs: { "enable_thinking": true, "clear_thinking": false }
       };
-
-      if (config?.temperature !== undefined) openAiConfig.temperature = config.temperature;
       
       if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
         openAiConfig.response_format = { type: "json_object" };

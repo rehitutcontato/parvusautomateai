@@ -336,15 +336,15 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
                 {/* Custom API Key (Available to everyone directly in custom key layout) */}
                 <div className="space-y-2 sm:col-span-2 pt-4 border-t border-white/5">
                   <label className="text-xs font-bold text-[#00ff88] uppercase tracking-wider flex items-center justify-between">
-                    <span className="flex items-center gap-1.5"><KeyRound size={13} /> NVIDIA API Key Própria</span>
+                    <span className="flex items-center gap-1.5"><KeyRound size={13} /> NVIDIA API Key Própria (GLM)</span>
                     <span className="text-[9px] bg-[#00ff88]/10 text-[#00ff88] px-2.5 py-0.5 rounded border border-[#00ff88]/20 font-bold uppercase">Opcional</span>
                   </label>
                   <p className="text-[11px] text-gray-400 leading-normal mb-2">
-                    Oferecemos limites generosos por padrão. No entanto, você pode inserir sua própria chave de API da NVIDIA (começando com nvapi-) para ignorar todas as franquias de uso e ter requisições ilimitadas.
+                    Oferecemos limites generosos por padrão. No entanto, você pode inserir sua própria chave de API da NVIDIA (começando com nvapi-) para usar o motor GLM-5.1 de alta capacidade, ignorar todas as franquias de uso e ter requisições ilimitadas.
                   </p>
                   <input 
                     type="password" 
-                    placeholder="nvapi-... (Sua chave pessoal da API NVIDIA)"
+                    placeholder="nvapi-... (Sua chave pessoal NVIDIA x GLM)"
                     value={profile?.gemini_key_propria || ''} 
                     onChange={e => setProfile({...profile, gemini_key_propria: e.target.value})}
                     className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-all"
