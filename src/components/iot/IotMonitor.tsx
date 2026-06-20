@@ -274,7 +274,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
   "titulo": "nome do projeto",
   "descricao_tecnica": "resumo de engenharia em 2 linhas",
   "placa": "${selectedPlaca}",
-  "imagem_placa_url": "URL real de imagem oficial da placa encontrada via web search",
+  "imagem_placa_url": "URL recomendada para ilustração (ex: https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80)",
   
   "analise_briefing": "sua leitura técnica em 3-4 linhas do que foi pedido",
   "decisoes_pinagem": [
@@ -355,7 +355,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
   "titulo": "nome curto do projeto",
   "descricao_tecnica": "resumo técnico em 2 linhas",
   "placa": "${selectedPlaca}",
-  "imagem_placa_url": "URL real da imagem oficial da placa (buscada via web)",
+  "imagem_placa_url": "URL recomendada para ilustração (ex: https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80)",
   "componentes": [
     {
       "nome": "nome do componente",
@@ -405,20 +405,26 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
       let apiUrl = import.meta.env.VITE_API_URL || '';
       if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
       const userKey = localStorage.getItem('parvus_key') || '';
-      const req = await fetch(`${apiUrl}/api/ai/generate-iot`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(userKey ? { 'x-gemini-key': userKey, 'x-nvidia-key': userKey } : {})
-        },
-        body: JSON.stringify({ prompt, placa: selectedPlaca })
-      });
+      
+      let req;
+      try {
+        req = await fetch(`${apiUrl}/api/ai/generate-iot`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(userKey ? { 'x-gemini-key': userKey, 'x-nvidia-key': userKey } : {})
+          },
+          body: JSON.stringify({ prompt, placa: selectedPlaca })
+        });
+      } catch (err) {
+        throw new Error("Falha na conexão (Network Error/CORS). O backend de IA demorou muito e o servidor (Render) reiniciou ou está indisponível. Aguarde alguns segundos e tente novamente.");
+      }
       
       let data;
       try {
         data = await req.json();
       } catch (jsonErr) {
-        throw new Error("Erro de comunicação com o servidor. A API retornou uma resposta inválida (não JSON). Verifique sua chave da API ou tente novamente.");
+        throw new Error(`Erro de comunicação com o servidor. A API retornou uma resposta inválida (não JSON). Status HTML: ${req.status}.`);
       }
       
       if (!data || data.error) {

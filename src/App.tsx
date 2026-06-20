@@ -82,18 +82,23 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
   
   let apiUrl = import.meta.env.VITE_API_URL || '';
   if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
-  const response = await fetch(`${apiUrl}/api/ai/generate`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(userKey ? { 'X-Gemini-Key': userKey, 'X-Nvidia-Key': userKey } : {})
-    },
-    body: JSON.stringify({
-      model,
-      contents,
-      config
-    })
-  });
+  let response;
+  try {
+    response = await fetch(`${apiUrl}/api/ai/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(userKey ? { 'X-Gemini-Key': userKey, 'X-Nvidia-Key': userKey } : {})
+      },
+      body: JSON.stringify({
+        model,
+        contents,
+        config
+      })
+    });
+  } catch (err: any) {
+    throw new Error(`Falha na conexão (Network Error/CORS). O backend de IA demorou muito e o servidor (Render) reiniciou ou está indisponível. Aguarde alguns segundos e tente novamente.`);
+  }
 
   if (!response.ok) {
     const errText = await response.text();
@@ -101,7 +106,7 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
     try {
       errData = JSON.parse(errText);
     } catch(e) {
-      throw new Error(`Erro HTTP ${response.status}: ${errText.substring(0, 100)}`);
+      throw new Error(`Erro HTTP ${response.status}: ${errText.substring(0, 50)}...`);
     }
     throw new Error(errData.error || `Erro HTTP ${response.status}`);
   }
@@ -2107,21 +2112,23 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
               </div>
             </nav>
 
-            <div className="flex-1 bg-[#0a0a0a] relative overflow-hidden sm:p-6">
+            <div className={`flex-1 bg-[#0a0a0a] relative overflow-hidden ${isFullscreen ? '' : 'sm:p-6'}`}>
               {activeTab === 'preview' && (
-                <div className="w-full h-full sm:bg-white/[0.02] sm:border border-white/10 sm:rounded-sm p-0 relative overflow-hidden">
-                  <div className="hidden sm:flex absolute top-0 left-0 right-0 h-8 bg-[#222] border-b border-[#333] flex items-center px-4 gap-2 z-10">
-                    <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
-                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
-                      <div className="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
+                <div className={`w-full h-full relative overflow-hidden ${isFullscreen ? '' : 'sm:bg-white/[0.02] sm:border border-white/10 sm:rounded-sm p-0'}`}>
+                  {!isFullscreen && (
+                    <div className="hidden sm:flex absolute top-0 left-0 right-0 h-8 bg-[#222] border-b border-[#333] items-center px-4 gap-2 z-10">
+                      <div className="flex gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
+                      </div>
+                      <div className="text-[10px] text-white/50 ml-2 bg-black/20 px-2 py-0.5 rounded-sm">https://localhost:8080/preview</div>
                     </div>
-                    <div className="text-[10px] text-white/50 ml-2 bg-black/20 px-2 py-0.5 rounded-sm">https://localhost:8080/preview</div>
-                  </div>
+                  )}
                   <iframe 
                     id="previewFrame"
                     srcDoc={generatedHtml || "<html><body style='background:#f0f0f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;'><h1 style='color:#ccc'>Projeto Vazio</h1></body></html>"}
-                    className="w-full h-full border-none outline-none sm:pt-8 bg-white"
+                    className={`w-full h-full border-none outline-none bg-white ${isFullscreen ? '' : 'sm:pt-8'}`}
                     title="Live Preview"
                     sandbox="allow-scripts allow-forms allow-same-origin"
                   />
