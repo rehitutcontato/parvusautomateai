@@ -567,6 +567,7 @@ RESPOSTAS: \n${answersText}
 
 REGRAS TÉCNICAS ABSOLUTAS:
 - Retorne APENAS o código HTML/JS/CSS limpo. NÃO inclua delimitadores markdown de bloco HTML (como as três crases com a palavra html) in hipótese alguma! Comece diretamente com <!DOCTYPE html>.
+- Garanta que o HTML contenha estilização com Tailwind para que a tag <body> preencha 100% da largura e altura da tela (adicionando as classes w-full, h-full, min-h-screen) para evitar bugs de exibição quando o usuário abrir a pré-visualização em tela cheia.
 - O código Javascript inserido no script deve gerenciar de forma impecável todo o estado simulado em memória local (use arrays de objetos pré-carregados com pelo menos 10 registros fictícios detalhados para parecer preenchido).
 - Zero placeholders ou comentários do tipo "// adicione código aqui". Tudo precisa estar totalmente implementado e funcional de ponta a ponta.
 - Use Tailwind CSS via CDN (<script src="https://unpkg.com/@tailwindcss/browser@4"></script>).
@@ -1107,6 +1108,7 @@ TECNOLOGIAS USADAS: ${template.tecnologias?.join(', ')}
 
 REGRAS TÉCNICAS ABSOLUTAS:
 - Retorne APENAS o código HTML/JS/CSS limpo. NÃO inclua delimitadores markdown de bloco HTML (como as três crases com a palavra html) em hipótese alguma! Comece diretamente com <!DOCTYPE html>.
+- Garanta que o HTML contenha estilização com Tailwind para que a tag <body> preencha 100% da largura e altura da tela (adicionando as classes w-full, h-full, min-h-screen) para evitar bugs de exibição quando o usuário abrir a pré-visualização em tela cheia.
 - O código Javascript inserido no script deve gerenciar de forma impecável todo o estado simulado em memória local (use arrays de objetos pré-carregados com pelo menos 10 registros fictícios detalhados para parecer preenchido).
 - Zero placeholders ou comentários do tipo "// adicione código aqui". Tudo precisa estar totalmente implementado e funcional de ponta a ponta.
 - Use Tailwind CSS via CDN (<script src="https://unpkg.com/@tailwindcss/browser@4"></script>).

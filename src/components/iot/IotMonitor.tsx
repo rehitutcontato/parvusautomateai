@@ -309,7 +309,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
         "via": "Resistor 1kΩ"
       }
     ],
-    "pinout_svg": "SVG COMPLETO representando o diagrama de ligação — use retângulos para representar a placa e componentes, linhas coloridas para os fios, labels em todos os pinos. Deve ser um SVG funcional e legível, mínimo 600x400px, fundo #0a0a0a, texto #00d4ff."
+    "pinout_svg": "SVG COMPLETO representando o diagrama de ligação — use retângulos para representar a placa e componentes, linhas coloridas para os fios, labels em todos os pinos. Deve ser um SVG funcional e legível, DEVE obrigatoriamente possuir viewBox (ex: viewBox='0 0 800 600'), width='100%' e height='100%', fundo #0a0a0a, texto #00d4ff."
   },
 
   "codigo": {
@@ -376,7 +376,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
         "via": "Resistor 220Ω"
       }
     ],
-    "pinout_svg": "SVG COMPLETO representando o diagrama de ligação — use retângulos para representar a placa e componentes, linhas coloridas para os fios, labels em todos os pinos. Deve ser um SVG funcional e legível, mínimo 600x400px, fundo #0a0a0a, texto #00d4ff."
+    "pinout_svg": "SVG COMPLETO representando o diagrama de ligação — use retângulos para representar a placa e componentes, linhas coloridas para os fios, labels em todos os pinos. Deve ser um SVG funcional e legível, DEVE obrigatoriamente possuir viewBox (ex: viewBox='0 0 800 600'), width='100%' e height='100%', fundo #0a0a0a, texto #00d4ff."
   },
   "codigo": {
     "linguagem": "C++",
@@ -1077,17 +1077,17 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                      <div className="flex justify-between items-center mb-4">
                         <div>
                           <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest flex items-center gap-2">
-                             <Code2 size={16} /> Firmware — {projeto.codigo.arquivo_principal}
+                             <Code2 size={16} /> Firmware — {projeto?.codigo?.arquivo_principal || 'main.cpp'}
                           </h3>
                         </div>
                         <div className="flex gap-2">
                           <button onClick={simulateExecution} disabled={isSimulating} className="flex items-center gap-2 text-black font-bold bg-[#00ff88] px-4 py-2 rounded text-xs uppercase hover:bg-[#00cc66] shadow-[0_0_15px_rgba(0,255,136,0.2)]">
                             <Play size={14} fill="currentColor" /> Simular Execução
                           </button>
-                          <button onClick={() => copyToClipboard(projeto.codigo.codigo_completo)} className="flex items-center gap-2 text-white border border-[#333] px-3 py-2 rounded text-xs hover:bg-[#222]">
+                          <button onClick={() => copyToClipboard(projeto?.codigo?.codigo_completo || '')} className="flex items-center gap-2 text-white border border-[#333] px-3 py-2 rounded text-xs hover:bg-[#222]">
                             <Copy size={14} />
                           </button>
-                          <button onClick={() => downloadFile(projeto.codigo.arquivo_principal, projeto.codigo.codigo_completo)} className="flex items-center gap-2 text-white border border-[#333] px-3 py-2 rounded text-xs hover:bg-[#222]">
+                          <button onClick={() => downloadFile(projeto?.codigo?.arquivo_principal || 'main.cpp', projeto?.codigo?.codigo_completo || '')} className="flex items-center gap-2 text-white border border-[#333] px-3 py-2 rounded text-xs hover:bg-[#222]">
                             <Download size={14} />
                           </button>
                         </div>
@@ -1095,15 +1095,15 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                      
                      <div className="flex-1 bg-[#050505] border border-[#333] rounded overflow-auto relative">
                        <pre className="p-4 text-sm font-mono leading-relaxed h-full overflow-auto">
-                         <code className={`language-${projeto.codigo.linguagem.toLowerCase().includes('python') ? 'python' : 'cpp'}`}>
-                           {projeto.codigo.codigo_completo}
+                         <code className={`language-${(projeto?.codigo?.linguagem || '').toLowerCase().includes('python') ? 'python' : 'cpp'}`}>
+                           {projeto?.codigo?.codigo_completo || '// Código não fornecido.'}
                          </code>
                        </pre>
                      </div>
 
                      <div className="mt-6 bg-[#111] p-4 border border-[#333] rounded">
                        <h4 className="text-gray-400 text-xs font-bold uppercase mb-2">Instruções de Upload</h4>
-                       <p className="text-gray-300 text-sm whitespace-pre-wrap">{projeto.codigo.instrucoes_upload}</p>
+                       <p className="text-gray-300 text-sm whitespace-pre-wrap">{projeto?.codigo?.instrucoes_upload || ''}</p>
                      </div>
                   </div>
                 )}
