@@ -80,7 +80,8 @@ type Tab = 'preview' | 'code' | 'architecture' | 'hardware';
 const callGeminiApi = async (model: string, contents: string, config?: any) => {
   const userKey = localStorage.getItem('parvus_key') || '';
   
-  const apiUrl = import.meta.env.VITE_API_URL || '';
+  let apiUrl = import.meta.env.VITE_API_URL || '';
+  if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
   const response = await fetch(`${apiUrl}/api/ai/generate`, {
     method: 'POST',
     headers: {
@@ -764,7 +765,14 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
           status: 'gerado'
         }).select().single();
 
-        if (data && !error) {
+        if (error) {
+           console.error("Erro inesperado ao salvar projeto no Supabase:", error);
+           // Fallback to local storage handling when insert fails
+           let localHistory = JSON.parse(localStorage.getItem('parvus_history') || '[]');
+           localHistory = [newHistoryItem, ...localHistory];
+           localStorage.setItem('parvus_history', JSON.stringify(localHistory));
+           setCurrentProjectId(String(newHistoryItem.id));
+        } else if (data) {
            newHistoryItem.id = data.id;
            setCurrentProjectId(data.id);
         }
@@ -1269,7 +1277,13 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
           status: 'gerado'
         }).select().single();
 
-        if (data && !error) {
+        if (error) {
+           console.error("Erro inesperado ao salvar template no Supabase:", error);
+           let localHistory = JSON.parse(localStorage.getItem('parvus_history') || '[]');
+           localHistory = [newHistoryItem, ...localHistory];
+           localStorage.setItem('parvus_history', JSON.stringify(localHistory));
+           setCurrentProjectId(String(newHistoryItem.id));
+        } else if (data) {
           newHistoryItem.id = data.id;
           setCurrentProjectId(data.id);
         }

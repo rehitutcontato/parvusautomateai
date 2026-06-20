@@ -402,7 +402,8 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
       }
 
       setLoadingMsg('Projetando esquema de ligação e simulando componentes...');
-      const apiUrl = import.meta.env.VITE_API_URL || '';
+      let apiUrl = import.meta.env.VITE_API_URL || '';
+      if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
       const userKey = localStorage.getItem('parvus_key') || '';
       const req = await fetch(`${apiUrl}/api/ai/generate-iot`, {
         method: 'POST',
@@ -466,7 +467,8 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
     setSimTerminal(['>_ Iniciando sistema IoT Emulator...', `>_ Target: ${projeto.placa}`, '>_ Compilando payload...']);
     
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '';
+      let apiUrl = import.meta.env.VITE_API_URL || '';
+      if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
       const userKey = localStorage.getItem('parvus_key') || '';
       const req = await fetch(`${apiUrl}/api/ai/simulate-iot`, {
         method: 'POST',
@@ -1038,15 +1040,15 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                   <div className="animate-in fade-in duration-300">
                      <div className="flex justify-between items-center mb-6">
                         <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest">&gt;_ Mapeamento de Pinos</h3>
-                        <button onClick={() => downloadFile('esquema.svg', projeto.esquema_ligacao.pinout_svg)} className="flex items-center gap-2 text-[#00d4ff] border border-[#00d4ff]/30 px-4 py-2 rounded text-xs uppercase hover:bg-[#00d4ff]/10">
+                        <button onClick={() => downloadFile('esquema.svg', projeto?.esquema_ligacao?.pinout_svg || '')} className="flex items-center gap-2 text-[#00d4ff] border border-[#00d4ff]/30 px-4 py-2 rounded text-xs uppercase hover:bg-[#00d4ff]/10">
                           <Download size={14} /> Baixar SVG
                         </button>
                      </div>
                      <div className="bg-[#050505] border border-[#333] rounded-lg p-6 mb-8 flex items-center justify-center overflow-x-auto" 
-                          dangerouslySetInnerHTML={{ __html: projeto.esquema_ligacao.pinout_svg.replace(/<style.*?>.*?<\/style>/is, '') }} />
+                          dangerouslySetInnerHTML={{ __html: (projeto?.esquema_ligacao?.pinout_svg || '').replace(/<style.*?>.*?<\/style>/is, '') }} />
                      
                      <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest mb-4">&gt;_ Conexões Físicas</h3>
-                     <p className="text-gray-400 mb-6 text-sm">{projeto.esquema_ligacao.descricao_textual}</p>
+                     <p className="text-gray-400 mb-6 text-sm">{projeto?.esquema_ligacao?.descricao_textual || 'Sem descrição.'}</p>
                      
                      <table className="w-full text-sm text-left">
                        <thead className="text-xs text-gray-500 uppercase bg-[#111]">
@@ -1057,7 +1059,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                          </tr>
                        </thead>
                        <tbody>
-                         {projeto.esquema_ligacao.conexoes?.map((c: any, i: number) => (
+                         {projeto?.esquema_ligacao?.conexoes?.map((c: any, i: number) => (
                            <tr key={i} className="bg-[#0a0a0a] border-b border-[#222]">
                              <td className="px-6 py-4 font-bold text-white">{c.de}</td>
                              <td className="px-6 py-4 text-gray-300">{c.para}</td>

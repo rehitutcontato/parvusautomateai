@@ -150,19 +150,9 @@ app.post("/api/ai/generate-iot", async (req, res) => {
     const { prompt, placa } = req.body;
     const userKey = (req.headers['x-gemini-key'] || req.headers['x-nvidia-key']) as string;
     
+    // Deixamos o motor responder dinamicamente de acordo com o esquema solicitado no prompt do IotMonitor.tsx
     const config = {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          codigo_placa: { type: Type.STRING },
-          pdf_pecas: { type: Type.STRING },
-          pdf_montagem: { type: Type.STRING },
-          pdf_documentacao: { type: Type.STRING },
-          pdf_setup: { type: Type.STRING }
-        },
-        required: ['codigo_placa', 'pdf_pecas', 'pdf_montagem', 'pdf_documentacao', 'pdf_setup']
-      }
+      responseMimeType: 'application/json'
     };
 
     const aiText = await executeGenerativeTask(prompt, config, userKey, reqId);
