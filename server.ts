@@ -81,7 +81,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
         temperature: config?.temperature !== undefined ? config.temperature : 1.0,
         top_p: 1,
         max_tokens: 16384,
-        chat_template_kwargs: { "enable_thinking": true, "clear_thinking": false }
+        chat_template_kwargs: { "enable_thinking": false, "clear_thinking": false }
       };
       
       if (config?.responseMimeType === 'application/json' || config?.responseSchema) {

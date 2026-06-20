@@ -407,6 +407,8 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
       const userKey = localStorage.getItem('parvus_key') || '';
       
       let req;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 segundos limite
       try {
         req = await fetch(`${apiUrl}/api/ai/generate-iot`, {
           method: 'POST',
@@ -414,10 +416,16 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
             'Content-Type': 'application/json',
             ...(userKey ? { 'x-gemini-key': userKey, 'x-nvidia-key': userKey } : {})
           },
-          body: JSON.stringify({ prompt, placa: selectedPlaca })
+          body: JSON.stringify({ prompt, placa: selectedPlaca }),
+          signal: controller.signal
         });
-      } catch (err) {
-        throw new Error("Falha na conexão (Network Error/CORS). O backend de IA demorou muito e o servidor (Render) reiniciou ou está indisponível. Aguarde alguns segundos e tente novamente.");
+        clearTimeout(timeoutId);
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+           throw new Error("Ocorreu um Timeout. A resposta da Inteligência Artificial demorou mais de 90 segundos e a conexão foi encerrada. Tente novamente.");
+        }
+        throw new Error("Falha na conexão (Network Error/CORS). O backend demorou muito e o servidor reiniciou ou está indisponível.");
       }
       
       let data;

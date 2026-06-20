@@ -83,6 +83,8 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
   let apiUrl = import.meta.env.VITE_API_URL || '';
   if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
   let response;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 sec timeout
   try {
     response = await fetch(`${apiUrl}/api/ai/generate`, {
       method: 'POST',
@@ -94,10 +96,16 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
         model,
         contents,
         config
-      })
+      }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
   } catch (err: any) {
-    throw new Error(`Falha na conexão (Network Error/CORS). O backend de IA demorou muito e o servidor (Render) reiniciou ou está indisponível. Aguarde alguns segundos e tente novamente.`);
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error(`Timeout: A Geração de Software demorou mais do que 90 segundos.`);
+    }
+    throw new Error(`Falha na conexão (Network Error/CORS). O backend de IA demorou muito e o servidor reiniciou. Tente novamente.`);
   }
 
   if (!response.ok) {
