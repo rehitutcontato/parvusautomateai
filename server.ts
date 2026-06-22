@@ -140,14 +140,31 @@ app.post("/api/ai/generate-iot", async (req, res) => {
       responseMimeType: 'application/json'
     };
 
-    const aiText = await executeGenerativeTask(prompt, config, userKey, reqId);
-    let cleanedText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
-    
-    console.log(`[REQ ${reqId}] Sucesso na geração IoT usando broker unificado. Tamanho: ${cleanedText.length}`);
-    res.json(JSON.parse(cleanedText));
+    res.setHeader('Content-Type', 'application/json');
+    res.write(' ');
+    const heartbeat = setInterval(() => { res.write(' '); }, 15000);
+
+    try {
+      const aiText = await executeGenerativeTask(prompt, config, userKey, reqId);
+      clearInterval(heartbeat);
+      let cleanedText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
+      
+      console.log(`[REQ ${reqId}] Sucesso na geração IoT usando broker unificado. Tamanho: ${cleanedText.length}`);
+      res.write(JSON.stringify(JSON.parse(cleanedText)));
+      res.end();
+    } catch (error: any) {
+      clearInterval(heartbeat);
+      console.error(`[REQ ${reqId}] Erro retornado ao cliente: ${error.message}`);
+      res.write(JSON.stringify({ error: error.message }));
+      res.end();
+    }
   } catch (error: any) {
-    console.error(`[REQ ${reqId}] Erro 500 retornado ao cliente: ${error.message}`);
-    res.status(500).json({ success: false, error: error.message });
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: error.message });
+    } else {
+      res.write(JSON.stringify({ error: error.message }));
+      res.end();
+    }
   }
 });
 
@@ -174,19 +191,36 @@ REGRAS:
 
 Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.`;
 
-    const aiText = await executeGenerativeTask(prompt, { temperature: 0.4 }, userKey, reqId);
+    res.setHeader('Content-Type', 'application/json');
+    res.write(' ');
+    const heartbeat = setInterval(() => { res.write(' '); }, 15000);
 
-    console.log(`[REQ ${reqId}] Sucesso na simulação IoT usando broker unificado. Tamanho do payload: ${aiText.length} chars.`);
-    res.json({ output: aiText });
+    try {
+      const aiText = await executeGenerativeTask(prompt, { temperature: 0.4 }, userKey, reqId);
+      clearInterval(heartbeat);
+      console.log(`[REQ ${reqId}] Sucesso na simulação IoT usando broker unificado. Tamanho do payload: ${aiText.length} chars.`);
+      res.write(JSON.stringify({ output: aiText }));
+      res.end();
+    } catch (error: any) {
+      clearInterval(heartbeat);
+      console.error(`[REQ ${reqId}] Erro retornado ao cliente: ${error.message}`);
+      res.write(JSON.stringify({ error: error.message }));
+      res.end();
+    }
   } catch (error: any) {
-    console.error(`[REQ ${reqId}] Erro 500 retornado ao cliente: ${error.message}`);
-    res.status(500).json({ success: false, error: error.message });
+    if (!res.headersSent) {
+       res.status(500).json({ success: false, error: error.message });
+    } else {
+       res.write(JSON.stringify({ error: error.message }));
+       res.end();
+    }
   }
 });
 
 app.post("/api/ai/generate", async (req, res) => {
   const reqId = Math.random().toString(36).substring(7);
   console.log(`[REQ ${reqId}] POST /api/ai/generate - Recebendo pedido geral de IA.`);
+  
   try {
     const { model, contents, config } = req.body;
     if (!contents) {
@@ -196,15 +230,37 @@ app.post("/api/ai/generate", async (req, res) => {
 
     const userKey = (req.headers['x-gemini-key'] || req.headers['x-nvidia-key']) as string;
     
-    const aiText = await executeGenerativeTask(contents, config, userKey, reqId);
+    // Configura o heartbeat anti-timeout para plataformas Serverless/Render:
+    res.setHeader('Content-Type', 'application/json');
+    res.write(' '); // Força o envio imediato dos headers para não dar timeout de Header
 
-    console.log(`[REQ ${reqId}] Sucesso na geração geral usando broker de IA. Tamanho: ${aiText.length} chars.`);
-    res.json({
-      text: aiText,
-    });
+    const heartbeat = setInterval(() => {
+      res.write(' '); // chunks de espaço não quebram o parser JSON.parse do cliente
+    }, 15000);
+
+    try {
+      const aiText = await executeGenerativeTask(contents, config, userKey, reqId);
+      clearInterval(heartbeat);
+      console.log(`[REQ ${reqId}] Sucesso na geração geral usando broker de IA. Tamanho: ${aiText.length} chars.`);
+      res.write(JSON.stringify({ text: aiText }));
+      res.end();
+    } catch (error: any) {
+      clearInterval(heartbeat);
+      console.error(`[REQ ${reqId}] Erro retornado ao cliente: ${error.message}`);
+      // Mandamos status 200 pro HTTP mas o JSON vai conter sucesso: false.
+      // E a aplicação cliente em `src/App.tsx` vai falhar lindamente ali em response.ok = true mas err.success = false
+      // Então vamos garantir que o json retorne o erro.
+      res.write(JSON.stringify({ error: error.message || String(error) }));
+      res.end();
+    }
   } catch (error: any) {
-    console.error(`[REQ ${reqId}] Erro 500 retornado ao cliente: ${error.message}`);
-    res.status(500).json({ success: false, error: error.message || String(error) });
+    console.error(`[REQ ${reqId}] Erro Crítico POST /api/ai/generate: ${error.message}`);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: error.message || String(error) });
+    } else {
+      res.write(JSON.stringify({ error: error.message || String(error) }));
+      res.end();
+    }
   }
 });
 

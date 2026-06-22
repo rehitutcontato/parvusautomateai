@@ -119,7 +119,13 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
     throw new Error(errData.error || `Erro HTTP ${response.status}`);
   }
 
+  // A resposta pode ser HTTP 200, MAS pode conter um erro porque os headers foram enviados cedo
+  // como heartbeat do Express. Neste caso, lançamos um erro explícito:
   const data = await response.json();
+  if (data.error) {
+    throw new Error(`[FALHA DE ESCOPO]: ${data.error}`);
+  }
+
   return {
     text: data.text
   };
