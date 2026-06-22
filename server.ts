@@ -75,11 +75,11 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
   const runNvidia = async () => {
     if (!nvidiaKey || nvidiaKey.startsWith("AIzaSy")) return false;
     try {
-      console.log(`[REQ ${reqId}] Tentativa com NVIDIA Llama (meta/llama-3.1-70b-instruct)...`);
+      console.log(`[REQ ${reqId}] Tentativa com NVIDIA Llama/Mistral/DeepSeek...`);
       const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
       
       let openAiConfig: any = {
-        model: "meta/llama-3.1-70b-instruct",
+        model: "deepseek-ai/deepseek-v4-flash",
         messages: [{ role: "user", content: prompt }],
         temperature: config?.temperature !== undefined ? config.temperature : 1.0,
         top_p: 1,
