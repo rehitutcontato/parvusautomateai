@@ -606,7 +606,7 @@ RESPOSTAS: \n${answersText}
   - Se for Dashboards / Painéis Industriais / IoT: Gráficos de telemetria SVG dinâmicos que se atualizam sozinhos a cada 2 segundos. Toggle botões para ligar/desligar atuadores/relés virtuais com animação e som visual realista.
   - Se for Finanças, Pagamentos, Checkout ou Calculadoras Técnicas: Simulador e processador dinâmico de cálculos/fórmulas matemáticas ou link de faturamento de forma 100% interativa. Adicione formulários interativos para preenchimento de dados de simulação (como valor da venda, metas, descontos, alíquotas), recalcule e plote instantaneamente gráficos SVG de pizza ou barras com o resultado dividido! Ofereça controles para salvar simulações na tabela do histórico, editar taxas diretamente no painel e simular relatório.
 - CONSOLE DE LOGS DO SISTEMA: Um painel no rodapé ou na lateral direita simulando a recepção de webhooks em tempo real e processamento do sistema (ex: "[WEBHOOK] Novo lead de Mariana Silveira (marianasilveira@email.com) recebido", "[DISPARO] Automatização 'Boas-vindas' executada com sucesso", etc.). Use um timer para injetar novos logs a cada poucos segundos!
-- SUPORTE A MODO DEMO ROBUSTO (COM CONTROLES DE SIMULAÇÃO): Inclua um painel explícito ("Painel de Simulação") com botões rápidos como: "Simular Entrada de Webhook", "Gerar Novo Lead Aleatório", "Disparar Alerta de Teste", "Limpar Histórico". Isso faz com que a interface pareça viva e 100% testável logo de cara!
+- SUPORTE A MODO DEMO ROBUSTO (COM CONTROLES DE SIMULAÇÃO E DESATIVADOR): Inclua um painel explícito ("Painel de Simulação") com botões rápidos como: "Simular Entrada", "Limpar Histórico". IMPORTANTÍSSIMO: SEMPRE ADICIONE um botão de alternância "Desativar Demo" ou "Modo Demo: ON/OFF" em TODAS as automações construídas. Ao desativar o demo, a rotina \`setInterval\` de telemetria/simulação DEVE ser completamente parada e o painel esvaziado, para uso manual e livre de dados pela pessoa. O sistema inicia com o demo ativado por padrão.
 
 REGRAS TÉCNICAS ABSOLUTAS:
 - Retorne APENAS o código HTML/JS/CSS limpo. NÃO inclua delimitadores markdown de bloco HTML (como as três crases com a palavra html) in hipótese alguma! Comece diretamente com <!DOCTYPE html>.
@@ -723,7 +723,7 @@ RESPOSTAS: \n${answersText}
 ⚡ REQUISITOS TÉCNICOS DETALHADOS DE HARDWARE:
 1. 'codigo_placa': Deve ser um código C++ extremamente robusto e compilável para Arduino IDE (visando ESP32 ou ESP8266), ou código em MicroPython limpo. Inclua comentários ricos e didáticos em português para que o usuário saiba quais pinos conectar de forma exata e como configurar sua rede Wi-Fi/Server Webhooks.
 2. 'pdf_pecas': Liste de forma minuciosa todos os componentes eletrônicos necessários (ex: tipo exato de sensor, microcontrolador, resistores de pull-up, relés, cabos, fontes de alimentação recomendadas com especificações de proteção). Adicione preços médios realistas de mercado em reais (R$) para cada item e links fictícios de comércio elétrico seguro no Brasil.
-3. 'pdf_montagem': Explique de forma detalhada as conexões físicas. Forneça diagramas técnicos esquemáticos refinados usando diagramação ASCII elegante (ex: mostrando portas GPIO conectadas a pinos VCC, GND e portas de dados do sensor).
+3. 'pdf_montagem': Explique de forma EXTREMAMENTE DETALHADA E DIDÁTICA todas as conexões físicas fio a fio. Imagine que o usuário é um iniciante absoluto. Diga exatamente de onde sai cada fio e onde se conecta no módulo/sensor. Inclua tabelas ASCII para mapear os pinos e diagramas esquemáticos com formatação limpa e clara. Dê avisos sobre tensões corretas (3.3V vs 5V) para evitar queimar a placa.
 4. 'pdf_documentacao': Documente o fluxo lógico do firmware embarcado (como funciona o loop infinito, tempos de amostragem/debounce de botões, e controle de watchdog para evitar panes).
 5. 'pdf_setup': Um passo a passo infalível em português ensinando como instalar drivers de placas (CH340/CP2102), configurar as preferências da IDE Arduino, instalar bibliotecas necessárias (PubSubClient, DHT, Adafruit, etc.) e carregar o código para a placa física.
 - Se houver manuseio de corrente alternada (110V/220V), adicione avisos de segurança rigorosos com destaque ("⚠️ ALERTA DE SEGURANÇA 110V/220V").
@@ -1148,7 +1148,7 @@ TECNOLOGIAS USADAS: ${template.tecnologias?.join(', ')}
   - Se for Dashboards / Painéis Industriais / IoT: Gráficos de telemetria SVG dinâmicos que se atualizam solos a cada 2 segundos. Toggle botões para ligar/desligar atuadores/relés virtuais com animação e som visual realista.
   - Se for Finanças, Pagamentos, Checkout ou Calculadoras Técnicas: Simulador e processador dinâmico de cálculos/fórmulas matemáticas ou link de faturamento de forma 100% interativa. Adicione formulários interativos para preenchimento de dados de simulação (como valor da venda, metas, descontos, alíquotas), recalcule e plote instantaneamente gráficos SVG de pizza ou barras com o resultado dividido! Ofereça controles para salvar simulações na tabela do histórico, editar taxas diretamente no painel e simular relatório.
 - CONSOLE DE LOGS DO SISTEMA: Um painel no rodapé ou na lateral direita simulando a recepção de webhooks em tempo real e processamento do sistema (ex: "[WEBHOOK] Novo lead de Mariana Silveira (marianasilveira@email.com) recebido", "[DISPARO] Automatização 'Boas-vindas' executada com sucesso", etc.). Use um timer para injetar novos logs a cada poucos segundos!
-- SUPORTE A MODO DEMO ROBUSTO (COM CONTROLES DE SIMULAÇÃO): Inclua um painel explícito ("Painel de Simulação") com botões rápidos como: "Simular Entrada de Webhook", "Gerar Novo Lead Aleatório", "Disparar Alerta de Teste", "Limpar Histórico". Isso faz com que a interface pareça viva e 100% testável logo de cara!
+- SUPORTE A MODO DEMO ROBUSTO (COM CONTROLES DE SIMULAÇÃO E DESATIVADOR): Inclua um painel explícito ("Painel de Simulação") com botões rápidos como: "Simular Entrada", "Limpar Histórico". IMPORTANTÍSSIMO: SEMPRE ADICIONE um botão de alternância "Desativar Demo" ou "Modo Demo: ON/OFF" em TODAS as automações construídas. Ao desativar o demo, a rotina \`setInterval\` de telemetria/simulação DEVE ser completamente parada e o painel esvaziado, para uso manual e livre de dados pela pessoa. O sistema inicia com o demo ativado por padrão.
 
 REGRAS TÉCNICAS ABSOLUTAS:
 - Retorne APENAS o código HTML/JS/CSS limpo. NÃO inclua delimitadores markdown de bloco HTML (como as três crases com a palavra html) em hipótese alguma! Comece diretamente com <!DOCTYPE html>.
@@ -1242,7 +1242,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
         ⚡ REQUISITOS TÉCNICOS DETALHADOS DE HARDWARE:
         1. 'codigo_placa': Deve ser um código C++ extremamente robusto e compilável para Arduino IDE (visando ESP32 ou ESP8266), ou código em MicroPython limpo. Inclua comentários ricos e didáticos em português para que o usuário saiba quais pinos conectar de forma exata e como configurar sua rede Wi-Fi/Server Webhooks.
         2. 'pdf_pecas': Liste de forma minuciosa todos os componentes eletrônicos necessários (ex: tipo exato de sensor, microcontrolador, resistores de pull-up, relés, cabos, fontes de alimentação recomendadas com especificações de proteção). Adicione preços médios realistas de mercado em reais (R$) para cada item e links fictícios de comércio elétrico seguro no Brasil.
-        3. 'pdf_montagem': Explique de forma detalhada as conexões físicas. Forneça diagramas técnicos esquemáticos refinados usando diagramação ASCII elegante (ex: mostrando portas GPIO conectadas a pinos VCC, GND e portas de dados do sensor).
+        3. 'pdf_montagem': Explique de forma EXTREMAMENTE DETALHADA E DIDÁTICA todas as conexões físicas fio a fio. Imagine que o usuário é um iniciante absoluto. Diga exatamente de onde sai cada fio e onde se conecta no módulo/sensor. Inclua tabelas ASCII para mapear os pinos e diagramas esquemáticos com formatação limpa e clara. Dê avisos sobre tensões corretas (3.3V vs 5V) para evitar queimar a placa.
         4. 'pdf_documentacao': Documente o fluxo lógico do firmware embarcado (como funciona o loop infinito, tempos de amostragem/debounce de botões, e controle de watchdog para evitar panes).
         5. 'pdf_setup': Um passo a passo infalível em português ensinando como instalar drivers de placas (CH340/CP2102), configurar as preferências da IDE Arduino, instalar bibliotecas necessárias (PubSubClient, DHT, Adafruit, etc.) e carregar o código para a placa física.
         - Se houver manuseio de corrente alternada (110V/220V), adicione avisos de segurança rigorosos com destaque ("⚠️ ALERTA DE SEGURANÇA 110V/220V").
@@ -2807,11 +2807,11 @@ Sem markdown no retorno. Apenas o JSON válido.`;
       <div className="absolute inset-0 pointer-events-none z-50 opacity-5" style={{ background: 'repeating-linear-gradient(0deg, #000, #000 2px, transparent 2px, transparent 4px)' }}></div>
       <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
-      {renderTopbar()}
+      {!isFullscreen && renderTopbar()}
       <main className="flex flex-1 overflow-hidden relative z-10 w-full">
         {currentView === 'app' ? (
           <>
-            {entryFlow === 'ai' && renderLeftPanel()}
+            {entryFlow === 'ai' && !isFullscreen && renderLeftPanel()}
             {entryFlow === 'selection' ? (
               <EntrySelection onSelect={handleSelectEntryFlow} />
             ) : entryFlow === 'templates' ? (

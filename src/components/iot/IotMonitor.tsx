@@ -301,7 +301,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
   "preco_total_estimado_brl": 150.00,
 
   "esquema_ligacao": {
-    "descricao_textual": "cada conexão física descrita de forma clara",
+    "descricao_textual": "Explicação EXTREMAMENTE DETALHADA E DIDÁTICA de cada conexão física. Ensine como se o usuário fosse um iniciante, explicando o motivo de cada fio e ligação (ex: 'Puxe um fio vermelho do pino 5V para alimentar o componente X, depois...' e dê dicas sobre polaridade e segurança).",
     "conexoes": [
       {
         "de": "ESP32 GPIO 5",
@@ -309,7 +309,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
         "via": "Resistor 1kΩ"
       }
     ],
-    "pinout_svg": "SVG COMPLETO representando o diagrama de ligação — use retângulos para representar a placa e componentes, linhas coloridas para os fios, labels em todos os pinos. Deve ser um SVG funcional e legível, DEVE obrigatoriamente possuir viewBox (ex: viewBox='0 0 800 600'), width='100%' e height='100%', fundo #0a0a0a, texto #00d4ff."
+    "pinout_svg": "CÓDIGO SVG INLINE COMPLETO E PROFISSIONAL do diagrama de ligação. Use retângulos estilizados para a placa e os sensores/módulos, desenhe fios esteticamente precisos e limpos indicando a cor do cabo, com labels descritivos em CADA pino e componente, e legendas claras sobre o fluxo da corrente. DEVE obrigatoriamente possuir viewBox='0 0 1000 600', width='100%' e height='100%', preenchimento elegante (ex: fundo #0a0a0a, textos #00d4ff). Não coloque markdown, retorne a string SVG literal pura com tags <svg> e </svg>."
   },
 
   "codigo": {
@@ -368,7 +368,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
   ],
   "preco_total_estimado_brl": 150.00,
   "esquema_ligacao": {
-    "descricao_textual": "descrição detalhada de cada conexão em linguagem técnica",
+    "descricao_textual": "Explicação EXTREMAMENTE DETALHADA E DIDÁTICA de como fazer a ligação das fiações (passo a passo para um nível técnico até iniciante conseguirem montar sem erro), incluindo razões, voltagens e dicas de cuidado.",
     "conexoes": [
       {
         "de": "ESP32 GPIO 2",
@@ -376,7 +376,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
         "via": "Resistor 220Ω"
       }
     ],
-    "pinout_svg": "SVG COMPLETO representando o diagrama de ligação — use retângulos para representar a placa e componentes, linhas coloridas para os fios, labels em todos os pinos. Deve ser um SVG funcional e legível, DEVE obrigatoriamente possuir viewBox (ex: viewBox='0 0 800 600'), width='100%' e height='100%', fundo #0a0a0a, texto #00d4ff."
+    "pinout_svg": "CÓDIGO SVG INLINE COMPLETO E PROFISSIONAL do diagrama de ligação. Use retângulos estilizados para a placa e os sensores/módulos, desenhe fios esteticamente precisos e limpos com curves, e preencha labels descritivos e didáticos em CADA pino de ligação. Indique componentes visivelmente. DEVE obrigatoriamente possuir viewBox='0 0 1000 600', width='100%' e height='100%', preenchimento elegante (ex: fundo #0a0a0a, textos #00d4ff), Não coloque blocos de markdown, devolva APENAS as tags originais do svg puros sem markdow."
   },
   "codigo": {
     "linguagem": "C++",
