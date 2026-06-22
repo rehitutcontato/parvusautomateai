@@ -29,50 +29,53 @@ function getCleanApiKey(userKey: string | undefined, envKeyName: string): string
 
 // Unified robust runner that tries the user preferred key/model, automatically falling back dynamically
 async function executeGenerativeTask(prompt: string, config: any, userKey?: string, reqId?: string): Promise<string> {
-  const geminiKey = getCleanApiKey(userKey, 'GEMINI_API_KEY') || process.env.GEMINI_API_KEY;
-  const nvidiaKey = getCleanApiKey(userKey, 'NVIDIA_API_KEY');
-
   const isUserGeminiKey = userKey && (userKey.startsWith("AIzaSy") || userKey.startsWith("aizasy") || userKey.includes("AIzaSy"));
+  const isUserNvidiaKey = userKey && !isUserGeminiKey;
+  
+  // Extrai as chaves de forma inteligente
+  const geminiKey = isUserGeminiKey ? userKey : (process.env.GEMINI_API_KEY || getCleanApiKey(undefined, 'GEMINI_API_KEY'));
+  const nvidiaKey = isUserNvidiaKey ? userKey : (process.env.NVIDIA_API_KEY || getCleanApiKey(undefined, 'NVIDIA_API_KEY'));
 
-  // 1. If key belongs to Gemini or Gemini is configured natively and NVIDIA isn't, use Gemini primary
-  if (isUserGeminiKey || (geminiKey && !nvidiaKey)) {
-    console.log(`[REQ ${reqId}] Direcionando requisição diretamente para o Gemini API pela excelente performance e latência reduzida...`);
+  const errors: string[] = [];
+
+  // FUNÇÕES DE EXECUÇÃO
+  const runGemini = async () => {
+    if (!geminiKey) return false;
     try {
+      console.log(`[REQ ${reqId}] Tentativa com Google Gemini (gemini-2.0-flash)...`);
       const ai = new GoogleGenAI({
         apiKey: geminiKey,
         httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
       });
       
-      const responseSchema = config?.responseSchema;
-      const model = 'gemini-2.0-flash';
-      
       const genConfig: any = {
         temperature: config?.temperature !== undefined ? config.temperature : 0.2,
       };
       
-      if (config?.responseMimeType === 'application/json' || responseSchema) {
+      if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
         genConfig.responseMimeType = 'application/json';
-        if (responseSchema) {
-          genConfig.responseSchema = responseSchema;
+        if (config?.responseSchema) {
+          genConfig.responseSchema = config?.responseSchema;
         }
       }
 
       const response = await ai.models.generateContent({
-        model,
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: genConfig
       });
-
       return response.text || "";
     } catch (err: any) {
-      console.error(`[REQ ${reqId}] Chamada direta ao Gemini falhou: ${err.message}. Tentando fallback/NVIDIA...`);
+      console.error(`[REQ ${reqId}] Falha no Gemini: ${err.message}. ${nvidiaKey ? 'Alternando provider...' : ''}`);
+      errors.push(`Gemini: ${err.message}`);
+      return false;
     }
-  }
+  };
 
-  // 2. Try NVIDIA Llama (unless it's a Gemini key)
-  if (nvidiaKey && !nvidiaKey.startsWith("AIzaSy")) {
+  const runNvidia = async () => {
+    if (!nvidiaKey || nvidiaKey.startsWith("AIzaSy")) return false;
     try {
-      console.log(`[REQ ${reqId}] Processando com API NVIDIA (meta/llama-3.1-405b-instruct)...`);
+      console.log(`[REQ ${reqId}] Tentativa com NVIDIA Llama (meta/llama-3.1-405b-instruct)...`);
       const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
       
       let openAiConfig: any = {
@@ -85,11 +88,10 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
       
       if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
         openAiConfig.response_format = { type: "json_object" };
-        let systemPrompt = "You must output JSON format only.";
+        let systemPrompt = "You must output strictly JSON format only. Do not output anything else.";
         if (config?.responseSchema) {
-          // Format the Gemini Schema into standard JSON Schema format for Llama
           const schemaStr = JSON.stringify(config.responseSchema).replace(/"type":"([A-Z]+)"/g, (match, p1) => `"type":"${p1.toLowerCase()}"`);
-          systemPrompt += ` The JSON must strictly adhere to this schema and you MUST provide all required properties fully populated: ${schemaStr}`;
+          systemPrompt += ` The JSON must exactly match this schema and populate all required fields: ${schemaStr}`;
         }
         openAiConfig.messages = [
           { role: "system", content: systemPrompt },
@@ -100,47 +102,29 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
       const response = await openai.chat.completions.create(openAiConfig);
       return response.choices[0].message?.content || "";
     } catch (err: any) {
-      console.warn(`[REQ ${reqId}] Chamada NVIDIA falhou ou excedeu o limite de tempo: ${err.message}. Entrando em modo de contingência direta com o Gemini.`);
+      console.warn(`[REQ ${reqId}] Falha no NVIDIA: ${err.message}.`);
+      errors.push(`NVIDIA: ${err.message}`);
+      return false;
     }
+  };
+
+  // ORDEM DE EXECUÇÃO: Prioriza o que o usuário colocou na dashboard.
+  if (isUserNvidiaKey) {
+    const res = await runNvidia();
+    if (res !== false) return res;
+    // Fallback: Gemini
+    const fallbackRes = await runGemini();
+    if (fallbackRes !== false) return fallbackRes;
+  } else {
+    // Default/Gemini Priority
+    const res = await runGemini();
+    if (res !== false) return res;
+    // Fallback: Nvidia
+    const fallbackRes = await runNvidia();
+    if (fallbackRes !== false) return fallbackRes;
   }
 
-  // 3. Fallback/Contingency mechanism using server-side Gemini key
-  if (geminiKey) {
-    console.log(`[REQ ${reqId}] Ativando Fallback de contingência para o Gemini (gemini-2.0-flash)...`);
-    try {
-      const ai = new GoogleGenAI({
-        apiKey: geminiKey,
-        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
-      });
-      
-      const responseSchema = config?.responseSchema;
-      const model = 'gemini-2.0-flash';
-      
-      const genConfig: any = {
-        temperature: config?.temperature !== undefined ? config.temperature : 0.2,
-      };
-      
-      if (config?.responseMimeType === 'application/json' || responseSchema) {
-        genConfig.responseMimeType = 'application/json';
-        if (responseSchema) {
-          genConfig.responseSchema = responseSchema;
-        }
-      }
-
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: genConfig
-      });
-
-      return response.text || "";
-    } catch (geminiErr: any) {
-      console.error(`[REQ ${reqId}] Falha crítica em todos os provedores: ${geminiErr.message}`);
-      throw geminiErr;
-    }
-  }
-
-  throw new Error("Nenhum provedor de IA (NVIDIA ou Gemini) com chave válida foi localizado para esta transação.");
+  throw new Error(`Falha crítica em todos os provedores/modelos de contingência. Detalhes: ${errors.join(" | ")}`);
 }
 
 app.post("/api/ai/generate-iot", async (req, res) => {
