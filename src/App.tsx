@@ -84,7 +84,7 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
   if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
   let response;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 sec timeout
+  const timeoutId = setTimeout(() => controller.abort(), 300000); // 300 sec timeout
   try {
     response = await fetch(`${apiUrl}/api/ai/generate`, {
       method: 'POST',
@@ -103,7 +103,7 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
   } catch (err: any) {
     clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
-      throw new Error(`Timeout: A Geração de Software demorou mais do que 90 segundos.`);
+      throw new Error(`Timeout: A Geração demorou muito, limite de 5 minutos estourado.`);
     }
     throw new Error(`Falha na conexão (Network Error/CORS). O backend de IA demorou muito e o servidor reiniciou. Tente novamente.`);
   }
@@ -459,13 +459,23 @@ Problema: ${descToUse}`;
       });
 
       let jsonStr = response.text || '{}';
+      
+      jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+      
       const startObj = jsonStr.indexOf('{');
       const endObj = jsonStr.lastIndexOf('}');
       if (startObj >= 0 && endObj >= 0) {
         jsonStr = jsonStr.substring(startObj, endObj + 1);
       }
       
-      const result = JSON.parse(jsonStr) as Classification;
+      let result: Classification;
+      try {
+        result = JSON.parse(jsonStr) as Classification;
+      } catch (err) {
+        console.error("JSON classification falhou, jsonStr:", jsonStr, err);
+        throw new Error("O modelo de IA retornou uma classificação inválida. Tente novamente.");
+      }
+      
       if (!result.tecnologias) result.tecnologias = [];
       if (!result.perguntas_necessarias) result.perguntas_necessarias = [];
       
@@ -484,10 +494,11 @@ Problema: ${descToUse}`;
         handleGenerate(result, {});
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       updateLog(`> Erro ao classificar: ${error}`, 'done');
       setPhase('input');
+      setProblemDescription(prev => `[FALHA DE ESCOPO: ${error.message}]\n\n` + prev);
       showToast("Ocorreu um erro ao analisar o problema. Verifique sua API Key ou tente novamente.", "error");
     }
   };
@@ -807,10 +818,11 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
 
       setTimeout(() => setPhase('done'), 1000);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       updateLog(`> Falha na geração: ${error}`, 'done');
-      showToast("Falha ao gerar código. Verifique o console.", "error");
+      showToast("Falha ao gerar código. Verifique o alerta.", "error");
+      setProblemDescription(prev => `[FALHA NA ÚLTIMA TENTATIVA: ${error.message}]\n\n` + prev);
       setPhase('input');
     }
   };
@@ -1791,7 +1803,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
   };
 
   const renderBuildArea = () => {
-    if (phase === 'input') {
+    if (phase === 'input' || phase === 'classifying' || phase === 'questions' || phase === 'inviavel') {
       return (
         <main className="flex-1 flex flex-col items-center justify-center relative bg-[#0a0a0a] z-10 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.03),transparent_60%)] pointer-events-none"></div>
@@ -1815,7 +1827,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
       );
     }
 
-    if (classification && (classification.tipo === 'ENTERPRISE' || classification.complexidade === 'ENTERPRISE')) {
+    if (phase === 'input' && classification && (classification.tipo === 'ENTERPRISE' || classification.complexidade === 'ENTERPRISE')) {
       return (
         <div className="flex-1 p-8 overflow-y-auto relative z-10 bg-[#0a0a0a]">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,102,0,0.05),transparent_50%)] pointer-events-none"></div>
@@ -1888,7 +1900,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
       );
     }
 
-    if (classification && (classification.tipo === 'HARDWARE' || classification.tipo === 'HIBRIDO')) {
+    if (phase === 'input' && classification && (classification.tipo === 'HARDWARE' || classification.tipo === 'HIBRIDO')) {
       return (
         <div className="flex-1 p-8 overflow-y-auto relative z-10 bg-[#0a0a0a]">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,102,255,0.05),transparent_50%)] pointer-events-none"></div>

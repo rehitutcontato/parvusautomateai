@@ -408,7 +408,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
       
       let req;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 segundos limite
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 300 segundos limite
       try {
         req = await fetch(`${apiUrl}/api/ai/generate-iot`, {
           method: 'POST',
@@ -423,7 +423,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
       } catch (err: any) {
         clearTimeout(timeoutId);
         if (err.name === 'AbortError') {
-           throw new Error("Ocorreu um Timeout. A resposta da Inteligência Artificial demorou mais de 90 segundos e a conexão foi encerrada. Tente novamente.");
+           throw new Error("Ocorreu um Timeout. A resposta da Inteligência Artificial demorou mais de 5 minutos e a conexão foi encerrada. Tente novamente.");
         }
         throw new Error("Falha na conexão (Network Error/CORS). O backend demorou muito e o servidor reiniciou ou está indisponível.");
       }
