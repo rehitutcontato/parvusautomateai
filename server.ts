@@ -44,7 +44,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
       });
       
       const responseSchema = config?.responseSchema;
-      const model = 'gemini-3.5-flash';
+      const model = 'gemini-2.0-flash';
       
       const genConfig: any = {
         temperature: config?.temperature !== undefined ? config.temperature : 0.2,
@@ -69,19 +69,18 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
     }
   }
 
-  // 2. Try NVIDIA GLM 5.1 (unless it's a Gemini key)
+  // 2. Try NVIDIA Llama (unless it's a Gemini key)
   if (nvidiaKey && !nvidiaKey.startsWith("AIzaSy")) {
     try {
-      console.log(`[REQ ${reqId}] Processando com API NVIDIA (z-ai/glm-5.1)...`);
+      console.log(`[REQ ${reqId}] Processando com API NVIDIA (meta/llama-3.1-70b-instruct)...`);
       const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
       
       let openAiConfig: any = {
-        model: "z-ai/glm-5.1",
+        model: "meta/llama-3.1-70b-instruct",
         messages: [{ role: "user", content: prompt }],
         temperature: config?.temperature !== undefined ? config.temperature : 1.0,
         top_p: 1,
-        max_tokens: 16384,
-        chat_template_kwargs: { "enable_thinking": false, "clear_thinking": false }
+        max_tokens: 4096,
       };
       
       if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
@@ -105,7 +104,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
 
   // 3. Fallback/Contingency mechanism using server-side Gemini key
   if (geminiKey) {
-    console.log(`[REQ ${reqId}] Ativando Fallback de contingência para o Gemini (gemini-3.5-flash)...`);
+    console.log(`[REQ ${reqId}] Ativando Fallback de contingência para o Gemini (gemini-2.0-flash)...`);
     try {
       const ai = new GoogleGenAI({
         apiKey: geminiKey,
@@ -113,7 +112,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
       });
       
       const responseSchema = config?.responseSchema;
-      const model = 'gemini-3.5-flash';
+      const model = 'gemini-2.0-flash';
       
       const genConfig: any = {
         temperature: config?.temperature !== undefined ? config.temperature : 0.2,
