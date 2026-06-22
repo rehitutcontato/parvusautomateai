@@ -72,11 +72,11 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
   // 2. Try NVIDIA Llama (unless it's a Gemini key)
   if (nvidiaKey && !nvidiaKey.startsWith("AIzaSy")) {
     try {
-      console.log(`[REQ ${reqId}] Processando com API NVIDIA (meta/llama-3.1-70b-instruct)...`);
+      console.log(`[REQ ${reqId}] Processando com API NVIDIA (meta/llama-3.1-405b-instruct)...`);
       const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
       
       let openAiConfig: any = {
-        model: "meta/llama-3.1-70b-instruct",
+        model: "meta/llama-3.1-405b-instruct",
         messages: [{ role: "user", content: prompt }],
         temperature: config?.temperature !== undefined ? config.temperature : 1.0,
         top_p: 1,
@@ -87,7 +87,9 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
         openAiConfig.response_format = { type: "json_object" };
         let systemPrompt = "You must output JSON format only.";
         if (config?.responseSchema) {
-          systemPrompt += ` The JSON must strictly adhere to this schema: ${JSON.stringify(config.responseSchema)}`;
+          // Format the Gemini Schema into standard JSON Schema format for Llama
+          const schemaStr = JSON.stringify(config.responseSchema).replace(/"type":"([A-Z]+)"/g, (match, p1) => `"type":"${p1.toLowerCase()}"`);
+          systemPrompt += ` The JSON must strictly adhere to this schema and you MUST provide all required properties fully populated: ${schemaStr}`;
         }
         openAiConfig.messages = [
           { role: "system", content: systemPrompt },

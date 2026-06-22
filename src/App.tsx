@@ -477,7 +477,20 @@ Problema: ${descToUse}`;
       }
       
       if (!result.tecnologias) result.tecnologias = [];
-      if (!result.perguntas_necessarias) result.perguntas_necessarias = [];
+      if (!result.perguntas_necessarias || !Array.isArray(result.perguntas_necessarias)) {
+        result.perguntas_necessarias = [];
+      }
+      
+      // Fallback in case the AI failed to generate questions (Llama JSON omission)
+      if (result.perguntas_necessarias.length === 0) {
+        result.perguntas_necessarias = [
+          {
+            id: 'design_pref',
+            texto: 'Você tem alguma preferência de cores, identidade visual, ou regra extra técnica para esta aplicação?',
+            tipo: 'texto'
+          }
+        ];
+      }
       
       setClassification(result);
       
