@@ -237,6 +237,8 @@ export default function App() {
       if (session) {
         fetchProjects();
         checkAdmin(session.user.id);
+      } else {
+        setHistory(JSON.parse(localStorage.getItem('parvus_history') || '[]'));
       }
     });
 
@@ -247,6 +249,7 @@ export default function App() {
         checkAdmin(session.user.id);
       } else {
         setIsAdmin(false);
+        setHistory(JSON.parse(localStorage.getItem('parvus_history') || '[]'));
       }
     });
 
@@ -377,12 +380,12 @@ export default function App() {
     }
   };
 
-  // Persist history if offline
+  // Persist history if offline or guest
   useEffect(() => {
-    if (!supabase) {
+    if (!supabase || !session) {
       localStorage.setItem('parvus_history', JSON.stringify(history));
     }
-  }, [history]);
+  }, [history, session, supabase]);
 
   // Auto-scroll logs
   useEffect(() => {
