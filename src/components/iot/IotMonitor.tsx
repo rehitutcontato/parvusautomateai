@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { supabase } from '../../lib/supabase';
 import { temAcesso } from '../../lib/permissions';
 import { Lock, AlertTriangle, ShieldAlert, CheckSquare, Search, Copy, Download, Code2, Play, Square, Save, Cpu, Layers, ExternalLink, X, Radio, ArrowLeft, Loader2, Info, Terminal, Trash2 } from 'lucide-react';
@@ -309,7 +310,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
         "via": "Resistor 1kΩ"
       }
     ],
-    "pinout_svg": "CÓDIGO SVG MINIMALISTA do diagrama de ligação. Use retângulos básicos e linhas. Mantenha o código SVG CURTO, com viewBox='0 0 800 600', width='100%' e height='100%', fundo #0a0a0a, textos #00d4ff. Não coloque markdown, retorne a string SVG literal pura com tags <svg> e </svg>."
+    "pinout_svg": "CÓDIGO SVG DO DIAGRAMA DE LIGAÇÃO. Gere um diagrama visualmente incrível e altamente criativo, semelhante a uma planta arquitetônica tech. Use gradientes, traços bem definidos e nós. Cores de texto #00d4ff, elementos com stroke #333. O SVG deve possuir viewBox='0 0 1000 600', width='100%', height='100%'. Faça um fundo dark agradável. Inclua labels descritivas nos pinos e cabos coloridos. Retorne a string literal puramente SVG sem marcações markdown."
   },
 
   "codigo": {
@@ -376,7 +377,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
         "via": "Resistor 220Ω"
       }
     ],
-    "pinout_svg": "CÓDIGO SVG MINIMALISTA do diagrama de ligação. Use retângulos básicos e linhas. Mantenha o código SVG CURTO, com viewBox='0 0 800 600', width='100%' e height='100%', fundo #0a0a0a, textos #00d4ff. Não coloque blocos de markdown, devolva APENAS as tags originais do svg puros sem markdow."
+    "pinout_svg": "CÓDIGO SVG DO DIAGRAMA DE LIGAÇÃO. Gere um diagrama visualmente incrível e altamente criativo, semelhante a uma planta arquitetônica tech. Use gradientes, traços bem definidos e nós. Cores de texto #00d4ff, elementos com stroke #333. O SVG deve possuir viewBox='0 0 1000 600', width='100%', height='100%'. Faça um fundo dark agradável. Inclua labels descritivas nos pinos e cabos coloridos. Retorne a string literal puramente SVG sem marcações markdown."
   },
   "codigo": {
     "linguagem": "C++",
@@ -1011,7 +1012,9 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                 {activeTab === 'VISÃO GERAL' && (
                   <div className="animate-in fade-in duration-300">
                     <h1 className="text-3xl font-black text-white uppercase tracking-wider mb-2 font-syne">{projeto.titulo}</h1>
-                    <p className="text-gray-400 mb-8 max-w-2xl">{projeto.descricao_tecnica}</p>
+                    <div className="markdown-body mb-8 max-w-2xl">
+                      <ReactMarkdown>{projeto.descricao_tecnica || ''}</ReactMarkdown>
+                    </div>
                     
                     <div className="flex gap-8 items-start">
                        <div className="flex-1">
@@ -1027,22 +1030,30 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                        <div className="flex-1">
                           <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest mb-4">&gt;_ AVISOS DE SEGURANÇA</h3>
                           <div className="space-y-3">
-                             {projeto.avisos_seguranca?.map((av: string, i: number) => (
+                             {projeto.avisos_seguranca?.length > 0 ? projeto.avisos_seguranca.map((av: string, i: number) => (
                                <div key={i} className="flex gap-3 bg-[#ffaa00]/10 border border-[#ffaa00]/30 text-[#ffaa00] p-4 rounded text-sm">
                                  <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-                                 <p>{av}</p>
+                                 <div className="markdown-body text-[#ffaa00] m-0 p-0">
+                                   <ReactMarkdown>{av}</ReactMarkdown>
+                                 </div>
                                </div>
-                             ))}
+                             )) : (
+                               <p className="text-gray-500 text-sm italic">Nenhum aviso de segurança específico retornado.</p>
+                             )}
                           </div>
                           
                           <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest mt-8 mb-4">&gt;_ PRÓXIMOS PASSOS</h3>
                           <ul className="space-y-4">
-                            {projeto.proximos_passos?.map((passo: string, i: number) => (
+                            {projeto.proximos_passos?.length > 0 ? projeto.proximos_passos.map((passo: string, i: number) => (
                               <li key={i} className="flex gap-4">
-                                <span className="text-[#00d4ff] font-bold">0{i+1}</span>
-                                <span className="text-gray-300 text-sm">{passo}</span>
+                                <span className="text-[#00d4ff] font-bold mt-1">0{i+1}</span>
+                                <div className="text-gray-300 text-sm markdown-body m-0 p-0">
+                                  <ReactMarkdown>{passo}</ReactMarkdown>
+                                </div>
                               </li>
-                            ))}
+                            )) : (
+                              <p className="text-gray-500 text-sm italic">Siga as instruções de upload.</p>
+                            )}
                           </ul>
                        </div>
                     </div>
@@ -1062,7 +1073,9 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                           dangerouslySetInnerHTML={{ __html: (projeto?.esquema_ligacao?.pinout_svg || '').replace(/<style.*?>.*?<\/style>/is, '') }} />
                      
                      <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest mb-4">&gt;_ Conexões Físicas</h3>
-                     <p className="text-gray-400 mb-6 text-sm">{projeto?.esquema_ligacao?.descricao_textual || 'Sem descrição.'}</p>
+                     <div className="markdown-body mb-6">
+                       <ReactMarkdown>{projeto?.esquema_ligacao?.descricao_textual || 'Sem descrição.'}</ReactMarkdown>
+                     </div>
                      
                      <table className="w-full text-sm text-left">
                        <thead className="text-xs text-gray-500 uppercase bg-[#111]">
@@ -1117,7 +1130,9 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
 
                      <div className="mt-6 bg-[#111] p-4 border border-[#333] rounded">
                        <h4 className="text-gray-400 text-xs font-bold uppercase mb-2">Instruções de Upload</h4>
-                       <p className="text-gray-300 text-sm whitespace-pre-wrap">{projeto?.codigo?.instrucoes_upload || ''}</p>
+                       <div className="markdown-body">
+                         <ReactMarkdown>{projeto?.codigo?.instrucoes_upload || ''}</ReactMarkdown>
+                       </div>
                      </div>
                   </div>
                 )}
@@ -1244,8 +1259,8 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                   <div className="animate-in fade-in duration-300">
                     <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest mb-6">&gt;_ DOCUMENTAÇÃO EXTERNA</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       {projeto.referencias?.map((ref: any, i: number) => (
-                         <a key={i} href={ref.url} target="_blank" rel="noreferrer" className="block p-6 bg-[#0a0a0a] border border-[#rgba(0,212,255,0.1)] rounded-xl hover:border-[#00d4ff]/50 transition-colors group">
+                       {projeto.referencias?.length > 0 ? projeto.referencias.map((ref: any, i: number) => (
+                         <a key={i} href={ref.url} target="_blank" rel="noreferrer" className="block p-6 bg-[#0a0a0a] border border-[rgba(0,212,255,0.1)] rounded-xl hover:border-[#00d4ff]/50 transition-colors group">
                            <h4 className="text-white font-bold mb-2 flex items-center justify-between">
                              {ref.titulo}
                              <ExternalLink size={16} className="text-gray-600 group-hover:text-[#00d4ff]" />
@@ -1253,7 +1268,9 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                            <p className="text-gray-500 text-sm">{ref.descricao}</p>
                            <div className="mt-4 text-[#00d4ff] text-xs font-mono truncate opacity-60 group-hover:opacity-100">{ref.url}</div>
                          </a>
-                       ))}
+                       )) : (
+                         <div className="col-span-full p-6 text-center text-gray-500 italic border border-[#333] rounded-xl bg-[#0a0a0a]">Nenhuma referência externa encontrada.</div>
+                       )}
                     </div>
                   </div>
                 )}
