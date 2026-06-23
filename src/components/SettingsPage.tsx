@@ -15,7 +15,9 @@ import {
   Sparkles, 
   Eye, 
   EyeOff,
-  AlertCircle
+  AlertCircle,
+  MessageCircle,
+  Shield
 } from 'lucide-react';
 
 interface SettingsPageProps {
@@ -40,6 +42,15 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
   const [securityError, setSecurityError] = useState('');
 
   const { plan, usedThisMonth, limit, loading: limitLoading } = useGenerationLimit();
+
+  const handleUpgradePlan = (planName: string) => {
+    const nomeUsuario = profile?.nome || 'Usuário Parvus';
+    const emailUsuario = userEmail || 'Sem email cadastrado';
+    const message = `Olá! Meu nome é ${nomeUsuario} (${emailUsuario}) e gostaria de assinar ou alterar meu plano no Parvus Automate para o plano ${planName}.`;
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/5519994656845?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
+  };
 
   useEffect(() => {
     fetchProfile();
@@ -478,6 +489,195 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
 
         </div>
       </div>
+
+      {/* SEÇÃO DE PLANOS DE ASSINATURA COMPLETA E PREMIUM */}
+      <div className="mt-12 pt-8 border-t border-white/10">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2.5 bg-[#00ff88]/10 rounded-lg border border-[#00ff88]/20">
+            <Crown className="text-[#00ff88] animate-pulse" size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-white uppercase tracking-wider font-syne flex items-center gap-2">
+              Planos de Assinatura
+            </h2>
+            <p className="text-xs text-gray-400">Desbloqueie todos os recursos avançados e aumente seu limite de gerações de automações.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          
+          {/* Plan: Starter */}
+          <div className={`bg-[#111111] border ${plan === 'starter' ? 'border-[#00ff88]/50 shadow-[0_0_20px_rgba(0,255,136,0.08)]' : 'border-white/5'} rounded-2xl p-6 flex flex-col justify-between relative`}>
+            {plan === 'starter' && (
+              <span className="absolute top-4 right-4 bg-[#00ff88]/10 text-[#00ff88] text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-[#00ff88]/30">
+                Seu Plano Ativo
+              </span>
+            )}
+            <div>
+              <h3 className="text-sm font-black text-white uppercase tracking-wider mb-2">Starter</h3>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-2xl font-black text-[#00ff88]">R$ 197</span>
+                <span className="text-xs text-gray-500">/mês</span>
+              </div>
+              <p className="text-xs text-[#888888] mb-4">Essencial para quem deseja experimentar e criar as primeiras automações de IA.</p>
+              <ul className="space-y-2 text-xs text-gray-300 mb-6 border-t border-white/5 pt-4">
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#00ff88] shrink-0" /> 5 gerações completas/mês</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#00ff88] shrink-0" /> Acesso total ao Marketplace</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-gray-600 shrink-0" /> Exportação de Código Fonte</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-gray-600 shrink-0" /> Suporte por e-mail padrão</li>
+              </ul>
+            </div>
+            <button
+              onClick={() => handleUpgradePlan('Starter')}
+              className="w-full bg-white/5 hover:bg-[#00ff88]/10 hover:text-[#00ff88] hover:border-[#00ff88]/30 text-white border border-white/10 py-3 rounded-xl text-xs uppercase font-bold transition-all cursor-pointer"
+            >
+              {plan === 'starter' ? 'Alterar / Renovar' : 'Adquirir Starter'}
+            </button>
+          </div>
+
+          {/* Plan: Creator */}
+          <div className={`bg-[#111111] border ${plan === 'creator' ? 'border-[#9b59b6]/50 shadow-[0_0_20px_rgba(155,89,182,0.08)]' : 'border-white/5'} rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden`}>
+            <div className="absolute top-0 right-0 bg-[#9b59b6] text-black font-black text-[8px] uppercase tracking-widest px-3 py-1 rounded-bl">Hardware + IoT</div>
+            {plan === 'creator' && (
+              <span className="absolute top-4 left-4 bg-[#9b59b6]/10 text-[#9b59b6] text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-[#9b59b6]/30">
+                Seu Plano Ativo
+              </span>
+            )}
+            <div className="mt-2">
+              <h3 className="text-sm font-black text-white uppercase tracking-wider mb-2">Creator</h3>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-2xl font-black text-[#9b59b6]">R$ 397</span>
+                <span className="text-xs text-gray-500">/mês</span>
+              </div>
+              <p className="text-xs text-[#888888] mb-4">Desbloqueie o Monitor IoT Virtual e a criação avançada de hardware.</p>
+              <ul className="space-y-2 text-xs text-gray-300 mb-6 border-t border-white/5 pt-4">
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#9b59b6] shrink-0" /> 10 gerações completas/mês</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#9b59b6] shrink-0" /> Monitor IoT Virtual Desbloqueado</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#9b59b6] shrink-0" /> Modo Agência (White-label) ativo</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-gray-600 shrink-0" /> Suporte técnico dedicado</li>
+              </ul>
+            </div>
+            <button
+              onClick={() => handleUpgradePlan('Creator')}
+              className="w-full bg-[#9b59b6]/10 hover:bg-[#9b59b6]/20 text-[#9b59b6] border border-[#9b59b6]/25 py-3 rounded-xl text-xs uppercase font-bold transition-all cursor-pointer"
+            >
+              {plan === 'creator' ? 'Alterar / Renovar' : 'Adquirir Creator'}
+            </button>
+          </div>
+
+          {/* Plan: Pro */}
+          <div className={`bg-[#111111] border ${plan === 'pro' ? 'border-[#ff6600]/50 shadow-[0_0_20px_rgba(255,102,0,0.08)]' : 'border-[#ff6600]/20'} rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden`}>
+            <div className="absolute top-0 right-0 bg-[#ff6600] text-black font-black text-[8px] uppercase tracking-widest px-3 py-1 rounded-bl">Mais Popular</div>
+            {plan === 'pro' && (
+              <span className="absolute top-4 left-4 bg-[#ff6600]/10 text-[#ff6600] text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-[#ff6600]/30">
+                Seu Plano Ativo
+              </span>
+            )}
+            <div className="mt-2">
+              <h3 className="text-sm font-black text-white uppercase tracking-wider mb-2">Pro</h3>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-2xl font-black text-[#ff6600]">R$ 597</span>
+                <span className="text-xs text-gray-500">/mês</span>
+              </div>
+              <p className="text-xs text-[#888888] mb-4">Para profissionais e freelancers que demandam alta performance.</p>
+              <ul className="space-y-2 text-xs text-gray-300 mb-6 border-t border-white/5 pt-4">
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#ff6600] shrink-0" /> 20 gerações completas/mês</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#ff6600] shrink-0" /> Monitor IoT + Modo Agência</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#ff6600] shrink-0" /> NVIDIA API Key Própria (GLM)</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#ff6600] shrink-0" /> Suporte VIP prioritário</li>
+              </ul>
+            </div>
+            <button
+              onClick={() => handleUpgradePlan('Pro')}
+              className="w-full bg-[#ff6600]/15 hover:bg-[#ff6600]/30 text-white border border-[#ff6600]/40 py-3 rounded-xl text-xs uppercase font-bold transition-all cursor-pointer"
+            >
+              {plan === 'pro' ? 'Alterar / Renovar' : 'Adquirir Pro'}
+            </button>
+          </div>
+
+          {/* Plan: Agency */}
+          <div className={`bg-[#111111] border ${plan === 'agency' ? 'border-[#f1c40f]/50 shadow-[0_0_20px_rgba(241,196,15,0.08)]' : 'border-white/5'} rounded-2xl p-6 flex flex-col justify-between relative`}>
+            {plan === 'agency' && (
+              <span className="absolute top-4 right-4 bg-[#f1c40f]/10 text-[#f1c40f] text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-[#f1c40f]/30">
+                Seu Plano Ativo
+              </span>
+            )}
+            <div>
+              <h3 className="text-sm font-black text-white uppercase tracking-wider mb-2">Agency</h3>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-2xl font-black text-[#f1c40f]">R$ 1.197</span>
+                <span className="text-xs text-gray-500">/mês</span>
+              </div>
+              <p className="text-xs text-[#888888] mb-4">Para estúdios e agências focadas em escala e entregas integradas.</p>
+              <ul className="space-y-2 text-xs text-gray-300 mb-6 border-t border-white/5 pt-4">
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#f1c40f] shrink-0" /> 50 gerações completas/mês</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#f1c40f] shrink-0" /> Monitor IoT + Modo Agência Completo</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#f1c40f] shrink-0" /> Suporte VIP dedicado via WhatsApp</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#f1c40f] shrink-0" /> Prioridade total na fila de IA</li>
+              </ul>
+            </div>
+            <button
+              onClick={() => handleUpgradePlan('Agency')}
+              className="w-full bg-[#f1c40f]/10 hover:bg-[#f1c40f]/20 text-[#f1c40f] border border-[#f1c40f]/25 py-3 rounded-xl text-xs uppercase font-bold transition-all cursor-pointer"
+            >
+              {plan === 'agency' ? 'Alterar / Renovar' : 'Adquirir Agency'}
+            </button>
+          </div>
+
+          {/* Plan: Enterprise */}
+          <div className={`bg-[#111111] border ${plan === 'enterprise' ? 'border-[#00d4ff]/50 shadow-[0_0_20px_rgba(0,212,255,0.08)]' : 'border-white/5'} rounded-2xl p-6 flex flex-col justify-between relative`}>
+            {plan === 'enterprise' && (
+              <span className="absolute top-4 right-4 bg-[#00d4ff]/10 text-[#00d4ff] text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-[#00d4ff]/30">
+                Seu Plano Ativo
+              </span>
+            )}
+            <div>
+              <h3 className="text-sm font-black text-white uppercase tracking-wider mb-2">Enterprise</h3>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-2xl font-black text-[#00d4ff]">R$ 2.497</span>
+                <span className="text-xs text-gray-500">/mês</span>
+              </div>
+              <p className="text-xs text-[#888888] mb-4">Capacidade massiva e suporte sob demanda com eng. dedicado.</p>
+              <ul className="space-y-2 text-xs text-gray-300 mb-6 border-t border-white/5 pt-4">
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#00d4ff] shrink-0" /> 100 gerações completas/mês</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#00d4ff] shrink-0" /> Suporte Premium 24/7 (WhatsApp)</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#00d4ff] shrink-0" /> Engenheiro de Integração Dedicado</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#00d4ff] shrink-0" /> Customização de API exclusiva</li>
+              </ul>
+            </div>
+            <button
+              onClick={() => handleUpgradePlan('Enterprise')}
+              className="w-full bg-gradient-to-r from-[#00d4ff] to-[#00ff88] text-black font-extrabold py-3 rounded-xl text-xs uppercase transition-all hover:brightness-110 cursor-pointer"
+            >
+              {plan === 'enterprise' ? 'Alterar / Renovar' : 'Adquirir Enterprise'}
+            </button>
+          </div>
+
+          {/* Plan: Admin */}
+          <div className="bg-[#111111]/60 border border-[#ff4444]/20 rounded-2xl p-6 flex flex-col justify-between opacity-80 hover:opacity-100 transition-opacity">
+            <div>
+              <h3 className="text-sm font-black text-white uppercase tracking-wider mb-2 flex items-center gap-1.5"><Shield size={14} className="text-[#ff4444]" /> Admin</h3>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-2xl font-black text-[#ff4444]">Customizado</span>
+              </div>
+              <p className="text-xs text-[#888888] mb-4">Ambiente administrativo para monitoramento interno e suporte.</p>
+              <ul className="space-y-2 text-xs text-gray-300 mb-6 border-t border-white/5 pt-4">
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#ff4444] shrink-0" /> Gerações ilimitadas sem custos</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#ff4444] shrink-0" /> Painel de controle de usuários</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={13} className="text-[#ff4444] shrink-0" /> Logs de sistema e auditoria de compras</li>
+              </ul>
+            </div>
+            <button
+              disabled
+              className="w-full bg-white/5 text-[#888888] border border-white/5 py-3 rounded-xl text-xs uppercase font-bold cursor-not-allowed"
+            >
+              Apenas Staff
+            </button>
+          </div>
+
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -44,7 +44,7 @@ export async function checkGenerationLimit(userId: string, supabaseClient: any) 
 
     // Se o plano for grátis ('free' ou vazio), o limite é exatamente 1 geração grátis lifetime/mensal de teste.
     const planoLimpo = profile.plano || 'free';
-    const isPaid = ['starter', 'pro', 'enterprise', 'admin'].includes(planoLimpo);
+    const isPaid = ['starter', 'creator', 'pro', 'agency', 'enterprise', 'admin'].includes(planoLimpo);
 
     let limiteSeguro = 1;
     if (isPaid) {
