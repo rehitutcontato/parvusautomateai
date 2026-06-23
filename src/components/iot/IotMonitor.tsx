@@ -309,7 +309,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
         "via": "Resistor 1kΩ"
       }
     ],
-    "pinout_svg": "CÓDIGO SVG INLINE COMPLETO E PROFISSIONAL do diagrama de ligação. Use retângulos estilizados para a placa e os sensores/módulos, desenhe fios esteticamente precisos e limpos indicando a cor do cabo, com labels descritivos em CADA pino e componente, e legendas claras sobre o fluxo da corrente. DEVE obrigatoriamente possuir viewBox='0 0 1000 600', width='100%' e height='100%', preenchimento elegante (ex: fundo #0a0a0a, textos #00d4ff). Não coloque markdown, retorne a string SVG literal pura com tags <svg> e </svg>."
+    "pinout_svg": "CÓDIGO SVG MINIMALISTA do diagrama de ligação. Use retângulos básicos e linhas. Mantenha o código SVG CURTO, com viewBox='0 0 800 600', width='100%' e height='100%', fundo #0a0a0a, textos #00d4ff. Não coloque markdown, retorne a string SVG literal pura com tags <svg> e </svg>."
   },
 
   "codigo": {
@@ -376,7 +376,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
         "via": "Resistor 220Ω"
       }
     ],
-    "pinout_svg": "CÓDIGO SVG INLINE COMPLETO E PROFISSIONAL do diagrama de ligação. Use retângulos estilizados para a placa e os sensores/módulos, desenhe fios esteticamente precisos e limpos com curves, e preencha labels descritivos e didáticos em CADA pino de ligação. Indique componentes visivelmente. DEVE obrigatoriamente possuir viewBox='0 0 1000 600', width='100%' e height='100%', preenchimento elegante (ex: fundo #0a0a0a, textos #00d4ff), Não coloque blocos de markdown, devolva APENAS as tags originais do svg puros sem markdow."
+    "pinout_svg": "CÓDIGO SVG MINIMALISTA do diagrama de ligação. Use retângulos básicos e linhas. Mantenha o código SVG CURTO, com viewBox='0 0 800 600', width='100%' e height='100%', fundo #0a0a0a, textos #00d4ff. Não coloque blocos de markdown, devolva APENAS as tags originais do svg puros sem markdow."
   },
   "codigo": {
     "linguagem": "C++",

@@ -6,6 +6,7 @@ import path from "path";
 import cors from "cors";
 import OpenAI from "openai";
 import { GoogleGenAI, Type } from "@google/genai";
+import { jsonrepair } from "jsonrepair";
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
@@ -83,7 +84,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
         messages: [{ role: "user", content: prompt }],
         temperature: config?.temperature !== undefined ? config.temperature : 1.0,
         top_p: 1,
-        max_tokens: 4096,
+        max_tokens: 8192,
       };
       
       if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
@@ -150,7 +151,22 @@ app.post("/api/ai/generate-iot", async (req, res) => {
       let cleanedText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
       
       console.log(`[REQ ${reqId}] Sucesso na geração IoT usando broker unificado. Tamanho: ${cleanedText.length}`);
-      res.write(JSON.stringify(JSON.parse(cleanedText)));
+      
+      let parsedJson;
+      try {
+        parsedJson = JSON.parse(cleanedText);
+      } catch (parseErr) {
+        console.warn(`[REQ ${reqId}] Erro ao realizar parse do JSON. Tentando recuperar JSON truncado...`);
+        try {
+          const repairedJson = jsonrepair(cleanedText);
+          parsedJson = JSON.parse(repairedJson);
+          console.log(`[REQ ${reqId}] JSON truncado recuperado com sucesso via jsonrepair!`);
+        } catch (repairErr: any) {
+          throw new Error(`Falha ao converter e reparar resposta JSON da IA: ${parseErr} / Repair Error: ${repairErr.message}`);
+        }
+      }
+      
+      res.write(JSON.stringify(parsedJson));
       res.end();
     } catch (error: any) {
       clearInterval(heartbeat);
