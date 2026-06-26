@@ -28,6 +28,7 @@ import { incrementGenerationCount } from './lib/services/generationLimitService'
 import { SettingsPage } from './components/SettingsPage';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { UpgradeModal } from './components/modals/UpgradeModal';
+import { LandingPage } from './components/LandingPage';
 
 // Types
 type ProjectType = 'SOFTWARE' | 'HARDWARE' | 'HIBRIDO' | 'ENTERPRISE';
@@ -156,6 +157,7 @@ export default function App() {
   const [previewProject, setPreviewProject] = useState<any>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLanding, setShowLanding] = useState<boolean>(() => !localStorage.getItem('parvus_has_seen_landing'));
   const generationLimit = useGenerationLimit();
 
   const handleSelectEntryFlow = (flow: 'ai' | 'templates' | 'briefing') => {
@@ -1491,6 +1493,15 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
          </div>
        </div>
      );
+  }
+
+  if (showLanding) {
+    return (
+      <LandingPage onEnter={() => {
+        setShowLanding(false);
+        localStorage.setItem('parvus_has_seen_landing', 'true');
+      }} />
+    );
   }
 
   const renderTopbar = () => (
