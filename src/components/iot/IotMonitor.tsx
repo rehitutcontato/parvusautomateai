@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import JSZip from 'jszip';
 import { supabase } from '../../lib/supabase';
 import { temAcesso } from '../../lib/permissions';
 import { Lock, AlertTriangle, ShieldAlert, CheckSquare, Search, Copy, Download, Code2, Play, Square, Save, Cpu, Layers, ExternalLink, X, Radio, ArrowLeft, Loader2, Info, Terminal, Trash2 } from 'lucide-react';
@@ -531,6 +532,55 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
     document.body.removeChild(el);
   };
 
+  const downloadProjectZip = async () => {
+    if (!projeto) return;
+    
+    const zip = new JSZip();
+    
+    // Add code
+    if (projeto.codigo) {
+      zip.file(projeto.codigo.arquivo_principal || 'main.cpp', projeto.codigo.codigo_completo || '');
+      if (projeto.codigo.instrucoes_upload) {
+        zip.file('INSTRUCOES_UPLOAD.md', projeto.codigo.instrucoes_upload);
+      }
+    }
+    
+    // Add schema
+    if (projeto.esquema_ligacao) {
+      if (projeto.esquema_ligacao.pinout_svg) {
+        zip.file('esquema.svg', projeto.esquema_ligacao.pinout_svg);
+      }
+      if (projeto.esquema_ligacao.descricao_textual) {
+        zip.file('LIGACOES.md', projeto.esquema_ligacao.descricao_textual);
+      }
+    }
+    
+    // Add components BOM
+    if (projeto.componentes) {
+      const bomText = projeto.componentes.map((c: any) => 
+        `- ${c.quantidade}x ${c.nome} (Pino: ${c.pino_sugerido || 'N/A'})\n  Specs: ${c.especificacao_tecnica}\n  Uso: ${c.motivo_uso}`
+      ).join('\n\n');
+      zip.file('BOM.md', `# Bill of Materials\n\n${bomText}`);
+    }
+    
+    // Add project info
+    zip.file('INFO.md', `# ${projeto.titulo}\n\n${projeto.descricao_tecnica}\n\n## Hardware\n${projeto.placa}\n\n## Total Estimado\nR$ ${projeto.preco_total_estimado_brl}`);
+    
+    // Add full project JSON
+    zip.file('projeto.json', JSON.stringify(projeto, null, 2));
+    
+    // Generate ZIP
+    const content = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(content);
+    const el = document.createElement('a');
+    el.href = url;
+    el.download = `${(projeto.titulo || 'projeto_iot').toLowerCase().replace(/\s+/g, '_')}.zip`;
+    document.body.appendChild(el);
+    el.click();
+    document.body.removeChild(el);
+    URL.revokeObjectURL(url);
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     alert('Copiado para a área de transferência');
@@ -989,20 +1039,27 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
           ) : projeto && (
             <>
               {/* TABS */}
-              <div className="flex border-b border-[rgba(0,212,255,0.1)] px-4 bg-[#050505]">
-                {(() => {
-                  const tabs = ['VISÃO GERAL', 'ESQUEMA', 'CÓDIGO', 'COMPONENTES'];
-                  if (projeto.analise_briefing) {
-                    tabs.push('ANÁLISE TÉCNICA');
-                  }
-                  tabs.push('REFERÊNCIAS');
-                  return tabs.map(t => (
-                    <button key={t} onClick={() => setActiveTab(t)}
-                      className={`px-6 py-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-colors ${activeTab === t ? 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5' : 'text-gray-600 border-transparent hover:text-gray-400'}`}>
-                      {t}
-                    </button>
-                  ));
-                })()}
+              <div className="flex border-b border-[rgba(0,212,255,0.1)] px-4 bg-[#050505] items-center">
+                <div className="flex">
+                  {(() => {
+                    const tabs = ['VISÃO GERAL', 'ESQUEMA', 'CÓDIGO', 'COMPONENTES'];
+                    if (projeto.analise_briefing) {
+                      tabs.push('ANÁLISE TÉCNICA');
+                    }
+                    tabs.push('REFERÊNCIAS');
+                    return tabs.map(t => (
+                      <button key={t} onClick={() => setActiveTab(t)}
+                        className={`px-6 py-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-colors ${activeTab === t ? 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5' : 'text-gray-600 border-transparent hover:text-gray-400'}`}>
+                        {t}
+                      </button>
+                    ));
+                  })()}
+                </div>
+                <div className="ml-auto">
+                   <button onClick={downloadProjectZip} className="flex items-center gap-2 text-[#00ff88] border border-[#00ff88]/30 px-4 py-2 rounded text-xs uppercase hover:bg-[#00ff88]/10 transition-colors">
+                     <Download size={14} /> Exportar Projeto (ZIP)
+                   </button>
+                </div>
               </div>
 
               {/* TAB CONTENT */}
