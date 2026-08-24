@@ -29,6 +29,8 @@ import { SettingsPage } from './components/SettingsPage';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { UpgradeModal } from './components/modals/UpgradeModal';
 import { LandingPage } from './components/LandingPage';
+import { generateDockerFiles } from './lib/dockerGenerator';
+import { useAutoSaveDraft } from './lib/hooks/useAutoSaveDraft';
 
 // Types
 type ProjectType = 'SOFTWARE' | 'HARDWARE' | 'HIBRIDO' | 'ENTERPRISE';
@@ -144,10 +146,20 @@ export default function App() {
   const [selectedListing, setSelectedListing] = useState<any>(null);
   const [listings, setListings] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
-  const [problemDescription, setProblemDescription] = useState('');
+  const draftStorage = useAutoSaveDraft('parvus_draft_software', {
+    problemDescription: '',
+    answers: {} as Record<string, string>
+  });
+
+  const [problemDescription, setProblemDescription] = useState(() => draftStorage.data.problemDescription || '');
   const [classification, setClassification] = useState<Classification | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(() => draftStorage.data.answers || {});
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+
+  // Sync draft state
+  useEffect(() => {
+    draftStorage.save({ problemDescription, answers });
+  }, [problemDescription, answers]);
   
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
   const [confirmModal, setConfirmModal] = useState<{title: string, message: string, onConfirm: () => void} | null>(null);
@@ -943,6 +955,23 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
     zip.file('.env.example', generatedNode.env_example);
     zip.file('README.md', generatedNode.readme_md);
     
+    // Add Docker & DevContainer files
+    const dockerFiles = generateDockerFiles({
+      projectName: 'parvus-app',
+      port: 3000,
+      includeDatabase: true,
+      includeMqtt: false,
+      nodeVersion: '20-alpine'
+    });
+    zip.file('Dockerfile', dockerFiles.dockerfile);
+    zip.file('docker-compose.yml', dockerFiles.dockerCompose);
+    zip.file('.dockerignore', dockerFiles.dockerignore);
+    
+    const devcontainer = zip.folder('.devcontainer');
+    if (devcontainer) {
+      devcontainer.file('devcontainer.json', dockerFiles.devcontainerJson);
+    }
+    
     const pub = zip.folder('public');
     if (pub) {
       pub.file('index.html', generatedHtml);
@@ -952,6 +981,42 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `parvus-automacao-nodejs-${Date.now()}.zip`;
+    a.click();
+  };
+
+  const downloadDockerPkg = async () => {
+    const zip = new JSZip();
+    const dockerFiles = generateDockerFiles({
+      projectName: 'parvus-app',
+      port: 3000,
+      includeDatabase: true,
+      includeMqtt: true,
+      nodeVersion: '20-alpine'
+    });
+    zip.file('Dockerfile', dockerFiles.dockerfile);
+    zip.file('docker-compose.yml', dockerFiles.dockerCompose);
+    zip.file('.dockerignore', dockerFiles.dockerignore);
+    zip.file('README_DOCKER.md', `# Parvus Docker Setup\n\n## Como rodar localmente com Docker Compose\n\`\`\`bash\ndocker compose up --build\n\`\`\`\n\nAcesse http://localhost:3000 no seu navegador.\n`);
+    
+    const devcontainer = zip.folder('.devcontainer');
+    if (devcontainer) {
+      devcontainer.file('devcontainer.json', dockerFiles.devcontainerJson);
+    }
+
+    if (generatedNode) {
+      zip.file('server.js', generatedNode.server_js);
+      zip.file('package.json', generatedNode.package_json);
+      zip.file('.env.example', generatedNode.env_example);
+    }
+    if (generatedHtml) {
+      const pub = zip.folder('public');
+      if (pub) pub.file('index.html', generatedHtml);
+    }
+
+    const blob = await zip.generateAsync({type: 'blob'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `parvus-docker-container-${Date.now()}.zip`;
     a.click();
   };
 
@@ -1561,6 +1626,11 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
           </div>
         )}
         <div className="relative group">
+          <button onClick={() => setShowLanding(true)} className="hover:text-white cursor-pointer transition-colors uppercase tracking-widest text-gray-400 hover:text-white flex items-center gap-1" title="Ver apresentação e landing page">
+            ✨ APRESENTAÇÃO
+          </button>
+        </div>
+        <div className="relative group">
           <button onClick={() => setCurrentView('settings')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest ${currentView === 'settings' ? 'text-white font-bold border-b border-[#00ff88]' : ''}`}>
             CONFIGURAÇÕES
           </button>
@@ -1836,31 +1906,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
   };
 
   const renderBuildArea = () => {
-    if (phase === 'input' || phase === 'classifying' || phase === 'questions' || phase === 'inviavel') {
-      return (
-        <main className="flex-1 flex flex-col items-center justify-center relative bg-[#0a0a0a] z-10 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.03),transparent_60%)] pointer-events-none"></div>
-          
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-white/5 rounded-full animate-[spin_60s_linear_infinite] pointer-events-none opacity-20"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-white/5 rounded-full animate-[spin_40s_linear_infinite_reverse] pointer-events-none opacity-20"></div>
-          
-          <div className="text-center max-w-xl relative z-10 p-8">
-            <div className="relative w-24 h-24 mx-auto mb-8">
-               <div className="absolute inset-0 bg-gradient-to-tr from-[#00ff88]/20 to-transparent rounded-2xl blur-xl animate-pulse"></div>
-               <div className="w-24 h-24 relative border border-white/10 bg-[#111111]/80 backdrop-blur-xl flex items-center justify-center rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                 <Cpu size={40} className="text-[#00ff88]" />
-               </div>
-            </div>
-            <h2 className="text-3xl font-black mb-4 tracking-tighter text-white">Parvus <span className="text-[#00ff88]">Intelligence</span></h2>
-            <p className="text-[#888888] text-base leading-relaxed font-light">
-              Descreva um problema ou processo no painel lateral. Nossa Engine criará instantaneamente um sistema completo, gerando simultaneamente <span className="text-white font-medium">código frontend, integrações backend e diagramas de arquitetura</span>.
-            </p>
-          </div>
-        </main>
-      );
-    }
-
-    if (phase === 'input' && classification && (classification.tipo === 'ENTERPRISE' || classification.complexidade === 'ENTERPRISE')) {
+    if (classification && (classification.tipo === 'ENTERPRISE' || classification.complexidade === 'ENTERPRISE')) {
       return (
         <div className="flex-1 p-8 overflow-y-auto relative z-10 bg-[#0a0a0a]">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,102,0,0.05),transparent_50%)] pointer-events-none"></div>
@@ -1933,7 +1979,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
       );
     }
 
-    if (phase === 'input' && classification && (classification.tipo === 'HARDWARE' || classification.tipo === 'HIBRIDO')) {
+    if (classification && (classification.tipo === 'HARDWARE' || classification.tipo === 'HIBRIDO') && phase !== 'done') {
       return (
         <div className="flex-1 p-8 overflow-y-auto relative z-10 bg-[#0a0a0a]">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,102,255,0.05),transparent_50%)] pointer-events-none"></div>
@@ -1981,6 +2027,30 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
             </div>
           </div>
         </div>
+      );
+    }
+
+    if (phase === 'input' || phase === 'classifying' || phase === 'questions' || phase === 'inviavel') {
+      return (
+        <main className="flex-1 flex flex-col items-center justify-center relative bg-[#0a0a0a] z-10 overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.03),transparent_60%)] pointer-events-none"></div>
+          
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-white/5 rounded-full animate-[spin_60s_linear_infinite] pointer-events-none opacity-20"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-white/5 rounded-full animate-[spin_40s_linear_infinite_reverse] pointer-events-none opacity-20"></div>
+          
+          <div className="text-center max-w-xl relative z-10 p-8">
+            <div className="relative w-24 h-24 mx-auto mb-8">
+               <div className="absolute inset-0 bg-gradient-to-tr from-[#00ff88]/20 to-transparent rounded-2xl blur-xl animate-pulse"></div>
+               <div className="w-24 h-24 relative border border-white/10 bg-[#111111]/80 backdrop-blur-xl flex items-center justify-center rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                 <Cpu size={40} className="text-[#00ff88]" />
+               </div>
+            </div>
+            <h2 className="text-3xl font-black mb-4 tracking-tighter text-white">Parvus <span className="text-[#00ff88]">Intelligence</span></h2>
+            <p className="text-[#888888] text-base leading-relaxed font-light">
+              Descreva um problema ou processo no painel lateral. Nossa Engine criará instantaneamente um sistema completo, gerando simultaneamente <span className="text-white font-medium">código frontend, integrações backend e diagramas de arquitetura</span>.
+            </p>
+          </div>
+        </main>
       );
     }
 
@@ -2146,6 +2216,13 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
                   className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-3 py-1 hover:border-[#0066ff] hover:text-[#0066ff] transition-colors text-[#888888] uppercase tracking-widest whitespace-nowrap"
                 >
                   NODE.JS PKG
+                </button>
+                <button 
+                  onClick={downloadDockerPkg}
+                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-3 py-1 hover:border-[#00d4ff] hover:text-[#00d4ff] transition-colors text-[#888888] uppercase tracking-widest whitespace-nowrap"
+                  title="Baixar pacote completo com Dockerfile, Compose e DevContainer"
+                >
+                  🐳 DOCKER PKG
                 </button>
                 {(classification?.tipo === 'HARDWARE' || classification?.tipo === 'HIBRIDO') && (
                   <button 

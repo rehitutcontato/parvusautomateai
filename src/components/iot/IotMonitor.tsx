@@ -3,7 +3,11 @@ import ReactMarkdown from 'react-markdown';
 import JSZip from 'jszip';
 import { supabase } from '../../lib/supabase';
 import { temAcesso } from '../../lib/permissions';
-import { Lock, AlertTriangle, ShieldAlert, CheckSquare, Search, Copy, Download, Code2, Play, Square, Save, Cpu, Layers, ExternalLink, X, Radio, ArrowLeft, Loader2, Info, Terminal, Trash2 } from 'lucide-react';
+import { generateWokwiDiagram } from '../../lib/wokwiHelper';
+import { WokwiSimulator } from './WokwiSimulator';
+import { WebSerialTerminal } from './WebSerialTerminal';
+import { useAutoSaveDraft } from '../../lib/hooks/useAutoSaveDraft';
+import { Lock, AlertTriangle, ShieldAlert, CheckSquare, Search, Copy, Download, Code2, Play, Square, Save, Cpu, Layers, ExternalLink, X, Radio, ArrowLeft, Loader2, Info, Terminal, Trash2, Usb, Sparkles, CheckCircle2 } from 'lucide-react';
 
 const PLACAS = [
   { id: 'esp32', name: 'ESP32 WROOM-32' },
@@ -55,10 +59,27 @@ export function IotMonitor() {
   const [termsCheckbox, setTermsCheckbox] = useState(false);
   const [agencyMode, setAgencyMode] = useState(false);
 
+  // Auto-Save Draft for IoT
+  const draftStorage = useAutoSaveDraft('parvus_draft_iot', {
+    descricao: '',
+    selectedPlaca: 'ESP32 WROOM-32',
+    iotConstructionMode: 'simple' as 'simple' | 'agency',
+    iotBriefing: {
+      hardware: '',
+      objetivo: '',
+      protocolo: 'WiFi HTTP REST',
+      protocolo_detalhes: '',
+      pinagem: '',
+      restricoes: '',
+      falha: '',
+      ambiente: ''
+    }
+  });
+
   // Agency Way IoT States
-  const [iotConstructionMode, setIotConstructionMode] = useState<'simple' | 'agency'>('simple');
+  const [iotConstructionMode, setIotConstructionMode] = useState<'simple' | 'agency'>(() => draftStorage.data.iotConstructionMode || 'simple');
   const [iotShowLockMsg, setIotShowLockMsg] = useState(false);
-  const [iotBriefing, setIotBriefing] = useState({
+  const [iotBriefing, setIotBriefing] = useState(() => draftStorage.data.iotBriefing || {
     hardware: '',
     objetivo: '',
     protocolo: 'WiFi HTTP REST',
@@ -70,24 +91,22 @@ export function IotMonitor() {
   });
   const [iotFormErrors, setIotFormErrors] = useState<Record<string, string>>({});
 
-  const validateIotForm = () => {
-    const errs: Record<string, string> = {};
-    if (!iotBriefing.hardware.trim()) {
-      errs.hardware = "Campo obrigatório";
-    }
-    if (!iotBriefing.objetivo.trim()) {
-      errs.objetivo = "Campo obrigatório";
-    }
-    setIotFormErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
   // Generation States
-  const [selectedPlaca, setSelectedPlaca] = useState('ESP32 WROOM-32');
-  const [descricao, setDescricao] = useState('');
+  const [selectedPlaca, setSelectedPlaca] = useState(() => draftStorage.data.selectedPlaca || 'ESP32 WROOM-32');
+  const [descricao, setDescricao] = useState(() => draftStorage.data.descricao || '');
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Sync back to auto-save draft
+  useEffect(() => {
+    draftStorage.save({
+      descricao,
+      selectedPlaca,
+      iotConstructionMode,
+      iotBriefing
+    });
+  }, [descricao, selectedPlaca, iotConstructionMode, iotBriefing]);
 
   // Result States
   const [projeto, setProjeto] = useState<any>(null);
@@ -222,6 +241,18 @@ export function IotMonitor() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const validateIotForm = () => {
+    const errs: Record<string, string> = {};
+    if (!iotBriefing.hardware.trim()) {
+      errs.hardware = "Campo obrigatório";
+    }
+    if (!iotBriefing.objetivo.trim()) {
+      errs.objetivo = "Campo obrigatório";
+    }
+    setIotFormErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const generateProject = async () => {
@@ -562,6 +593,16 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
       ).join('\n\n');
       zip.file('BOM.md', `# Bill of Materials\n\n${bomText}`);
     }
+
+    // Add Wokwi Simulation Bundle
+    try {
+      const { diagramJson, wokwiToml } = generateWokwiDiagram(projeto);
+      zip.file('diagram.json', diagramJson);
+      zip.file('wokwi.toml', wokwiToml);
+      zip.file('WOKWI_SIMULATOR.md', `# Como rodar no Wokwi Simulator\n\n1. Acesse https://wokwi.com ou use a extensão oficial 'Wokwi Simulator' no VS Code.\n2. Carregue o arquivo diagram.json na aba de circuito e o código fonte em main.cpp.\n3. Pressione Play para simular as conexões e firmware sem hardware físico!\n`);
+    } catch (e) {
+      console.warn('Erro ao gerar Wokwi bundle para o zip:', e);
+    }
     
     // Add project info
     zip.file('INFO.md', `# ${projeto.titulo}\n\n${projeto.descricao_tecnica}\n\n## Hardware\n${projeto.placa}\n\n## Total Estimado\nR$ ${projeto.preco_total_estimado_brl}`);
@@ -777,6 +818,11 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
            <span className="text-[10px] text-[#00ff88] px-2 py-0.5 border border-[#00ff88]/30 bg-[#00ff88]/10 rounded flex items-center gap-2">
              <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88]"></span> IA PRONTA
            </span>
+           {draftStorage.hasDraft && (
+             <span className="hidden sm:flex text-[10px] text-gray-400 bg-white/5 border border-white/10 px-2.5 py-0.5 rounded items-center gap-1.5" title="Seu briefing está seguro offline no navegador">
+               <span className="w-1.5 h-1.5 rounded-full bg-[#00d4ff]"></span> Rascunho salvo offline
+             </span>
+           )}
          </div>
          <button onClick={abrirSidebar} className="border border-[rgba(0,212,255,0.3)] hover:bg-[rgba(0,212,255,0.1)] text-[#00d4ff] px-4 py-1.5 rounded text-xs uppercase tracking-widest flex items-center gap-2 transition-colors">
            <Layers size={14} /> Meus Projetos IoT
@@ -1042,14 +1088,20 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
               <div className="flex border-b border-[rgba(0,212,255,0.1)] px-4 bg-[#050505] items-center">
                 <div className="flex">
                   {(() => {
-                    const tabs = ['VISÃO GERAL', 'ESQUEMA', 'CÓDIGO', 'COMPONENTES'];
+                    const tabs = ['VISÃO GERAL', 'ESQUEMA', 'CÓDIGO', 'COMPONENTES', 'SIMULADOR WOKWI', 'WEB SERIAL (USB)'];
                     if (projeto.analise_briefing) {
-                      tabs.push('ANÁLISE TÉCNICA');
+                      tabs.splice(4, 0, 'ANÁLISE TÉCNICA');
                     }
                     tabs.push('REFERÊNCIAS');
                     return tabs.map(t => (
                       <button key={t} onClick={() => setActiveTab(t)}
-                        className={`px-6 py-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-colors ${activeTab === t ? 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5' : 'text-gray-600 border-transparent hover:text-gray-400'}`}>
+                        className={`px-4 lg:px-6 py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                          activeTab === t
+                            ? (t === 'SIMULADOR WOKWI' ? 'text-[#00ff88] border-[#00ff88] bg-[#00ff88]/5' : t === 'WEB SERIAL (USB)' ? 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5' : 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5')
+                            : 'text-gray-500 border-transparent hover:text-gray-300'
+                        }`}>
+                        {t === 'SIMULADOR WOKWI' && <Sparkles size={12} className="text-[#00ff88]" />}
+                        {t === 'WEB SERIAL (USB)' && <Usb size={12} className="text-[#00d4ff]" />}
                         {t}
                       </button>
                     ));
@@ -1308,6 +1360,23 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                          </div>
                        </div>
                      )}
+                   </div>
+                 )}
+
+                 {/* SIMULADOR WOKWI */}
+                 {activeTab === 'SIMULADOR WOKWI' && (
+                   <div className="animate-in fade-in duration-300 h-full">
+                     <WokwiSimulator projeto={projeto} />
+                   </div>
+                 )}
+
+                 {/* WEB SERIAL (USB) */}
+                 {activeTab === 'WEB SERIAL (USB)' && (
+                   <div className="animate-in fade-in duration-300 h-full">
+                     <WebSerialTerminal 
+                       codigoFirmware={projeto?.codigo?.codigo_completo} 
+                       placaNome={projeto?.placa} 
+                     />
                    </div>
                  )}
 

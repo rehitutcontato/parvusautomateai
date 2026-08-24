@@ -109,7 +109,7 @@ export function AdminDashboard() {
             <Users className="text-blue-400" size={20} />
           </div>
           <div className="text-3xl font-bold text-white">
-            {Object.values(stats.counts).reduce((a: any, b: any) => a + b, 0)}
+            {Number((Object.values(stats.counts) as (number | string)[]).reduce((a, b) => Number(a) + Number(b), 0))}
           </div>
         </div>
 
