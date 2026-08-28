@@ -450,7 +450,7 @@ Obrigatoriedade de Perguntas: Para QUALQUER cenário, selecione e crie de 2 a 3 
 Analise o problema abaixo e retorne APENAS um JSON válido seguindo estritamente esse modelo.
 Problema: ${descToUse}`;
 
-      const response = await callGeminiApi('gemini-2.0-flash', prompt, {
+      const response = await callGeminiApi('gemini-3.6-flash', prompt, {
         temperature: 0.1,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -633,7 +633,7 @@ REGRAS TÉCNICAS ABSOLUTAS:
 - Use Tailwind CSS via CDN (<script src="https://unpkg.com/@tailwindcss/browser@4"></script>).
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, sem qualquer menção à "Parvus Automate". Insira no cabeçalho ou nas configurações rápidas uma marca personalizável ou um local para o cliente final logar.\n' : ''}`;
 
-      const responseHtml = await callGeminiApi('gemini-2.0-flash', frontendPrompt, {
+      const responseHtml = await callGeminiApi('gemini-3.6-flash', frontendPrompt, {
         temperature: 0.2
       });
       
@@ -686,7 +686,7 @@ INSTRUÇÕES ESPECÍFICAS DE ACORDO COM O TIPO DE SISTEMA:
 - Em env_example: Adicione todas as variáveis necessárias de banco de dados, portas e chaves simuladas.
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca "Parvus Automate" e crie um esqueleto 100% white-label.\n' : ''}`;
 
-      const responseNode = await callGeminiApi('gemini-2.0-flash', backendPrompt, {
+      const responseNode = await callGeminiApi('gemini-3.6-flash', backendPrompt, {
         temperature: 0.2,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -746,7 +746,7 @@ RESPOSTAS: \n${answersText}
 - Se houver manuseio de corrente alternada (110V/220V), adicione avisos de segurança rigorosos com destaque ("⚠️ ALERTA DE SEGURANÇA 110V/220V").
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, use white-label e torne tudo vendível.\n' : ''}`;
 
-        const responseIoT = await callGeminiApi('gemini-2.0-flash', iotPrompt, {
+        const responseIoT = await callGeminiApi('gemini-3.6-flash', iotPrompt, {
           temperature: 0.2,
           responseMimeType: 'application/json',
           responseSchema: {
@@ -1228,7 +1228,7 @@ REGRAS TÉCNICAS ABSOLUTAS:
 - Use Tailwind CSS via CDN (<script src="https://unpkg.com/@tailwindcss/browser@4"></script>).
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, sem qualquer menção à "Parvus Automate". Insira no cabeçalho ou nas configurações rápidas uma marca personalizável ou um local para o cliente final logar.\n' : ''}`;
 
-      const responseHtml = await callGeminiApi('gemini-2.0-flash', frontendPrompt, {
+      const responseHtml = await callGeminiApi('gemini-3.6-flash', frontendPrompt, {
         temperature: 0.2
       });
       
@@ -1260,7 +1260,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
       4. DOCUMENTAÇÃO PREMIUM: Crie um README.md contendo o diagrama de arquitetura ASCII do sistema, instruções de variáveis do .env e guia rápido de uso com curl/scripts de teste.
       ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate para manter white-label absoluto.\n' : ''}`;
 
-      const responseNode = await callGeminiApi('gemini-2.0-flash', backendPrompt, {
+      const responseNode = await callGeminiApi('gemini-3.6-flash', backendPrompt, {
         temperature: 0.2,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -1318,7 +1318,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
         - Se houver manuseio de corrente alternada (110V/220V), adicione avisos de segurança rigorosos com destaque ("⚠️ ALERTA DE SEGURANÇA 110V/220V").
         ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, use white-label e torne tudo vendível.\n' : ''}`;
 
-        const responseIoT = await callGeminiApi('gemini-2.0-flash', iotPrompt, {
+        const responseIoT = await callGeminiApi('gemini-3.6-flash', iotPrompt, {
           temperature: 0.2,
           responseMimeType: 'application/json',
           responseSchema: {
@@ -1455,7 +1455,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
     `;
     
     try {
-      const response = await callGeminiApi('gemini-2.0-flash', promptInterpreter, { temperature: 0.4 });
+      const response = await callGeminiApi('gemini-3.6-flash', promptInterpreter, { temperature: 0.4 });
       const generatedPrompt = response.text;
       
       if (generatedPrompt) {
@@ -2740,7 +2740,7 @@ Soluções Enterprise → R$ 2999+
 Calcule o preço com base na complexidade e nessas faixas. Arredonde para final .90 ou .00. 
 Sem markdown no retorno. Apenas o JSON válido.`;
          
-         const response = await callGeminiApi('gemini-2.0-flash', prompt, {
+         const response = await callGeminiApi('gemini-3.6-flash', prompt, {
            temperature: 0.2,
            responseMimeType: "application/json"
          });
@@ -2931,7 +2931,7 @@ Sem markdown no retorno. Apenas o JSON válido.`;
         ) : currentView === 'settings' ? (
           <SettingsPage onLogout={handleLogout} />
         ) : currentView === 'iot' ? (
-          <IotMonitor />
+          <IotMonitor onBack={() => setCurrentView('app')} />
         ) : null}
       </main>
       

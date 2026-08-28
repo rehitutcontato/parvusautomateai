@@ -43,7 +43,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
   const runGemini = async () => {
     if (!geminiKey) return false;
     try {
-      console.log(`[REQ ${reqId}] Tentativa com Google Gemini (gemini-2.0-flash)...`);
+      console.log(`[REQ ${reqId}] Tentativa com Google Gemini (gemini-3.6-flash)...`);
       const ai = new GoogleGenAI({
         apiKey: geminiKey,
         httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
@@ -61,7 +61,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
       }
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3.6-flash',
         contents: prompt,
         config: genConfig
       });
@@ -74,39 +74,46 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
   };
 
   const runNvidia = async () => {
-    if (!nvidiaKey || nvidiaKey.startsWith("AIzaSy")) return false;
-    try {
-      console.log(`[REQ ${reqId}] Tentativa com NVIDIA Llama/Mistral/DeepSeek...`);
-      const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
-      
-      let openAiConfig: any = {
-        model: "deepseek-ai/deepseek-v4-flash",
-        messages: [{ role: "user", content: prompt }],
-        temperature: config?.temperature !== undefined ? config.temperature : 1.0,
-        top_p: 1,
-        max_tokens: 8192,
-      };
-      
-      if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
-        openAiConfig.response_format = { type: "json_object" };
-        let systemPrompt = "You must output strictly JSON format only. Do not output anything else.";
-        if (config?.responseSchema) {
-          const schemaStr = JSON.stringify(config.responseSchema).replace(/"type":"([A-Z]+)"/g, (match, p1) => `"type":"${p1.toLowerCase()}"`);
-          systemPrompt += ` The JSON must exactly match this schema and populate all required fields: ${schemaStr}`;
-        }
-        openAiConfig.messages = [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt }
-        ];
-      }
-
-      const response = await openai.chat.completions.create(openAiConfig);
-      return response.choices[0].message?.content || "";
-    } catch (err: any) {
-      console.warn(`[REQ ${reqId}] Falha no NVIDIA: ${err.message}.`);
-      errors.push(`NVIDIA: ${err.message}`);
+    if (!nvidiaKey || nvidiaKey.startsWith("AIzaSy")) {
+      errors.push("Chave NVIDIA inválida ou ausente.");
       return false;
     }
+    const nvidiaModelsToTry = ["glm-5.2", "deepseek-ai/deepseek-v4-pro", "nvidia/nemotron-3-ultra-550b-a55b"];
+    
+    for (const nvidiaModel of nvidiaModelsToTry) {
+      try {
+        console.log(`[REQ ${reqId}] Tentativa com NVIDIA (${nvidiaModel})...`);
+        const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
+        
+        let openAiConfig: any = {
+          model: nvidiaModel,
+          messages: [{ role: "user", content: prompt }],
+          temperature: config?.temperature !== undefined ? config.temperature : 0.2,
+          top_p: 1,
+          max_tokens: 8192,
+        };
+        
+        if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
+          openAiConfig.response_format = { type: "json_object" };
+          let systemPrompt = "You must output strictly JSON format only. Do not output anything else.";
+          if (config?.responseSchema) {
+            const schemaStr = JSON.stringify(config.responseSchema).replace(/"type":"([A-Z]+)"/g, (match, p1) => `"type":"${p1.toLowerCase()}"`);
+            systemPrompt += ` The JSON must exactly match this schema and populate all required fields: ${schemaStr}`;
+          }
+          openAiConfig.messages = [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt }
+          ];
+        }
+  
+        const response = await openai.chat.completions.create(openAiConfig);
+        return response.choices[0].message?.content || "";
+      } catch (err: any) {
+        console.warn(`[REQ ${reqId}] Falha no NVIDIA (${nvidiaModel}): ${err.message}. Tentando próximo modelo NVIDIA...`);
+        errors.push(`NVIDIA (${nvidiaModel}): ${err.message}`);
+      }
+    }
+    return false;
   };
 
   // ORDEM DE EXECUÇÃO: Prioriza o que o usuário colocou na dashboard.

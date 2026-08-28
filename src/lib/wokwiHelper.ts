@@ -12,7 +12,7 @@ export interface WokwiDiagram {
   connections: Array<[string, string, string, string[]]>;
 }
 
-export function generateWokwiDiagram(projeto: any): { diagram: WokwiDiagram; diagramJson: string; wokwiToml: string } {
+export function generateWokwiDiagram(projeto: any): { diagram: WokwiDiagram; diagramJson: string; wokwiToml: string; librariesTxt: string } {
   const placa = (projeto?.placa || '').toLowerCase();
   
   let boardType = 'wokwi-esp32-devkit-v1';
@@ -132,9 +132,10 @@ export function generateWokwiDiagram(projeto: any): { diagram: WokwiDiagram; dia
 
   const wokwiToml = `[wokwi]
 version = 1
-firmware = '${elfPath}'
-elf = '${elfPath}'
 `;
 
-  return { diagram, diagramJson, wokwiToml };
+  const deps = projeto?.codigo?.dependencias || [];
+  const librariesTxt = deps.join('\n');
+
+  return { diagram, diagramJson, wokwiToml, librariesTxt };
 }

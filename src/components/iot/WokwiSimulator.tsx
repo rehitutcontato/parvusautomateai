@@ -8,9 +8,9 @@ interface WokwiSimulatorProps {
 
 export function WokwiSimulator({ projeto }: WokwiSimulatorProps) {
   const [copiedType, setCopiedType] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'visual' | 'diagram' | 'toml' | 'instructions'>('visual');
+  const [activeTab, setActiveTab] = useState<'visual' | 'diagram' | 'toml' | 'libraries' | 'instructions'>('visual');
 
-  const { diagram, diagramJson, wokwiToml } = generateWokwiDiagram(projeto);
+  const { diagram, diagramJson, wokwiToml, librariesTxt } = generateWokwiDiagram(projeto);
   const code = projeto?.codigo?.codigo_completo || '';
   const placa = (projeto?.placa || 'ESP32').toUpperCase();
 
@@ -104,6 +104,18 @@ export function WokwiSimulator({ projeto }: WokwiSimulatorProps) {
         >
           <Terminal size={14} /> wokwi.toml
         </button>
+        {librariesTxt && (
+          <button
+            onClick={() => setActiveTab('libraries')}
+            className={`px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${
+              activeTab === 'libraries'
+                ? 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5'
+                : 'text-gray-500 border-transparent hover:text-gray-300'
+            }`}
+          >
+            <Code size={14} /> libraries.txt
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('instructions')}
           className={`px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${
@@ -240,6 +252,32 @@ export function WokwiSimulator({ projeto }: WokwiSimulatorProps) {
           </div>
         )}
 
+        {activeTab === 'libraries' && librariesTxt && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400 text-xs">Bibliotecas Wokwi (libraries.txt):</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => copyToClipboard(librariesTxt, 'libraries')}
+                  className="flex items-center gap-1.5 bg-[#1a1a1a] hover:bg-[#252525] text-white border border-[#333] px-3 py-1.5 rounded transition-colors"
+                >
+                  {copiedType === 'libraries' ? <Check size={14} className="text-[#00ff88]" /> : <Copy size={14} />}
+                  {copiedType === 'libraries' ? 'Copiado!' : 'Copiar'}
+                </button>
+                <button
+                  onClick={() => downloadFile('libraries.txt', librariesTxt)}
+                  className="flex items-center gap-1.5 bg-[#00d4ff]/10 hover:bg-[#00d4ff]/20 text-[#00d4ff] border border-[#00d4ff]/30 px-3 py-1.5 rounded transition-colors"
+                >
+                  <Download size={14} /> Baixar libraries.txt
+                </button>
+              </div>
+            </div>
+            <pre className="p-4 bg-[#0a0a0a] border border-[#222] rounded overflow-auto max-h-[400px] text-[#ffaa00]">
+              <code>{librariesTxt}</code>
+            </pre>
+          </div>
+        )}
+
         {activeTab === 'instructions' && (
           <div className="space-y-6 font-sans text-sm text-gray-300 max-w-3xl leading-relaxed">
             <div className="border-l-2 border-[#00ff88] pl-4">
@@ -255,7 +293,7 @@ export function WokwiSimulator({ projeto }: WokwiSimulatorProps) {
                 <div>
                   <h4 className="text-white font-bold text-xs uppercase font-mono mb-1">Opção A: No Navegador (Wokwi Web)</h4>
                   <p className="text-xs text-gray-400">
-                    Clique no botão verde <strong>"Abrir no Wokwi Web"</strong> acima. Na aba do Wokwi, cole o código C/C++ do firmware na aba <code>sketch.ino</code> ou <code>main.cpp</code> e cole o conteúdo de <code>diagram.json</code> na aba <strong>Diagram</strong>.
+                    Clique no botão verde <strong>"Abrir no Wokwi Web"</strong> acima. Na aba do Wokwi, cole o código C/C++ do firmware na aba <code>sketch.ino</code> ou <code>main.cpp</code> e cole o conteúdo de <code>diagram.json</code> na aba <strong>Diagram</strong>. Caso seu projeto tenha dependências, busque-as na aba Library Manager do Wokwi.
                   </p>
                 </div>
               </div>
@@ -265,7 +303,7 @@ export function WokwiSimulator({ projeto }: WokwiSimulatorProps) {
                 <div>
                   <h4 className="text-white font-bold text-xs uppercase font-mono mb-1">Opção B: No VS Code (Extensão Wokwi)</h4>
                   <p className="text-xs text-gray-400">
-                    Baixe o <strong>ZIP completo do Projeto IoT</strong> no botão superior. Abra a pasta descompactada no VS Code, instale a extensão <strong>"Wokwi Simulator"</strong> e pressione <code>F1 &gt; Wokwi: Start Simulator</code> para depurar em tempo real com breakpoints.
+                    Baixe o <strong>ZIP completo do Projeto IoT</strong> no botão superior. A exportação ZIP <strong>já inclui o arquivo <code>libraries.txt</code></strong> e todos os metadados do Wokwi. Abra a pasta descompactada no VS Code, instale a extensão <strong>"Wokwi Simulator"</strong> e pressione <code>F1 &gt; Wokwi: Start Simulator</code> para depurar em tempo real. O Wokwi instalará as bibliotecas automaticamente!
                   </p>
                 </div>
               </div>

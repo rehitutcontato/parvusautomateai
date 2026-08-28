@@ -7,7 +7,7 @@ import { generateWokwiDiagram } from '../../lib/wokwiHelper';
 import { WokwiSimulator } from './WokwiSimulator';
 import { WebSerialTerminal } from './WebSerialTerminal';
 import { useAutoSaveDraft } from '../../lib/hooks/useAutoSaveDraft';
-import { Lock, AlertTriangle, ShieldAlert, CheckSquare, Search, Copy, Download, Code2, Play, Square, Save, Cpu, Layers, ExternalLink, X, Radio, ArrowLeft, Loader2, Info, Terminal, Trash2, Usb, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Lock, AlertTriangle, ShieldAlert, CheckSquare, Search, Copy, Download, Code2, Play, Square, Save, Cpu, Layers, ExternalLink, X, Radio, ArrowLeft, Loader2, Info, Terminal, Trash2, Usb, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react';
 
 const PLACAS = [
   { id: 'esp32', name: 'ESP32 WROOM-32' },
@@ -50,12 +50,20 @@ const normalizeProject = (savedData: any, hardware: string, nome: string, descri
   };
 };
 
-export function IotMonitor() {
+export function IotMonitor({ onBack }: { onBack?: () => void }) {
+  const isTermoAceitoInicial = () => {
+    try {
+      return localStorage.getItem('parvus_iot_termo') === 'aceito' || sessionStorage.getItem('parvus_iot_termo') === 'aceito';
+    } catch {
+      return false;
+    }
+  };
+
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [userPlan, setUserPlan] = useState('free');
   const [showTerms, setShowTerms] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(isTermoAceitoInicial);
   const [termsCheckbox, setTermsCheckbox] = useState(false);
   const [agencyMode, setAgencyMode] = useState(false);
 
@@ -97,6 +105,10 @@ export function IotMonitor() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Edit States
+  const [editPrompt, setEditPrompt] = useState('');
+  const [isEditingCode, setIsEditingCode] = useState(false);
 
   // Sync back to auto-save draft
   useEffect(() => {
@@ -181,14 +193,24 @@ export function IotMonitor() {
         setHasAccess(false);
         return;
       }
-      const { data: profile } = await supabase.from('profiles').select('plano').eq('id', user.id).single();
-      const plano = profile?.plano?.toLowerCase() || 'free';
+      const { data: profile } = await supabase.from('profiles').select('plano, is_admin').eq('id', user.id).single();
+      let plano = profile?.plano?.toLowerCase() || 'free';
+      if (profile?.is_admin || user.email === 'rehitutcontato@gmail.com' || user.email?.includes('admin')) {
+        plano = 'admin';
+      }
       setUserPlan(plano);
       
       if (temAcesso(plano, 'iot_monitor')) {
         setHasAccess(true);
-        if (sessionStorage.getItem('parvus_iot_termo') === 'aceito') {
+        let accepted = false;
+        try {
+          accepted = localStorage.getItem('parvus_iot_termo') === 'aceito' || sessionStorage.getItem('parvus_iot_termo') === 'aceito';
+        } catch {
+          accepted = false;
+        }
+        if (accepted) {
           setTermsAccepted(true);
+          setShowTerms(false);
         } else {
           setShowTerms(true);
         }
@@ -204,9 +226,14 @@ export function IotMonitor() {
   };
 
   const handleAcceptTerms = () => {
-    sessionStorage.setItem('parvus_iot_termo', 'aceito');
-    setShowTerms(false);
+    try {
+      localStorage.setItem('parvus_iot_termo', 'aceito');
+      sessionStorage.setItem('parvus_iot_termo', 'aceito');
+    } catch (e) {
+      console.warn("Storage warning:", e);
+    }
     setTermsAccepted(true);
+    setShowTerms(false);
   };
 
   const carregarMeusProjetos = async () => {
@@ -353,6 +380,12 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
     "instrucoes_upload": "passo a passo detalhado para flash e upload de código"
   },
 
+  "aplicativo": {
+    "framework": "React Native (Expo) ou React (Web App)",
+    "arquivo_principal": "App.js ou index.html",
+    "codigo": "Código fonte completo do aplicativo mobile ou web (único arquivo principal ou estrutura essencial para controlar/monitorar a placa)",
+    "instrucoes": "Como rodar este aplicativo (ex: Expo Go) e como ele se comunica com o hardware"
+  },
   "comportamento_falha_implementado": "descreva como o failsafe foi projetado ou tratado no firmware",
   "avisos_seguranca": [
     "alerta de segurança elétrica ou ambiental"
@@ -417,6 +450,12 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
     "codigo_completo": "código completo, comentado em português, pronto para upload na placa — zero placeholders",
     "dependencias": ["lib1", "lib2"],
     "instrucoes_upload": "passo a passo para fazer upload do código na placa"
+  },
+  "aplicativo": {
+    "framework": "React Native (Expo) ou React (Web App)",
+    "arquivo_principal": "App.js ou index.html",
+    "codigo": "Código fonte completo do aplicativo mobile ou web (único arquivo principal ou estrutura essencial para controlar/monitorar a placa)",
+    "instrucoes": "Como rodar este aplicativo (ex: Expo Go) e como ele se comunica com o hardware"
   },
   "avisos_seguranca": [
     "aviso específico para este projeto — não genérico"
@@ -508,6 +547,111 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
     }
   };
 
+  const editProject = async () => {
+    if (!editPrompt.trim() || !projeto) return;
+    
+    setErrorMsg("");
+    setIsGenerating(true);
+    setLoadingMsg('Aplicando modificações ao projeto...');
+    
+    try {
+      const prompt = `Você é um engenheiro sênior revisando um projeto IoT existente. 
+O cliente solicitou uma modificação específica.
+MANTENHA todo o resto do projeto exatamente como está, alterando APENAS o que for afetado pelo pedido do usuário (ex: se mudar um pino, mude no código e no esquema de ligação. Se adicionar um sensor, adicione nos componentes, no código e no esquema).
+
+== JSON DO PROJETO ATUAL ==
+${JSON.stringify(projeto)}
+
+== PEDIDO DE ALTERAÇÃO DO USUÁRIO ==
+${editPrompt}
+
+Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, mantendo a mesma estrutura original.`;
+
+      let apiUrl = import.meta.env.VITE_API_URL || '';
+      if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
+      const userKey = localStorage.getItem('parvus_key') || '';
+      
+      let req;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000);
+      try {
+        req = await fetch(`${apiUrl}/api/ai/generate-iot`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(userKey ? { 'x-gemini-key': userKey, 'x-nvidia-key': userKey } : {})
+          },
+          body: JSON.stringify({ prompt, placa: projeto.placa }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+           throw new Error("Ocorreu um Timeout. A resposta da Inteligência Artificial demorou mais de 5 minutos e a conexão foi encerrada. Tente novamente.");
+        }
+        throw new Error("Falha na conexão (Network Error/CORS). O backend demorou muito e o servidor reiniciou ou está indisponível.");
+      }
+      
+      let data;
+      try {
+        data = await req.json();
+      } catch (jsonErr) {
+        throw new Error(`Erro de comunicação com o servidor. A API retornou uma resposta inválida (não JSON). Status HTML: ${req.status}.`);
+      }
+      
+      if (!data || data.error) {
+        throw new Error(data?.error || "Erro ao editar projeto com a IA.");
+      }
+
+      setProjeto(data);
+      setEditPrompt(""); // Clear input on success
+      
+      // Auto-save update
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // just insert a new revision
+          await supabase.from('iot_devices').insert({
+            user_id: user.id,
+            nome: (data.titulo || 'Projeto IoT') + ' (Revisão)',
+            tipo: 'PROJETO_GERADO',
+            hardware: data.placa || projeto.placa,
+            descricao: data.descricao_tecnica,
+            dados_atuais: {
+              ...data,
+              componentes: data.componentes,
+              codigo: data.codigo,
+              esquema: data.esquema_ligacao,
+              referencias: data.referencias,
+              preco_total: data.preco_total_estimado_brl
+            },
+            status: 'offline'
+          });
+        }
+      } catch (err) {
+        console.error("Auto-save falhou na edição", err);
+      }
+
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'Falha na comunicação com a API NVIDIA.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCodeChange = (newCode: string) => {
+    if (!projeto) return;
+    setProjeto((prev: any) => ({
+      ...prev,
+      codigo: {
+        ...prev.codigo,
+        codigo_completo: newCode
+      }
+    }));
+  };
+
   const simulateExecution = async () => {
     if (!projeto?.codigo?.codigo_completo) return;
     setIsSimulating(true);
@@ -570,12 +714,29 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
     
     // Add code
     if (projeto.codigo) {
-      zip.file(projeto.codigo.arquivo_principal || 'main.cpp', projeto.codigo.codigo_completo || '');
+      let fileName = projeto.codigo.arquivo_principal || 'main.cpp';
+      const code = projeto.codigo.codigo_completo || '';
+      
+      // Rename to sketch.ino if it looks like Arduino framework to ensure 1-click Wokwi compatibility
+      if (fileName === 'main.cpp' && (code.includes('setup()') || code.includes('loop()') || code.includes('<Arduino.h>'))) {
+         fileName = 'sketch.ino';
+      }
+      
+      zip.file(`firmware/${fileName}`, code);
       if (projeto.codigo.instrucoes_upload) {
-        zip.file('INSTRUCOES_UPLOAD.md', projeto.codigo.instrucoes_upload);
+        zip.file('firmware/INSTRUCOES_UPLOAD.md', projeto.codigo.instrucoes_upload);
       }
     }
-    
+
+    // Add app
+    if (projeto.aplicativo && projeto.aplicativo.codigo) {
+      const appFileName = projeto.aplicativo.arquivo_principal || 'App.js';
+      zip.file(`app_mobile/${appFileName}`, projeto.aplicativo.codigo);
+      if (projeto.aplicativo.instrucoes) {
+        zip.file('app_mobile/INSTRUCOES_APP.md', projeto.aplicativo.instrucoes);
+      }
+    }
+
     // Add schema
     if (projeto.esquema_ligacao) {
       if (projeto.esquema_ligacao.pinout_svg) {
@@ -596,10 +757,18 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
 
     // Add Wokwi Simulation Bundle
     try {
-      const { diagramJson, wokwiToml } = generateWokwiDiagram(projeto);
-      zip.file('diagram.json', diagramJson);
-      zip.file('wokwi.toml', wokwiToml);
-      zip.file('WOKWI_SIMULATOR.md', `# Como rodar no Wokwi Simulator\n\n1. Acesse https://wokwi.com ou use a extensão oficial 'Wokwi Simulator' no VS Code.\n2. Carregue o arquivo diagram.json na aba de circuito e o código fonte em main.cpp.\n3. Pressione Play para simular as conexões e firmware sem hardware físico!\n`);
+      const { diagramJson, wokwiToml, librariesTxt } = generateWokwiDiagram(projeto);
+      zip.file('firmware/diagram.json', diagramJson);
+      
+      // If Wokwi VS Code extension is used without CMake, we should omit "elf=" or provide it.
+      // But we just provide wokwi.toml as generated.
+      zip.file('firmware/wokwi.toml', wokwiToml);
+      
+      if (librariesTxt) {
+        zip.file('firmware/libraries.txt', librariesTxt);
+      }
+      
+      zip.file('firmware/WOKWI_SIMULATOR.md', `# Como rodar no Wokwi Simulator\n\n## No Navegador (https://wokwi.com)\n1. Crie um novo projeto no Wokwi.\n2. Cole o código fonte no \`sketch.ino\` ou \`main.cpp\`.\n3. Cole o conteúdo de \`diagram.json\` na aba Diagram.\n4. Caso use bibliotecas, adicione-as no Library Manager.\n\n## No VS Code (Extensão Wokwi)\n1. Abra a pasta descompactada deste projeto no VS Code.\n2. Instale a extensão "Wokwi Simulator".\n3. Abra a Command Palette (F1) e digite \`Wokwi: Start Simulator\`.\n4. Ele irá simular as conexões e compilar o firmware automaticamente usando as bibliotecas do \`libraries.txt\`!\n`);
     } catch (e) {
       console.warn('Erro ao gerar Wokwi bundle para o zip:', e);
     }
@@ -774,38 +943,111 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
       <div className="absolute inset-0 z-0 pointer-events-none" style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.2) 1px, rgba(0,0,0,0.2) 2px)' }}></div>
 
       {showTerms && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" style={{ fontFamily: '"IBM Plex Mono", monospace' }}>
-          <div className="max-w-3xl border border-[#ffaa00]/30 rounded-xl bg-[#0f0a00] p-8 shadow-[0_0_50px_rgba(255,170,0,0.1)]">
-            <h2 className="text-[#ffaa00] text-2xl font-bold flex items-center gap-3 uppercase tracking-widest mb-6">
-              <ShieldAlert size={28} /> AVISO IMPORTANTE — LEIA ANTES DE CONTINUAR
-            </h2>
-            <div className="text-gray-300 space-y-4 mb-8 leading-relaxed text-sm">
-              <p>Este módulo é destinado EXCLUSIVAMENTE a pessoas com experiência comprovada em eletrônica e hardware.</p>
-              <p className="font-bold text-[#ffaa00] mt-6">AO CONTINUAR, VOCÊ DECLARA QUE:</p>
-              <ul className="space-y-3 pl-4">
-                <li>✓ Possui conhecimento em eletrônica básica e avançada</li>
-                <li>✓ Sabe identificar e manusear componentes eletrônicos</li>
-                <li>✓ Entende os riscos de curto-circuito, sobretensão e manuseio incorreto de componentes energizados</li>
-                <li>✓ Assume total responsabilidade por danos a equipamentos, componentes ou lesões decorrentes do uso das informações</li>
-                <li>✓ A Parvus não se responsabiliza por resultados incorretos gerados pela IA — sempre valide com um profissional</li>
-                <li>✓ Nunca trabalhe com tensões acima de 5V sem os devidos equipamentos de proteção individual</li>
-              </ul>
-            </div>
+        <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto" style={{ fontFamily: '"IBM Plex Mono", monospace' }}>
+          <div className="relative w-full max-w-2xl my-auto bg-[#0e0a02] border border-[#ffaa00]/40 rounded-2xl shadow-[0_0_50px_rgba(255,170,0,0.2)] flex flex-col overflow-hidden">
             
-            <label className="flex items-start gap-4 mb-8 cursor-pointer p-4 border border-[#333] rounded hover:border-[#ffaa00] transition-colors">
-               <input type="checkbox" checked={termsCheckbox} onChange={(e) => setTermsCheckbox(e.target.checked)} className="mt-1 w-5 h-5 accent-[#ffaa00]" />
-               <span className="text-sm text-gray-400 select-none">Li e aceito os termos acima e declaro ter experiência necessária para utilizar este módulo com segurança.</span>
-            </label>
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 border-b border-[#ffaa00]/20 bg-[#160e00] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-[#ffaa00]/10 border border-[#ffaa00]/30 text-[#ffaa00]">
+                  <ShieldAlert size={24} />
+                </div>
+                <div>
+                  <h2 className="text-[#ffaa00] text-lg sm:text-xl font-bold uppercase tracking-wider">
+                    TERMO DE RESPONSABILIDADE & SEGURANÇA
+                  </h2>
+                  <p className="text-[11px] text-gray-400">Hardware, circuitos e montagem de protótipos</p>
+                </div>
+              </div>
+            </div>
 
-            <div className="flex justify-between">
-              <a href="/" className="px-6 py-3 border border-[#333] text-gray-500 rounded uppercase tracking-widest text-xs hover:bg-[#111] transition-colors">Cancelar — Voltar</a>
+            {/* Modal Body - Scrollable */}
+            <div className="p-5 sm:p-6 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar text-xs sm:text-sm text-gray-300 leading-relaxed">
+              <div className="p-3.5 rounded-lg bg-black/40 border border-white/5 text-gray-300">
+                <p className="font-medium text-white">
+                  O módulo <span className="text-[#00d4ff] font-bold">IoT Creator</span> projeta esquemas elétricos, pinouts, diagramas e códigos de firmware para execução em hardware real (ESP32, Arduino, Raspberry Pi, etc.).
+                </p>
+              </div>
+
+              <div>
+                <p className="font-bold text-[#ffaa00] mb-3 uppercase tracking-wider text-xs">
+                  AO CONTINUAR, VOCÊ DECLARA QUE:
+                </p>
+                <div className="space-y-2.5">
+                  <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-black/30 border border-white/5">
+                    <span className="text-[#ffaa00] font-bold mt-0.5">✓</span>
+                    <span>Possui conhecimento e experiência básica/avançada em eletrônica e montagem de circuitos.</span>
+                  </div>
+                  <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-black/30 border border-white/5">
+                    <span className="text-[#ffaa00] font-bold mt-0.5">✓</span>
+                    <span>Sabe identificar, polarizar e manusear componentes eletrônicos sem causar curto-circuito.</span>
+                  </div>
+                  <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-black/30 border border-white/5">
+                    <span className="text-[#ffaa00] font-bold mt-0.5">✓</span>
+                    <span>Entende os riscos de sobretensão, inversão de polaridade e queima de portas GPIO.</span>
+                  </div>
+                  <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-black/30 border border-white/5">
+                    <span className="text-[#ffaa00] font-bold mt-0.5">✓</span>
+                    <span>Assume total responsabilidade pela montagem física, conexões elétricas e validação dos sinais antes de energizar qualquer placa.</span>
+                  </div>
+                  <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-black/30 border border-white/5">
+                    <span className="text-[#ffaa00] font-bold mt-0.5">✓</span>
+                    <span>Nunca trabalhará com tensões de rede alternada (110V/220V) sem isolamento galvânico adequado e supervisão profissional.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interactive Checkbox Card */}
+              <div 
+                onClick={() => setTermsCheckbox(!termsCheckbox)}
+                className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                  termsCheckbox 
+                    ? 'border-[#ffaa00] bg-[#ffaa00]/10 text-white shadow-[0_0_20px_rgba(255,170,0,0.15)]' 
+                    : 'border-[#333] bg-black/50 text-gray-400 hover:border-[#ffaa00]/50 hover:bg-black/80'
+                }`}
+              >
+                <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-colors shrink-0 ${
+                  termsCheckbox ? 'bg-[#ffaa00] border-[#ffaa00] text-black font-bold' : 'border-gray-500 bg-black/40'
+                }`}>
+                  {termsCheckbox && <CheckCircle2 size={16} className="text-black stroke-[3]" />}
+                </div>
+                <span className="text-xs sm:text-sm font-medium leading-snug">
+                  Li e concordo com a declaração acima. Afirmo que possuo a experiência técnica necessária para utilizar as informações e montar os circuitos com segurança.
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-5 border-t border-[#ffaa00]/20 bg-[#120b00] flex items-center justify-between gap-3">
               <button 
+                type="button"
+                onClick={() => {
+                  if (onBack) {
+                    onBack();
+                  } else {
+                    setShowTerms(false);
+                  }
+                }}
+                className="px-4 sm:px-6 py-2.5 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white rounded-lg uppercase tracking-wider text-xs transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              
+              <button 
+                type="button"
                 disabled={!termsCheckbox}
                 onClick={handleAcceptTerms}
-                className="disabled:opacity-30 disabled:cursor-not-allowed bg-[#ffaa00] hover:bg-[#ff8800] text-black font-bold uppercase tracking-widest px-8 py-3 rounded text-xs transition-colors shadow-[0_0_15px_rgba(255,170,0,0.3)]">
-                Aceitar e Continuar →
+                className={`font-bold uppercase tracking-widest px-6 sm:px-8 py-3 rounded-lg text-xs transition-all flex items-center gap-2 ${
+                  termsCheckbox 
+                    ? 'bg-[#ffaa00] hover:bg-[#ff8800] text-black shadow-[0_0_20px_rgba(255,170,0,0.4)] cursor-pointer active:scale-95' 
+                    : 'bg-white/10 text-gray-500 cursor-not-allowed opacity-50'
+                }`}
+              >
+                <span>Aceitar e Continuar</span>
+                <span>→</span>
               </button>
             </div>
+
           </div>
         </div>
       )}
@@ -833,9 +1075,68 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
       <div className="flex w-full h-full pt-14 z-20">
         
         {/* LEFT PANEL - INPUT */}
-        <div className="w-[40%] min-w-[400px] border-r border-[rgba(0,212,255,0.1)] bg-[#050505] p-6 overflow-y-auto custom-scrollbar flex flex-col">
-          {/* MODO DE CONSTRUÇÃO */}
-          <div className="space-y-3 mb-6 p-4 bg-white/5 border border-white/5 rounded-xl">
+        <div className="w-[40%] min-w-[400px] border-r border-[rgba(0,212,255,0.1)] bg-[#050505] p-6 overflow-y-auto custom-scrollbar flex flex-col relative">
+          
+          {projeto ? (
+            <div className="flex flex-col h-full animate-in fade-in duration-300">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-[#00d4ff] font-bold text-sm uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#00d4ff] animate-pulse"></span>
+                  Modo de Edição
+                </h2>
+                <button 
+                  onClick={() => setProjeto(null)} 
+                  className="text-[10px] text-gray-400 hover:text-white border border-gray-600 hover:border-gray-400 px-3 py-1.5 rounded uppercase tracking-wider transition-colors"
+                >
+                  Novo Projeto
+                </button>
+              </div>
+
+              <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-5 mb-8 text-sm">
+                <h3 className="text-white font-bold text-lg mb-2">{projeto.titulo}</h3>
+                <p className="text-gray-400 leading-relaxed text-xs">
+                  O projeto já foi estruturado pela IA. Você pode solicitar ajustes pontuais via chat sem precisar gerar tudo do zero novamente.
+                </p>
+                
+                <div className="mt-4 p-3 bg-black/50 border border-white/5 rounded-lg flex items-start gap-2">
+                  <Sparkles size={14} className="text-[#00d4ff] shrink-0 mt-0.5" />
+                  <span className="text-xs text-gray-300 leading-tight">
+                    <strong>Exemplo:</strong> "Troque o LED do pino 5 para o pino 8", "Adicione um sensor DHT11", "Mude a lógica para piscar 3x ao ligar".
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex-1 flex flex-col justify-end min-h-[300px]">
+                <h3 className="text-[#00d4ff] font-bold text-[11px] uppercase tracking-widest mb-3">&gt;_ O QUE DESEJA ALTERAR?</h3>
+                
+                <textarea
+                  value={editPrompt}
+                  onChange={(e) => setEditPrompt(e.target.value)}
+                  disabled={isGenerating}
+                  placeholder="Descreva a modificação desejada..."
+                  className="w-full bg-[#111] border border-[#333] focus:border-[#00d4ff]/50 rounded-xl p-4 text-sm text-white focus:ring-1 focus:ring-[#00d4ff]/50 transition-all outline-none resize-none h-32 mb-4 font-light custom-scrollbar"
+                />
+
+                {errorMsg && <div className="text-[#ff4444] text-[10px] uppercase font-bold mb-4 bg-red-500/10 p-3 rounded-lg border border-red-500/20">{errorMsg}</div>}
+
+                <button
+                  onClick={editProject}
+                  disabled={isGenerating || !editPrompt.trim()}
+                  className="w-full bg-[#00d4ff] hover:bg-[#00bfff] disabled:opacity-50 text-black font-bold uppercase tracking-widest py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(0,212,255,0.15)] hover:shadow-[0_0_30px_rgba(0,212,255,0.3)] flex items-center justify-center gap-3 active:scale-[0.98]"
+                  style={{ fontFamily: '"Syne", sans-serif' }}
+                >
+                  {isGenerating ? (
+                    <><Loader2 size={18} className="animate-spin" /> {loadingMsg}</>
+                  ) : (
+                    <><RefreshCw size={18} /> ATUALIZAR PROJETO</>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="animate-in fade-in duration-300">
+              {/* MODO DE CONSTRUÇÃO */}
+              <div className="space-y-3 mb-6 p-4 bg-white/5 border border-white/5 rounded-xl">
             <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-[#9b59b6] rounded-full"></span>
               Modo de Construção IoT
@@ -1062,9 +1363,11 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
             {isGenerating ? <><Loader2 size={18} className="animate-spin" /> {loadingMsg}</> : <><Cpu size={18} /> {iotConstructionMode === 'agency' ? 'GERAR ESPECIFICAÇÃO DE ENGENHARIA' : 'GERAR PROJETO DE HARDWARE'}</>}
           </button>
         </div>
+        )}
+      </div>
 
-        {/* RIGHT PANEL - OUTPUT */}
-        <div className="w-[60%] flex flex-col bg-[#080808]/50 backdrop-blur-sm">
+      {/* RIGHT PANEL - OUTPUT */}
+      <div className="w-[60%] flex flex-col bg-[#080808]/50 backdrop-blur-sm">
           {!projeto && !isGenerating ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-20">
               <Cpu size={80} className="mb-6 text-[#00d4ff]" />
@@ -1088,9 +1391,13 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
               <div className="flex border-b border-[rgba(0,212,255,0.1)] px-4 bg-[#050505] items-center">
                 <div className="flex">
                   {(() => {
-                    const tabs = ['VISÃO GERAL', 'ESQUEMA', 'CÓDIGO', 'COMPONENTES', 'SIMULADOR WOKWI', 'WEB SERIAL (USB)'];
+                    const tabs = ['VISÃO GERAL', 'ESQUEMA', 'CÓDIGO'];
+                    if (projeto.aplicativo) {
+                      tabs.push('APP MOBILE');
+                    }
+                    tabs.push('COMPONENTES', 'SIMULADOR WOKWI', 'WEB SERIAL (USB)');
                     if (projeto.analise_briefing) {
-                      tabs.splice(4, 0, 'ANÁLISE TÉCNICA');
+                      tabs.splice(tabs.indexOf('SIMULADOR WOKWI'), 0, 'ANÁLISE TÉCNICA');
                     }
                     tabs.push('REFERÊNCIAS');
                     return tabs.map(t => (
@@ -1210,11 +1517,22 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                 {/* 3. CÓDIGO */}
                 {activeTab === 'CÓDIGO' && (
                   <div className="animate-in fade-in duration-300 h-full flex flex-col">
-                     <div className="flex justify-between items-center mb-4">
-                        <div>
+                     <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+                        <div className="flex items-center gap-4">
                           <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest flex items-center gap-2">
                              <Code2 size={16} /> Firmware — {projeto?.codigo?.arquivo_principal || 'main.cpp'}
                           </h3>
+                          <button 
+                            onClick={() => setIsEditingCode(!isEditingCode)} 
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-colors border ${
+                              isEditingCode 
+                                ? 'bg-[#00d4ff]/20 text-[#00d4ff] border-[#00d4ff]/50 shadow-[0_0_10px_rgba(0,212,255,0.2)]' 
+                                : 'bg-[#111] text-gray-400 border-[#333] hover:text-white hover:border-gray-500'
+                            }`}
+                          >
+                            {isEditingCode ? <Save size={14} /> : <Code2 size={14} />}
+                            {isEditingCode ? 'Concluir Edição' : 'Editar Manualmente'}
+                          </button>
                         </div>
                         <div className="flex gap-2">
                           <button onClick={simulateExecution} disabled={isSimulating} className="flex items-center gap-2 text-black font-bold bg-[#00ff88] px-4 py-2 rounded text-xs uppercase hover:bg-[#00cc66] shadow-[0_0_15px_rgba(0,255,136,0.2)]">
@@ -1228,19 +1546,64 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
                           </button>
                         </div>
                      </div>
-                     
-                     <div className="flex-1 bg-[#050505] border border-[#333] rounded overflow-auto relative">
-                       <pre className="p-4 text-sm font-mono leading-relaxed h-full overflow-auto">
-                         <code className={`language-${(projeto?.codigo?.linguagem || '').toLowerCase().includes('python') ? 'python' : 'cpp'}`}>
-                           {projeto?.codigo?.codigo_completo || '// Código não fornecido.'}
-                         </code>
-                       </pre>
+                       
+                     <div className="flex-1 bg-[#050505] border border-[#333] rounded overflow-hidden relative flex flex-col">
+                       {isEditingCode ? (
+                         <textarea
+                           value={projeto?.codigo?.codigo_completo || ''}
+                           onChange={(e) => handleCodeChange(e.target.value)}
+                           className="w-full h-full bg-[#0a0a0a] text-gray-200 font-mono text-sm p-4 outline-none resize-none custom-scrollbar focus:ring-1 focus:ring-[#00d4ff]/50"
+                           spellCheck={false}
+                         />
+                       ) : (
+                         <pre className="p-4 text-sm font-mono leading-relaxed h-full overflow-auto">
+                           <code className={`language-${(projeto?.codigo?.linguagem || '').toLowerCase().includes('python') ? 'python' : 'cpp'}`}>
+                             {projeto?.codigo?.codigo_completo || '// Código não fornecido.'}
+                           </code>
+                         </pre>
+                       )}
                      </div>
 
                      <div className="mt-6 bg-[#111] p-4 border border-[#333] rounded">
                        <h4 className="text-gray-400 text-xs font-bold uppercase mb-2">Instruções de Upload</h4>
                        <div className="markdown-body">
                          <ReactMarkdown>{projeto?.codigo?.instrucoes_upload || ''}</ReactMarkdown>
+                       </div>
+                     </div>
+                  </div>
+                )}
+
+                {/* 3.5 APP MOBILE */}
+                {activeTab === 'APP MOBILE' && projeto?.aplicativo && (
+                  <div className="animate-in fade-in duration-300 h-full flex flex-col">
+                     <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-4">
+                          <h3 className="text-[#9b59b6] font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                             <Code2 size={16} /> {projeto.aplicativo.framework} — {projeto.aplicativo.arquivo_principal}
+                          </h3>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => copyToClipboard(projeto.aplicativo.codigo || '')} className="flex items-center gap-2 text-white border border-[#333] px-3 py-2 rounded text-xs hover:bg-[#222]">
+                            <Copy size={14} /> Copiar App
+                          </button>
+                          <button onClick={() => downloadFile(projeto.aplicativo.arquivo_principal || 'App.js', projeto.aplicativo.codigo || '')} className="flex items-center gap-2 text-white border border-[#333] px-3 py-2 rounded text-xs hover:bg-[#222]">
+                            <Download size={14} /> Baixar
+                          </button>
+                        </div>
+                     </div>
+                       
+                     <div className="flex-1 bg-[#050505] border border-[#333] rounded overflow-auto relative flex flex-col">
+                       <pre className="p-4 text-sm font-mono leading-relaxed h-full overflow-auto">
+                         <code className="language-javascript text-[#ffaa00]">
+                           {projeto.aplicativo.codigo || '// Código não fornecido.'}
+                         </code>
+                       </pre>
+                     </div>
+
+                     <div className="mt-6 bg-[#111] p-4 border border-[#9b59b6]/30 rounded">
+                       <h4 className="text-[#9b59b6] text-xs font-bold uppercase mb-2">Instruções de Integração</h4>
+                       <div className="markdown-body">
+                         <ReactMarkdown>{projeto.aplicativo.instrucoes || ''}</ReactMarkdown>
                        </div>
                      </div>
                   </div>
