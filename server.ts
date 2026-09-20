@@ -199,20 +199,31 @@ app.post("/api/ai/simulate-iot", async (req, res) => {
     const { codigo, linguagem, placa } = req.body;
     const userKey = (req.headers['x-gemini-key'] || req.headers['x-nvidia-key']) as string;
     
-    const prompt = `Você é um emulador de ${placa}. Execute este código de ${linguagem} e simule o output do Serial Monitor/console por 10 ciclos de execução.
+    const prompt = `Você é um emulador de hardware industrial e console serial de alta precisão para a plataforma: ${placa}.
+Execute o seguinte código de ${linguagem} e simule o output do Serial Monitor / console de depuração por exatamente 10 ciclos de execução em tempo real.
 
-CÓDIGO:
+CÓDIGO-FONTE A EXECUTAR:
 ${codigo}
 
-REGRAS:
-- Simule outputs realistas com timestamps
-- Se o código tem sensor, simule leituras variadas e realistas
-- Se o código tem atuadores, simule as respostas
-- Use formato de Serial Monitor real do Arduino (se C++) ou print() real (se Python)
-- Dure exatamente 10 ciclos/iterações e pare
-- Se houver bug óbvio no código, aponte no output
+DIRETRIZES DE EMULAÇÃO DE ALTA FIDELIDADE:
+1. ETAPA DE BOOTLOADER / INICIALIZAÇÃO (Primeiras 4-6 linhas):
+   - Simule o boot real da placa (ex: se ESP32, mostre clock de 240MHz, chip revision, MAC address, Free Heap, versão do core).
+   - Simule a inicialização de barramentos (I2C/SPI/UART) e pinos GPIO conforme definidos no código.
+   - Se houver Wi-Fi/Ethernet no código, simule a tentativa de conexão com pontos de progresso (....), sucesso, RSSI em dBm e obtenção de IP local (ex: 192.168.1.x).
+   - Se houver MQTT/HTTP/WebSockets, simule a conexão ao servidor/broker com Client ID e inscrição de tópicos.
 
-Retorne APENAS o texto do terminal, linha por linha. Sem JSON. Sem explicação.`;
+2. 10 CICLOS DE TELEMETRIA E PROCESSAMENTO:
+   - Simule 10 iterações com timestamps crescentes realistas (ex: [00:00:02.150]).
+   - Sensores: Apresente dados dinâmicos coerentes com ruído físico real (ex: temperatura variando 24.3°C, 24.6°C, 24.5°C; umidade variando; valores de ADC com flutuação natural).
+   - Atuadores: Exiba feedback visual e técnico estrito de quando relés, buzzers, LEDs ou saídas digitais comutam de estado (ex: "[ATUADOR] Pino GPIO 4 -> HIGH (Relé 1 ATIVADO)").
+   - Payloads de Rede: Mostre os pacotes JSON realmente enviados via MQTT/HTTP conforme codificado no loop.
+   - Telemetria de Sistema: Inclua métricas de heap livre e status de watchdog se aplicável.
+
+3. DIAGNÓSTICO:
+   - Se houver erro de sintaxe, pino conflituoso ou biblioteca ausente no código, aponte um alerta claro formatado como "[RUNTIME WARN]" ou "[EXCEPTION]".
+
+FORMATO DE RETORNO:
+Retorne EXCLUSIVAMENTE o texto puro do Serial Monitor linha por linha. Não inclua blocos markdown (\`\`\`), explicações ou JSON. Apenas a saída bruta do terminal.`;
 
     res.setHeader('Content-Type', 'application/json');
     res.write(' ');

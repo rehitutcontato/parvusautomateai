@@ -305,170 +305,189 @@ export function IotMonitor({ onBack }: { onBack?: () => void }) {
       let prompt = '';
 
       if (iotConstructionMode === 'agency') {
-        prompt = `Você é um engenheiro de sistemas embarcados sênior. Nível: produção industrial.
-O cliente preencheu um briefing técnico completo de hardware. Execute com precisão absoluta.
-Assuma que o usuário é extremamente experiente em eletrônica — não explique conceitos básicos.
+        prompt = `Você é um Engenheiro Chefe de Sistemas Embarcados e IoT Industrial. Nível: Produção Comercial e Missão Crítica.
+O cliente preencheu um briefing técnico de hardware avançado. Sua missão é projetar e documentar a solução física completa, industrialmente viável e impecável.
 
 == BRIEFING TÉCNICO DOS EMBARCADOS ==
-
 HARDWARE DISPONÍVEL: ${iotBriefing.hardware}
 OBJETIVO (entradas/saídas/lógica): ${iotBriefing.objetivo}
 PROTOCOLO DE COMUNICAÇÃO: ${iotBriefing.protocolo} — ${iotBriefing.protocolo_detalhes}
 PINAGEM DEFINIDA: ${iotBriefing.pinagem || 'Não definida pelo usuário — projete a melhor pinagem possível'}
 RESTRIÇÕES DE HARDWARE: ${iotBriefing.restricoes || 'Nenhuma'}
-COMPORTAMENTO DE FALHA: ${iotBriefing.falha || 'Não especificado — implemente failsafe industrial padrão'}
+COMPORTAMENTO DE FALHA: ${iotBriefing.falha || 'Failsafe industrial padrão com watchdog e estados seguros'}
 AMBIENTE DE OPERAÇÃO: ${iotBriefing.ambiente || 'Industrial/Comum padrão'}
-
 == FIM DO BRIEFING ==
 
-Use web search para:
-- Buscar datasheet ou pinout oficial do hardware principal mencionado (se aplicável)
-- Buscar preços reais dos componentes no Brasil (FilipeFlop, Baú da Eletrônica, Mercado Livre)
-- Buscar imagem oficial do hardware de placa principal
-- Buscar 3 referências técnicas ou bibliotecas relevantes
+⚡ PADRÃO DE ENGENHARIA DE FIRMWARE (NÃO-NEGOCIÁVEL):
+1. CÓDIGO NÃO-BLOQUEANTE: PROIBIDO usar delay() no loop principal! Use máquinas de estado temporizadas com millis() ou tarefas FreeRTOS no ESP32.
+2. CONECTIVIDADE RESILIENTE: Rotina de reconexão automática Wi-Fi/MQTT com backoff exponencial sem congelar as leituras locais de sensores.
+3. FILTRAGEM DE RUÍDO: Implemente filtro de média móvel para leituras analógicas e debounce de 50ms para entradas digitais.
+4. SEGURANÇA DE PINOS: Evite usar pinos de strapping do ESP32 (GPIO 0, 2, 12, 15) para saídas ativas no boot.
+5. WATCHDOG TIMER: Configure esp_task_wdt ou watchdog de hardware para reiniciar o microcontrolador caso trave.
+6. SERIAL DE ALTA PERFORMANCE: Use Serial.begin(115200) com logs ricos formatados com tags ([BOOT], [WIFI], [MQTT], [SENSOR], [ALERT]).
 
-${agencyMode ? '- MODO AGÊNCIA ATIVADO: Remova referências ao gerador, crie conteúdo white-label pronto para revenda corporativa.\n' : ''}
+${agencyMode ? '- MODO AGÊNCIA ATIVADO: Remova referências à Parvus Automate, crie documentação white-label pronta para entrega ao cliente final corporativo.\n' : ''}
 
 Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
 {
-  "titulo": "nome do projeto",
-  "descricao_tecnica": "resumo de engenharia em 2 linhas",
+  "titulo": "Nome profissional do projeto IoT",
+  "descricao_tecnica": "Resumo de engenharia de 2 a 3 linhas destacando arquitetura e protocolos",
   "placa": "${selectedPlaca}",
-  "imagem_placa_url": "URL recomendada para ilustração (ex: https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80)",
-  
-  "analise_briefing": "sua leitura técnica em 3-4 linhas do que foi pedido",
+  "imagem_placa_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80",
+  "analise_briefing": "Diagnóstico de engenharia em 3-4 linhas com cálculo de viabilidade elétrica e taxa de transmissão",
   "decisoes_pinagem": [
     {
-      "pino": "GPIO 5",
-      "funcao": "Trigger do Relé",
-      "justificativa": "Pino com pull-down interno estável no boot"
+      "pino": "GPIO 4",
+      "funcao": "Trigger do Módulo Relé 1",
+      "justificativa": "Pino sem restrição de boot, nível lógico limpo em 3.3V com pull-down externo"
     }
   ],
   "alertas_tecnicos": [
-    "aviso de risco identificado (ex: corrente limite de GPIO, segurança de 110/220V)"
+    "Aviso técnico de limite de corrente (máx 12mA por GPIO no ESP32), necessidade de optoacoplador para cargas indutivas"
   ],
-
   "componentes": [
     {
-      "nome": "nome do componente",
+      "nome": "Nome do componente (ex: Sensor DHT22 / AM2302)",
       "quantidade": 1,
-      "especificacao": "modelo/especificação exata com part number se aplicável",
-      "preco_estimado_brl": 15.90,
-      "onde_comprar": "FilipeFlop / Mercado Livre / Baú da Eletrônica",
-      "link_sugerido": "URL real"
+      "especificacao": "Part number exato, faixa de tensão (ex: 3.3V - 5.5V DC)",
+      "pino_sugerido": "GPIO 4",
+      "preco_estimado_brl": 28.50,
+      "onde_comprar": "FilipeFlop / Baú da Eletrônica / Mercado Livre",
+      "link_sugerido": "https://www.mercadolivre.com.br"
     }
   ],
-  "preco_total_estimado_brl": 150.00,
-
+  "preco_total_estimado_brl": 165.00,
   "esquema_ligacao": {
-    "descricao_textual": "Explicação EXTREMAMENTE DETALHADA E DIDÁTICA de cada conexão física. Ensine como se o usuário fosse um iniciante, explicando o motivo de cada fio e ligação (ex: 'Puxe um fio vermelho do pino 5V para alimentar o componente X, depois...' e dê dicas sobre polaridade e segurança).",
+    "descricao_textual": "Instruções didáticas passo a passo fio a fio: especifique exatamente de qual pino da placa sai o cabo, a cor recomendada do fio (vermelho para VCC, preto para GND, amarelo/verde para sinal), e em qual borne ou pino do módulo se conecta. Destaque se o sensor opera em 3.3V ou 5V para evitar queima.",
     "conexoes": [
       {
-        "de": "ESP32 GPIO 5",
-        "para": "In do Módulo Relé",
-        "via": "Resistor 1kΩ"
+        "de": "ESP32 GPIO 4",
+        "para": "IN1 do Módulo Relé",
+        "via": "Conexão direta fêmea-fêmea"
+      },
+      {
+        "de": "ESP32 3V3",
+        "para": "VCC do Sensor",
+        "via": "Linha positiva da protoboard"
+      },
+      {
+        "de": "ESP32 GND",
+        "para": "GND do Sensor",
+        "via": "Linha negativa da protoboard"
       }
     ],
-    "pinout_svg": "CÓDIGO SVG DO DIAGRAMA DE LIGAÇÃO. Gere um diagrama visualmente incrível e altamente criativo, semelhante a uma planta arquitetônica tech. Use gradientes, traços bem definidos e nós. Cores de texto #00d4ff, elementos com stroke #333. O SVG deve possuir viewBox='0 0 1000 600', width='100%', height='100%'. Faça um fundo dark agradável. Inclua labels descritivas nos pinos e cabos coloridos. Retorne a string literal puramente SVG sem marcações markdown."
+    "pinout_svg": "CÓDIGO SVG DO DIAGRAMA DE LIGAÇÃO. Gere um diagrama visualmente incrível e de alta precisão técnica semelhante a uma planta blueprint cibernética. Use viewBox='0 0 1000 600', width='100%', height='100%', fundo dark (#0a0d14), componentes estilizados em caixas modulares com cantos arredondados, trilhas de conexão bem traçadas com cores padrão (VCC: #ef4444, GND: #374151, SINAL: #00d4ff, DADOS: #10b981), labels legíveis com fonte monospace e pinos numerados. Retorne a string literal puramente SVG sem crases ou markdown."
   },
-
   "codigo": {
     "linguagem": "C++",
     "arquivo_principal": "main.cpp",
-    "codigo_completo": "código completo, comentado em português, totalmente funcional sem omitir pinos ou lógica — zero placeholders",
-    "dependencias": ["Nome da biblioteca com versão recomendada"],
-    "instrucoes_upload": "passo a passo detalhado para flash e upload de código"
+    "codigo_completo": "Código C++ de nível industrial completo, não-bloqueante (com millis()), documentado e comentado em português, com configuração de Wi-Fi, MQTT/HTTP, leitura de sensores filtrada, controle de atuadores, watchdog e logs em 115200 baud. Zero placeholders.",
+    "dependencias": ["PubSubClient@^2.8", "ArduinoJson@^6.21.3", "DHT sensor library@^1.4.4"],
+    "instrucoes_upload": "Guia detalhado: seleção de placa na Arduino IDE / VSCode PlatformIO, velocidade de upload 921600, partição SPIFFS/LittleFS, e pressionar botão BOOT no início do flash se necessário."
   },
-
   "aplicativo": {
-    "framework": "React Native (Expo) ou React (Web App)",
-    "arquivo_principal": "App.js ou index.html",
-    "codigo": "Código fonte completo do aplicativo mobile ou web (único arquivo principal ou estrutura essencial para controlar/monitorar a placa)",
-    "instrucoes": "Como rodar este aplicativo (ex: Expo Go) e como ele se comunica com o hardware"
+    "framework": "React (Web Dashboard)",
+    "arquivo_principal": "DashboardIot.jsx",
+    "codigo": "Código React completo com interface Dark luxuosa, cards de telemetria em tempo real, botões liga/desliga para relés com visual feedback e indicador de status de conexão WebSocket/MQTT.",
+    "instrucoes": "Como integrar este painel frontend ao broker MQTT ou backend REST para controle imediato."
   },
-  "comportamento_falha_implementado": "descreva como o failsafe foi projetado ou tratado no firmware",
+  "comportamento_falha_implementado": "Descrição técnica do failsafe: desliga relés de alta potência em caso de perda de sinal por mais de 30s e aciona watchdog.",
   "avisos_seguranca": [
-    "alerta de segurança elétrica ou ambiental"
+    "⚠️ SEGURANÇA ELÉTRICA: Para chaveamento de 110V/220V AC, utilize obrigatoriamente relés com isolamento por optoacoplador e caixa de proteção antichamas com aterramento."
   ],
   "referencias": [
     {
-      "titulo": "Datasheet ou Tutorial de Referência",
-      "url": "URL real",
-      "descricao": "por que este recurso é útil para o engenheiro na vida real"
+      "titulo": "Datasheet Oficial do ESP32-WROOM-32",
+      "url": "https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32_datasheet_en.pdf",
+      "descricao": "Especificações elétricas de consumo, pinout e limites de corrente por GPIO."
     }
   ],
   "proximos_passos": [
-    "passo 1 após montar a protoboard"
+    "1. Montar o circuito em protoboard conferindo as linhas de 3.3V e GND",
+    "2. Instalar as bibliotecas requeridas na Arduino IDE",
+    "3. Conectar a placa via USB e carregar o firmware"
   ]
 }`;
       } else {
-        prompt = `Você é um engenheiro de hardware sênior. O usuário descreve um projeto e você gera TUDO necessário para construí-lo.
+        prompt = `Você é um Engenheiro Chefe de Hardware e Sistemas Embarcados da Parvus Automate.
+O usuário descreve um projeto físico e você gera TUDO necessário para construí-lo com nível de engenharia industrial.
 
 PLACA SELECIONADA: ${selectedPlaca}
 DESCRIÇÃO DO PROJETO: ${descricao}
 
-CONTEXTO CRÍTICO:
-- O usuário é EXPERIENTE em eletrônica — não explique conceitos básicos
-- Este é um projeto REAL — não uma simulação
-- O código gerado deve funcionar no hardware real sem modificações conceituais
-- Use web search para buscar preços reais de componentes no Brasil (Mercado Livre, FilipeFlop, Baú da Eletrônica)
-- Use web search para buscar a imagem oficial da placa ${selectedPlaca}
-- Use web search para buscar 3 links de referência relevantes para este projeto
-${agencyMode ? '- MODO AGÊNCIA ATIVADO: Remova referências ao gerador, crie conteúdo white-label pronto para revenda corporativa.\n' : ''}
+⚡ PADRÃO DE EXCELÊNCIA TÉCNICA:
+- Projeto 100% REAL e executável na prática: componentes comercialmente acessíveis no Brasil.
+- Código NÃO-BLOQUEANTE: NUNCA use delay() no loop principal; utilize controle temporal com millis() e máquinas de estado.
+- Resiliência: Reconexão de rede automática, tratamento de falhas e watchdog timer.
+- Mapeamento Wokwi: Em 'componentes', forneça SEMPRE o campo 'pino_sugerido' com o pino exato (ex: 'GPIO 4', 'GPIO 21 (SDA)', 'D2', 'A0') para integração perfeita com o simulador virtual.
+${agencyMode ? '- MODO AGÊNCIA ATIVADO: Remova qualquer menção à marca Parvus Automate, gere documentação white-label pronta para revenda corporativa.\n' : ''}
 
-Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
+Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
 {
-  "titulo": "nome curto do projeto",
-  "descricao_tecnica": "resumo técnico em 2 linhas",
+  "titulo": "Nome técnico e comercial do projeto",
+  "descricao_tecnica": "Resumo de engenharia em 2-3 linhas destacando arquitetura e funcionamento",
   "placa": "${selectedPlaca}",
-  "imagem_placa_url": "URL recomendada para ilustração (ex: https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80)",
+  "imagem_placa_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80",
   "componentes": [
     {
-      "nome": "nome do componente",
+      "nome": "Nome claro do componente (ex: Sensor DHT22 / Módulo Relé 2 Canais)",
       "quantidade": 1,
-      "especificacao": "modelo/especificação exata",
-      "preco_estimado_brl": 25.90,
+      "especificacao": "Part number e especificações elétricas exatas (ex: Tensão 3.3V-5V, I2C/Digital)",
+      "pino_sugerido": "GPIO 4",
+      "preco_estimado_brl": 24.90,
       "onde_comprar": "FilipeFlop / Mercado Livre / Baú da Eletrônica",
-      "link_sugerido": "URL real"
+      "link_sugerido": "https://www.mercadolivre.com.br"
     }
   ],
-  "preco_total_estimado_brl": 150.00,
+  "preco_total_estimado_brl": 145.00,
   "esquema_ligacao": {
-    "descricao_textual": "Explicação EXTREMAMENTE DETALHADA E DIDÁTICA de como fazer a ligação das fiações (passo a passo para um nível técnico até iniciante conseguirem montar sem erro), incluindo razões, voltagens e dicas de cuidado.",
+    "descricao_textual": "Passo a passo didático e ultra minucioso de cada conexão fio a fio: de onde sai cada cabo, cor sugerida (VCC vermelho, GND preto, Dados verde/amarelo), borne de destino e advertências de tensão (3.3V vs 5V).",
     "conexoes": [
       {
-        "de": "ESP32 GPIO 2",
-        "para": "Anodo do LED",
-        "via": "Resistor 220Ω"
+        "de": "${selectedPlaca} GPIO 4",
+        "para": "Pino Sinal do Sensor",
+        "via": "Resistor Pull-up 4.7kΩ para 3.3V"
+      },
+      {
+        "de": "${selectedPlaca} 3V3",
+        "para": "VCC do Sensor",
+        "via": "Trilha de alimentação"
+      },
+      {
+        "de": "${selectedPlaca} GND",
+        "para": "GND do Sensor",
+        "via": "Trilha de terra comum"
       }
     ],
-    "pinout_svg": "CÓDIGO SVG DO DIAGRAMA DE LIGAÇÃO. Gere um diagrama visualmente incrível e altamente criativo, semelhante a uma planta arquitetônica tech. Use gradientes, traços bem definidos e nós. Cores de texto #00d4ff, elementos com stroke #333. O SVG deve possuir viewBox='0 0 1000 600', width='100%', height='100%'. Faça um fundo dark agradável. Inclua labels descritivas nos pinos e cabos coloridos. Retorne a string literal puramente SVG sem marcações markdown."
+    "pinout_svg": "CÓDIGO SVG DO DIAGRAMA DE LIGAÇÃO. Gere um diagrama visualmente impactante estilo blueprint dark com viewBox='0 0 1000 600', width='100%', height='100%', fundo dark (#0a0d14), nós e circuitos bem destacados com cabos coloridos (#ef4444 para VCC, #374151 para GND, #00d4ff para Dados), caixas modulares para os componentes e labels nítidas. Retorne a string literal puramente SVG sem crases markdown."
   },
   "codigo": {
     "linguagem": "C++",
     "arquivo_principal": "main.cpp",
-    "codigo_completo": "código completo, comentado em português, pronto para upload na placa — zero placeholders",
-    "dependencias": ["lib1", "lib2"],
-    "instrucoes_upload": "passo a passo para fazer upload do código na placa"
+    "codigo_completo": "Código C++ completo, industrial, não-bloqueante (usando millis()), ricamente comentado em português, com configuração de Wi-Fi, telemetria MQTT/HTTP em formato JSON, leitura estável de sensores com filtro e controle de atuadores. Zero placeholders.",
+    "dependencias": ["PubSubClient@^2.8", "ArduinoJson@^6.21.3"],
+    "instrucoes_upload": "Guia de upload detalhado para Arduino IDE ou PlatformIO: porta COM, velocidade de baud 115200 e modo de flash."
   },
   "aplicativo": {
-    "framework": "React Native (Expo) ou React (Web App)",
-    "arquivo_principal": "App.js ou index.html",
-    "codigo": "Código fonte completo do aplicativo mobile ou web (único arquivo principal ou estrutura essencial para controlar/monitorar a placa)",
-    "instrucoes": "Como rodar este aplicativo (ex: Expo Go) e como ele se comunica com o hardware"
+    "framework": "React (Web Dashboard)",
+    "arquivo_principal": "DashboardIot.jsx",
+    "codigo": "Código React completo com interface Cyberpunk luxuosa, cards de telemetria em tempo real, botões interativos para controle de relés e status de conexão.",
+    "instrucoes": "Como executar o dashboard e conectar ao broker MQTT ou API REST."
   },
   "avisos_seguranca": [
-    "aviso específico para este projeto — não genérico"
+    "⚠️ Atenção aos limites de tensão: Não alimente pinos analógicos ou digitais com mais de 3.3V sem divisor resistivo."
   ],
   "referencias": [
     {
-      "titulo": "título do recurso",
-      "url": "URL real encontrada via web search",
-      "descricao": "por que este link é útil para este projeto"
+      "titulo": "Documentação e Pinout da Placa ${selectedPlaca}",
+      "url": "https://docs.espressif.com",
+      "descricao": "Guia oficial com tabela de pinos seguros e funções de multiplexação."
     }
   ],
   "proximos_passos": [
-    "passo 1 após montar o hardware"
+    "1. Montar os componentes na protoboard conferindo alimentação e terra",
+    "2. Carregar o firmware compilado via porta USB",
+    "3. Abrir o Serial Monitor a 115200 baud para verificar a inicialização"
   ]
 }`;
       }
@@ -555,9 +574,17 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura:
     setLoadingMsg('Aplicando modificações ao projeto...');
     
     try {
-      const prompt = `Você é um engenheiro sênior revisando um projeto IoT existente. 
-O cliente solicitou uma modificação específica.
-MANTENHA todo o resto do projeto exatamente como está, alterando APENAS o que for afetado pelo pedido do usuário (ex: se mudar um pino, mude no código e no esquema de ligação. Se adicionar um sensor, adicione nos componentes, no código e no esquema).
+      const prompt = `Você é um Engenheiro Chefe de Hardware e Sistemas Embarcados revisando um projeto IoT existente. 
+O cliente solicitou uma modificação técnica específica.
+
+DIRETRIZES DE REVISÃO E INTEGRIDADE:
+1. Mantenha o firmware NÃO-BLOQUEANTE (com millis()), seguro contra falhas e com watchdog.
+2. Certifique-se de que qualquer alteração de pino, componente ou sensor reflita de forma síncrona em:
+   - 'componentes' (incluindo o campo 'pino_sugerido' atualizado para o simulador Wokwi)
+   - 'esquema_ligacao' (conexoes e pinout_svg consistente)
+   - 'codigo' (definições #define e inicialização)
+   - 'aplicativo' (mostradores ou botões correspondentes)
+3. Mantenha o padrão de produção industrial com logs seriais em 115200 baud.
 
 == JSON DO PROJETO ATUAL ==
 ${JSON.stringify(projeto)}
@@ -565,7 +592,7 @@ ${JSON.stringify(projeto)}
 == PEDIDO DE ALTERAÇÃO DO USUÁRIO ==
 ${editPrompt}
 
-Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, mantendo a mesma estrutura original.`;
+Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e mantendo a mesma estrutura original.`;
 
       let apiUrl = import.meta.env.VITE_API_URL || '';
       if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);

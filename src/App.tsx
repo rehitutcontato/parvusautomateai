@@ -434,20 +434,21 @@ export default function App() {
     addLog('> Analisando problema...', 'active');
     
     try {
-      const prompt = `Você é um classificador de problemas de automação sênior e arquiteto de software de elite.
-Sua missão é realizar uma auditoria profunda do que o usuário realmente pede vs. o que ele precisa para criar um software de excelência.
-Ao invés de gerar perguntas genéricas, selecione de 2 a 3 perguntas críticas específicas para guiar as variáveis do sistema, as regras de negócio mais finas e a estrutura técnica desse escopo.
+      const prompt = `Você é o Arquiteto Chefe de Software e Classificador de Sistemas da Parvus Automate.
+Sua missão é realizar uma auditoria de engenharia profunda no problema descrito pelo usuário para categorizar o sistema e formular de 2 a 3 perguntas críticas de arquitetura que definirão as variáveis-chave da solução.
 
-DIRETRIZES DE PERGUNTAS DE ACORDO COM O DOMÍNIO DA SOLUÇÃO:
-- Se for um CRM/Pipelines: Pergunte qual o KPI principal (Conversão, Acompanhamento, Retenção), quantidade de etapas no funil, e se há integrações externas específicas.
-- Se for Agenda/Calendário/Reservas: Pergunte o tipo de agendamento (interno/cliente/ambos), duração padrão da sessão, e regras de colisão de horários.
-- Se for Automação WhatsApp/Cobrança/Robôs de Conversa: Pergunte qual o gatilho exato (ex: novo lead, fatura pendente), a sequência de mensagens, e se precisa de logs de rastreio de leitura.
-- Se for Calculadoras de Comissão/Impostos, Conversores de Dados, Ferramentas Financeiras ou Utilitários Administrativos: Pergunte sobre as regras de cálculo e fórmulas de negócio (porcentagem fixa, bônus progressivo, taxas dinâmicas), quais campos de entrada o usuário deseja fornecer para processar, e qual a visualização/relatório ideal (gráficos interativos, tabelas exportáveis, etc.).
-- Se for Dashboards/IoT/Painéis de Dados: Pergunte de onde vêm os registros em tempo real (dados manuais simulados, webhooks de sensores físicos, banco local), os limites críticos para alertas, e quais atuadores controlar.
+DIRETRIZES DE AUDITORIA & FORMULAÇÃO DE PERGUNTAS DE ALTO IMPACTO:
+- As perguntas NÃO devem ser genéricas (ex: evite perguntas vagas como "qual sua cor favorita?").
+- As perguntas DEVEM ser cirúrgicas e técnicas, preferencialmente do tipo 'opcoes' com alternativas concretas de alto valor para o projeto:
+  1. Para CRMs / Gestão de Leads / Pipelines: Pergunte a estrutura de etapas do funil desejada ou regra de distribuição de leads (ex: Roleta Round-Robin, Por Região, Por Valor).
+  2. Para Agenda / Reservas / Calendário: Pergunte a regra de validação de colisão de horários ou duração padrão dos atendimentos.
+  3. Para WhatsApp / Automações de Atendimento / Bots: Pergunte o gatilho exato de disparo (ex: Novo Lead Webhook, Alteração de Status, Pagamento Confirmado) e o tempo de follow-up.
+  4. Para Finanças / Calculadoras / Faturamento: Pergunte a fórmula de negócio específica (ex: Alíquota Progressiva, Comissão por Escala de Metas, Juros Compostos) e o formato do relatório exportável.
+  5. Para Dashboards / IoT / Painéis de Telemetria: Pergunte o protocolo de telemetria preferido (MQTT vs WebSockets vs HTTP REST) e os limiares de alarme crítico.
 
-Obrigatoriedade de Perguntas: Para QUALQUER cenário, selecione e crie de 2 a 3 perguntas precisas que se adaptem perfeitamente ao problema. Não retorne um array de perguntas vazio; faça as perguntas necessárias para que a geração do código backend e da interface fique impecavelmente fiel ao que o usuário precisa.
+Obrigatoriedade: Gere SEMPRE de 2 a 3 perguntas essenciais (com id, texto, tipo e opções quando aplicável).
+Analise o problema abaixo e retorne APENAS um JSON válido seguindo estritamente o schema solicitado.
 
-Analise o problema abaixo e retorne APENAS um JSON válido seguindo estritamente esse modelo.
 Problema: ${descToUse}`;
 
       const response = await callGeminiApi('gemini-3.6-flash', prompt, {
@@ -599,39 +600,56 @@ Problema: ${descToUse}`;
       setGeneratingProgress(30);
       addLog('> Arquitetando solução frontend...', 'active');
       
-      const frontendPrompt = `Você é um engenheiro frontend de elite da Parvus Automate. Sua missão é gerar uma interface web magnífica, altamente interativa, estilosa e profissional para resolver o seguinte problema.
+      const frontendPrompt = `Você é o Arquiteto Frontend de Elite da Parvus Automate. Sua missão é gerar uma aplicação web completa (Single Page Application), magnífica, visualmente deslumbrante e 100% INTERATIVA para resolver com maestria o seguinte problema.
 
 PROBLEMA: ${problemDescription}
 TIPO: ${classData.tipo}
-RESPOSTAS: \n${answersText}
+RESPOSTAS DO CLIENTE: \n${answersText}
 
-⚡ REQUISITOS DE DESIGN E UX (ULTRA POLIDO):
-1. CORES E TEMA: Use um tema dark cibernético luxuoso (fundo principal em tom profundo como bg-[#0d0e12] ou bg-[#070709]). Use gradientes e efeitos de bordas brilhantes/glowing com tons como verde esmeralda (#00ff88), azul cobalto profundo (#0066ff) ou laranja neon/yellow.
-2. GLASSMORPHISM: Aplique nas divisões de cards ou painéis a classe "backdrop-blur-md bg-white/[0.02] border border-white/10" para um acabamento limpo.
-3. ESTILO DE BOTÕES: Efeitos de transição ricos (duration-300), sombras de hover sutis e cantos arredondados modernos (rounded-xl ou rounded-2xl). Evite botões básicos cinzas ou azuis padrão.
-4. ÍCONES E FONTES: Carregue fontes elegantes do Google Fonts (como "Plus Jakarta Sans" ou "Space Grotesk") e use ícones modernos (use SVGs Inline refinados ou Lucide Icons via CDN para renderizar ícones bonitos).
-5. RESPONSIVIDADE: O layout deve rodar magnificamente em computadores desktop (com barra lateral estruturada e painel de controle principal espaçoso) e adaptar-se perfeitamente a dispositivos móveis.
+⚡ PADRÃO VISUAL & DESIGN SYSTEM (NÍVEL AAA - APRESENTAÇÃO DE TCC):
+1. TEMA DARK CYBERPUNK LUXUOSO:
+   - Fundo principal ultra profundo: bg-[#08090d] ou bg-[#0a0c13] com gradiente radial sutil.
+   - Cards e painéis com Glassmorphism refinado: "backdrop-blur-xl bg-white/[0.03] border border-white/10 shadow-[0_10px_35px_rgba(0,0,0,0.6)] rounded-2xl".
+   - Cores de destaque vibrantes com gradientes: Esmeralda (#10b981), Ciano Neon (#06b6d4), Âmbar (#f59e0b) ou Violeta Elétrico (#8b5cf6).
+   - Badges e Pills elegantes: "px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider".
+   - Tipografia: Importe Google Fonts ("Plus Jakarta Sans" ou "Inter" e "JetBrains Mono" para métricas/código) via <link>.
+2. ÍCONES INFALÍVEIS:
+   - Se utilizar Lucide Icons via CDN (<script src="https://unpkg.com/lucide@latest"></script>), é OBRIGATÓRIO invocar "lucide.createIcons();" no window.onload E SEMPRE que qualquer elemento dinâmico for adicionado ou re-renderizado pelo script! Ou use SVGs inline desenhados com stroke/fill explícitos.
+3. RESPONSIVIDADE TOTAL:
+   - Header high-tech, barra lateral retrátil no mobile e área de trabalho central expansiva com scroll suave.
 
-⚡ ARQUITETURA DA INTERFACE (COMPONENTES OBRIGATÓRIOS):
-- HEADER HIGH-TECH: Logo bonita do sistema, indicador ativo com animação pulsante ("● SIMULAÇÃO DE FLUXO ATIVA"), latência simulada (ex: 22ms) e contador de novos eventos ou notificações.
-- SIDEBAR DE NAVEGAÇÃO: Abas navegáveis adaptadas ao domínio (ex: se for CRM, use "Kanban, Métricas, Leads"; se for Calculadora ou Utilitário, use "Painel de Cálculo, Histórico, Configurações de Fórmulas"; de forma geral crie abas que façam sentido para o problema do usuário!).
-- CARDS DE MÉTRICAS / KPI (MÍNIMO 3 CARDS): Mostre dados em tempo real ou simulações relevantes à aplicação (ex: taxa de conversão %, total de comissões calculadas, ou transações criadas, alertas emitidos). Inclua mini-charts visuais usando SVG.
-- ÁREA DE TRABALHO CENTRAL (TOTALMENTE INTERATIVA E FUNCIONAL):
-  - Se for CRM/Pipelines: Quadro Kanban real com colunas estilizadas. Permita arrastar leads de um estágio para outro, criar novos leads através de modal com campos detalhados, e abrir detalhes do lead para editar e salvar! 
-  - Se for Agenda/Calendário: Visualizador de agenda em grid mensal ou semanal. Mostre slots brilhando e permita clicar num horário livre para agendar verdadeiramente (abre modal, define dados, adiciona à lista com som visual de sucesso).
-  - Se for WhatsApp / Automações de Chat / Robôs: Um editor de fluxos gráfico interativo na tela (caixas conectáveis simulando nós ou sequência lógica), um chat de simulação ao vivo (onde é possível digitar algo e ver o chatbot simulado responder imediatamente), e um histórico de logs rolável.
-  - Se for Dashboards / Painéis Industriais / IoT: Gráficos de telemetria SVG dinâmicos que se atualizam sozinhos a cada 2 segundos. Toggle botões para ligar/desligar atuadores/relés virtuais com animação e som visual realista.
-  - Se for Finanças, Pagamentos, Checkout ou Calculadoras Técnicas: Simulador e processador dinâmico de cálculos/fórmulas matemáticas ou link de faturamento de forma 100% interativa. Adicione formulários interativos para preenchimento de dados de simulação (como valor da venda, metas, descontos, alíquotas), recalcule e plote instantaneamente gráficos SVG de pizza ou barras com o resultado dividido! Ofereça controles para salvar simulações na tabela do histórico, editar taxas diretamente no painel e simular relatório.
-- CONSOLE DE LOGS DO SISTEMA: Um painel no rodapé ou na lateral direita simulando a recepção de webhooks em tempo real e processamento do sistema (ex: "[WEBHOOK] Novo lead de Mariana Silveira (marianasilveira@email.com) recebido", "[DISPARO] Automatização 'Boas-vindas' executada com sucesso", etc.). Use um timer para injetar novos logs a cada poucos segundos!
-- SUPORTE A MODO DEMO ROBUSTO (COM CONTROLES DE SIMULAÇÃO E DESATIVADOR): Inclua um painel explícito ("Painel de Simulação") com botões rápidos como: "Simular Entrada", "Limpar Histórico". IMPORTANTÍSSIMO: SEMPRE ADICIONE um botão de alternância "Desativar Demo" ou "Modo Demo: ON/OFF" em TODAS as automações construídas. Ao desativar o demo, a rotina \`setInterval\` de telemetria/simulação DEVE ser completamente parada e o painel esvaziado, para uso manual e livre de dados pela pessoa. O sistema inicia com o demo ativado por padrão.
+⚡ MOTOR DE ESTADO REATIVO & INTERATIVIDADE REAL (ZERO TELAS ESTÁTICAS):
+1. STORE DE DADOS LOCAL:
+   - Crie no Javascript um store de dados reativo completo: "const store = { items: [...], stats: {...}, filter: 'ALL', search: '', demoActive: true };"
+   - PRÉ-CARREGUE com 10 a 15 registros hiper-realistas e detalhados em português (nomes completos, empresas brasileiras, valores em R$, status reais, datas e métricas).
+2. BARRA DE BUSCA & FILTROS EM TEMPO REAL:
+   - Um campo de pesquisa (<input>) funcional que filtra instantaneamente as linhas da tabela/cards conforme o usuário digita.
+   - Botões de filtro (ex: "Todos", "Ativos", "Pendentes", "Concluídos") com estado ativo visual e filtragem imediata.
+3. MODAL DE "NOVO REGISTRO / AÇÃO RÁPIDA" 100% OPERACIONAL:
+   - Botão de destaque "Novo Registro" ou "Nova Automação" que ABRE um modal moderno com campos de formulário detalhados.
+   - Ao submeter o formulário: valida os campos, insere o novo item no store de dados, atualiza a tabela/cards na hora, recalcula as métricas dos KPI cards, exibe um Toast animado de sucesso no canto da tela e gera um log no terminal do sistema!
+4. AÇÕES DE LINHA FUNCIONAIS:
+   - Botão de Excluir (remove do store e atualiza tela) e botão de Ver Detalhes (abre modal/drawer com informações completas).
+5. GRÁFICOS VISUAIS DINÂMICOS (SVG):
+   - Pelo menos 2 gráficos SVG interativos (ex: Gráfico de Área com gradiente e pontos de dados, Sparklines nos KPI cards, Gráfico de Barras comparativo ou Medidores circulares). Os gráficos DEVEM recalcular e redesenhar dinamicamente quando novos registros forem inseridos!
+6. CONSOLE DE TELEMETRIA & TERMINAL DE EVENTOS AO VIVO:
+   - Painel terminal estilizado (no rodapé ou lateral) simulando o recebimento contínuo de eventos/webhooks em tempo real com timestamps [15:30:12].
+   - Controles do Terminal:
+     * Botão "Simular Disparo / Novo Evento" (injeta manualmente um novo evento realista ao vivo para demonstrar na apresentação!).
+     * Botão "Limpar Logs".
+     * Botão de alternância "Modo Demo: ON/OFF" (ao desligar, a simulação automática por setInterval é completamente pausada).
+7. COMPONENTES ESPECÍFICOS POR DOMÍNIO:
+   - Se for CRM/Pipelines: Quadro Kanban drag-and-drop ou com botões de avançar estágio, cálculo de valor total do pipeline.
+   - Se for Agenda/Reservas: Grade de horários com slots clicáveis para reserva imediata e indicador de ocupação.
+   - Se for WhatsApp/Chat/Bots: Simulador de conversa ao vivo onde o usuário digita e recebe resposta automática da regra configurada, além de editor visual de nós.
+   - Se for IoT/Painéis Industriais: Toggles animados para ligar/desligar atuadores/relés virtuais com som visual, e telemetria de sensores flutuando em tempo real.
+   - Se for Finanças/Calculadoras/Fórmulas: Simulador de taxas/cálculos em lote com recálculo instantâneo de totais e projeções.
 
 REGRAS TÉCNICAS ABSOLUTAS:
-- Retorne APENAS o código HTML/JS/CSS limpo. NÃO inclua delimitadores markdown de bloco HTML (como as três crases com a palavra html) in hipótese alguma! Comece diretamente com <!DOCTYPE html>.
-- Garanta que o HTML contenha estilização com Tailwind para que a tag <body> preencha 100% da largura e altura da tela (adicionando as classes w-full, h-full, min-h-screen) para evitar bugs de exibição quando o usuário abrir a pré-visualização em tela cheia.
-- O código Javascript inserido no script deve gerenciar de forma impecável todo o estado simulado em memória local (use arrays de objetos pré-carregados com pelo menos 10 registros fictícios detalhados para parecer preenchido).
-- Zero placeholders ou comentários do tipo "// adicione código aqui". Tudo precisa estar totalmente implementado e funcional de ponta a ponta.
-- Use Tailwind CSS via CDN (<script src="https://unpkg.com/@tailwindcss/browser@4"></script>).
-${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, sem qualquer menção à "Parvus Automate". Insira no cabeçalho ou nas configurações rápidas uma marca personalizável ou um local para o cliente final logar.\n' : ''}`;
+- Retorne APENAS o código HTML/JS/CSS limpo. NÃO inclua delimitadores markdown de bloco HTML (como as três crases com a palavra html). Comece diretamente com <!DOCTYPE html>.
+- O CSS deve usar Tailwind via CDN (<script src="https://unpkg.com/@tailwindcss/browser@4"></script>). Garanta que a tag <body> preencha 100% da tela (w-full h-full min-h-screen).
+- Zero placeholders como "// adicione código aqui". Todo o código Javascript deve estar 100% implementado, sem erros de console.
+${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, sem menção à Parvus Automate.\n' : ''}`;
 
       const responseHtml = await callGeminiApi('gemini-3.6-flash', frontendPrompt, {
         temperature: 0.2
@@ -648,43 +666,52 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
       setGeneratingProgress(70);
       addLog('> Arquitetando solução backend...', 'active');
       
-      const backendPrompt = `Você é um engenheiro sênior de infraestrutura e backend Node.js. Sua tarefa é arquitetar e gerar o projeto de microsserviço Express completo, limpo, robusto e perfeitamente estruturado para apoiar o seguinte problema.
+      const backendPrompt = `Você é o Arquiteto Chefe de Backend e Infraestrutura da Parvus Automate.
+Sua missão é projetar e gerar um projeto de microsserviço Node.js/Express COMPLETO, MODULAR, ROBUSTO e pronto para produção para atender o seguinte escopo.
 
 PROBLEMA: ${problemDescription}
 TIPO: ${classData.tipo}
 RESPOSTAS: \n${answersText}
 
-⚡ REQUISITOS DE SOFTWARE E ENGENHARIA DE BACKEND (ULTRA POLIDO):
-1. MIDDLEWARES OBRIGATÓRIOS: Configure middlewares para CORS, Express JSON parser, Express URLencoded e um Logger customizado enriquecido para exibir requisições no console do servidor em português.
-2. ROTAS E ENDPOINTS DE PRODUÇÃO:
-   - Rotas de Verificação: Endpoint GET /api/health retornando status de funcionamento e latência simulada de banco de dados.
-   - CRUDs Completos: Endpoints GET, POST, PUT e DELETE implementados com lógica real de manipulação de dados em memória local (usando objetos carregados na inicialização do script), simulando persistência a um banco.
-   - Webhooks Receivers: Endpoints POST específicos para receber Webhooks externos (ex: webhook de leads de parceiros, webhook de notificações, webhook de sensores IoT). Faça logs muito claros em português para cada requisição recebida!
-3. TRATAMENTO DE ERROS FLUIDO: Bloco try/catch global com tratamento adequado para rotas não encontradas (404) e erros genéricos (500), devolvendo mensagens limpas no formato JSON.
-4. COMENTÁRIOS EXPLICATIVOS: Inclua comentários técnicos ricos explicando as rotas, simulações em memória e variáveis.
+⚡ ESPECIFICAÇÕES DE ENGENHARIA DE BACKEND (NÍVEL ENTERPRISE PARA APRESENTAÇÃO DE TCC):
+1. ESTRUTURA DO 'server_js':
+   - Servidor Express 4/5 completo e profissional com documentação JSDoc clara em português.
+   - MIDDLEWARES DE PRODUÇÃO:
+     * helmet() para cabeçalhos de segurança HTTP.
+     * cors({ origin: '*' }) com tratamento de pre-flight OPTIONS.
+     * express.json({ limit: '10mb' }) e express.urlencoded({ extended: true }).
+     * LOGGER CUSTOMIZADO: Middleware que registra no console todas as requisições recebidas com método, rota, status HTTP, IP e tempo de resposta em milissegundos formatado com cores e timestamps [ISO 8601].
+   - REPOSITÓRIO EM MEMÓRIA ROBUSTO:
+     * Implemente uma classe/objeto de repositório com dados pré-carregados estruturados (mínimo 10 registros fictícios realistas).
+     * Geração de IDs usando crypto.randomUUID().
+     * Suporte a buscas por texto, filtros por status e paginação (?page=1&limit=10) retornando meta-informações (total, page, totalPages).
+   - ENDPOINTS RESTFUL DE PRODUÇÃO:
+     * GET /api/v1/health: Verificação de integridade com status, uptime do processo, versão e métricas de memória (process.memoryUsage()).
+     * GET /api/v1/metrics: Resumo estatístico com contadores de registros, volume processado e taxa de sucesso.
+     * CRUD COMPLETO: GET (listagem paginada e filtrada), GET /:id (busca por ID com 404), POST (criação com validação estrita de payload e retorno 201), PUT /:id (atualização e validação de transição de estado), DELETE /:id.
+     * ENDPOINT DE WEBHOOK: POST /api/v1/webhooks/... para ingestão de eventos externos (com validação simulada de cabeçalho de assinatura 'x-signature-sha256' e log detalhado em português).
+     * REGRAS ESPECÍFICAS DE DOMÍNIO: Endpoint especializado de negócio (ex: /api/v1/calculate para processar fórmulas com validação matemática; /api/v1/messages/send com interpolação de tags {{nome}}; /api/v1/telemetry com verificação de limites críticos e geração de alarmes).
+   - TRATAMENTO DE ERROS PADRONIZADO (RFC 7807):
+     * Middleware global de erro devolvendo JSON uniforme: { statusCode, error, message, timestamp, path }.
+     * Tratamento de rotas inexistentes (404 Not Found).
 
-INSTRUÇÕES ESPECÍFICAS DE ACORDO COM O TIPO DE SISTEMA:
-- Para CRM / Pipelines:
-  - Banco (README): Defina o esquema SQL de 4 tabelas (leads, interactions, stages, users) com chaves estrangeiras, índices de performance recomendados e triggers para atualização de logs.
-  - APIs: GET /api/leads, POST /api/leads para criar leads com validação, PUT /api/leads/:id para troca de estágio de funil, POST /api/webhooks/lead para capturar leads externos em tempo real.
-- Para Agenda / Calendário / Reservas:
-  - Banco (README): Defina o esquema SQL de tabelas (appointments, users, availability_rules, slots).
-  - APIs: GET /api/appointments, POST /api/appointments para reservas com validação avançada (não permitindo sobreposição ou colisão de horários), GET /api/availability para consultar horários disponíveis de acordo com regras de disponibilidade.
-- Para WhatsApp / Automações de Chat / Robôs / CRM Chat:
-  - Banco (README): Tabelas (whatsapp_automations, whatsapp_messages, whatsapp_logs, templates).
-  - APIs: GET /api/automations para listar sequências, POST /api/webhooks/whatsapp para capturar novas mensagens recebidas, POST /api/messages/send como microsserviço de envio (simulando integração transparente com Twilio/Z-API, com suporte à interpolação de variáveis como {{nome}}, {{link}}, etc.).
-- Para Dashboards / Painéis Industriais / IoT:
-  - Banco (README): Tabelas (devices, telemetry_logs, system_alerts).
-  - APIs: POST /api/telemetry para receber dados brutos de sensores IoT com verificação de limites (dispara Alerta se valor de temperatura/pressão for crítico), GET /api/alerts para listar alertas ativos, GET /api/devices para status de atuadores.
-- Para Finanças, Pagamentos, Checkout, Calculadoras Técnicas, Utilitários Administrativos ou Ferramentas de Produtividade:
-  - Banco (README): Tabelas (calculation_logs, users, formulas_config, sales_targets, transactions, invoices).
-  - APIs: GET /api/calculations para obter o histórico de execuções de fórmulas/simulações, POST /api/calculations para salvar e processar um novo cálculo em lote (validando as fórmulas matemáticas e limites de taxas no servidor de forma matemática e segura), PUT /api/formulas para atualizar as porcentagens, descontos e regras de negócio das fórmulas. Ofereça também endpoints de faturamento fictício e logs de transações.
+2. DOCUMENTAÇÃO 'readme_md' DE ALTO IMPACTO:
+   - Diagrama de arquitetura ASCII do sistema completo (Arquitetura C4: Cliente Web -> API Gateway/Proxy -> Microsserviço Express -> Repositório/Banco -> Webhooks Externos).
+   - SCRIPT SQL COMPLETO PARA POSTGRESQL / SUPABASE:
+     * Criação de tabelas completas com UUID PRIMARY KEY DEFAULT gen_random_uuid(), TIMESTAMPTZ DEFAULT now().
+     * Chaves estrangeiras com ON DELETE CASCADE, restrições CHECK e NOT NULL.
+     * Índices de performance recomendados (CREATE INDEX idx_...).
+     * Triggers para atualização automática de updated_at.
+     * Políticas de segurança RLS (Row Level Security) com exemplo de auth.uid().
+   - GUIA DE TESTE COM cURL: Exemplos prontos de comandos cURL para testar cada um dos endpoints da API.
+   - GUIA DE DEPLOY: Passos claros para deploy no Docker, Railway, Render e Vercel.
 
-⚡ REGRAS DE RETORNO DO JSON:
-- No README: Detalhe o diagrama de arquitetura do sistema em arte ASCII e liste os passos exatos de deploy (Railway, Vercel ou VPS Ubuntu).
-- Em package.json: Certifique-se de preencher as dependências corretas (express, cors, dotenv, helmet, pg, drizzle-orm).
-- Em env_example: Adicione todas as variáveis necessárias de banco de dados, portas e chaves simuladas.
-${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca "Parvus Automate" e crie um esqueleto 100% white-label.\n' : ''}`;
+3. ARQUIVOS AUXILIARES:
+   - 'package_json': Dependências reais (express, cors, helmet, dotenv, pg, zod) com scripts ("start", "dev", "test").
+   - 'env_example': Todas as variáveis documentadas com comentários explicativos (PORT, DATABASE_URL, JWT_SECRET, WEBHOOK_SECRET, ENVIRONMENT).
+   - 'arquitetura_ascii': Diagrama ASCII refinado e limpo.
+
+${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer menção à "Parvus Automate" e gere arquitetura 100% white-label corporativa.\n' : ''}`;
 
       const responseNode = await callGeminiApi('gemini-3.6-flash', backendPrompt, {
         temperature: 0.2,
@@ -732,19 +759,33 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca "P
         setGeneratingProgress(85);
         addLog('> Gerando artefatos de hardware e PDFs...', 'active');
         
-        const iotPrompt = `Você é um engenheiro de hardware e eletrônica sênior especializado em sistemas embarcados e IoT da Parvus Automate. Sua missão é projetar e documentar a solução física completa para:
+        const iotPrompt = `Você é o Engenheiro Chefe de Hardware e Sistemas Embarcados da Parvus Automate.
+Sua missão é projetar e documentar a solução física completa, industrial e impecável para:
+
 PROBLEMA: ${problemDescription}
 TIPO: ${classData.tipo}
 RESPOSTAS: \n${answersText}
-        
-⚡ REQUISITOS TÉCNICOS DETALHADOS DE HARDWARE:
-1. 'codigo_placa': Deve ser um código C++ extremamente robusto e compilável para Arduino IDE (visando ESP32 ou ESP8266), ou código em MicroPython limpo. Inclua comentários ricos e didáticos em português para que o usuário saiba quais pinos conectar de forma exata e como configurar sua rede Wi-Fi/Server Webhooks.
-2. 'pdf_pecas': Liste de forma minuciosa todos os componentes eletrônicos necessários (ex: tipo exato de sensor, microcontrolador, resistores de pull-up, relés, cabos, fontes de alimentação recomendadas com especificações de proteção). Adicione preços médios realistas de mercado em reais (R$) para cada item e links fictícios de comércio elétrico seguro no Brasil.
-3. 'pdf_montagem': Explique de forma EXTREMAMENTE DETALHADA E DIDÁTICA todas as conexões físicas fio a fio. Imagine que o usuário é um iniciante absoluto. Diga exatamente de onde sai cada fio e onde se conecta no módulo/sensor. Inclua tabelas ASCII para mapear os pinos e diagramas esquemáticos com formatação limpa e clara. Dê avisos sobre tensões corretas (3.3V vs 5V) para evitar queimar a placa.
-4. 'pdf_documentacao': Documente o fluxo lógico do firmware embarcado (como funciona o loop infinito, tempos de amostragem/debounce de botões, e controle de watchdog para evitar panes).
-5. 'pdf_setup': Um passo a passo infalível em português ensinando como instalar drivers de placas (CH340/CP2102), configurar as preferências da IDE Arduino, instalar bibliotecas necessárias (PubSubClient, DHT, Adafruit, etc.) e carregar o código para a placa física.
-- Se houver manuseio de corrente alternada (110V/220V), adicione avisos de segurança rigorosos com destaque ("⚠️ ALERTA DE SEGURANÇA 110V/220V").
-${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, use white-label e torne tudo vendível.\n' : ''}`;
+
+⚡ REQUISITOS TÉCNICOS DETALHADOS DE HARDWARE & FIRMWARE INDUSTRIAL:
+1. 'codigo_placa':
+   - Código C++ completo de nível de produção compilável na Arduino IDE / PlatformIO para ESP32 ou ESP8266 (ou MicroPython se aplicável).
+   - ARQUITETURA NÃO-BLOQUEANTE: PROIBIDO usar delay() no loop principal! Implemente temporização com millis() ou tarefas FreeRTOS no ESP32.
+   - CONECTIVIDADE & PROTOCOLOS: Rotina de reconexão Wi-Fi resiliente e cliente MQTT (PubSubClient) com serialização JSON (ArduinoJson), tópicos estruturados de telemetria e comandos.
+   - FILTROS & ESTABILIDADE: Média móvel para leituras analógicas, debounce de 50ms para botões e Watchdog Timer habilitado para evitar travamento físico.
+   - Logs seriais detalhados em português a 115200 baud com tags de identificação ([BOOT], [WIFI], [MQTT], [TELEMETRY], [ALERTA]).
+2. 'pdf_pecas':
+   - Lista minuciosa de componentes eletrônicos: sensores com part-number exato, microcontrolador, módulos de relé isolados por optoacoplador, resistores de pull-up/pull-down, capacitores de desacoplamento, fonte de alimentação regulada recomendada.
+   - Preços médios de mercado no Brasil em Reais (R$) e lojas de eletrônica recomendadas (FilipeFlop, Baú da Eletrônica, Mercado Livre).
+3. 'pdf_montagem':
+   - Manual didático de montagem física fio a fio: especifique exatamente a saída de cada pino da placa, a cor sugerida do cabo (vermelho para 3.3V/5V, preto para GND, amarelo/verde para sinal) e o borne de conexão no módulo.
+   - Tabela ASCII de mapeamento de pinagem completa e avisos claros sobre níveis de tensão (3.3V vs 5V) para evitar danos à placa.
+   - Se houver chaveamento de tensão de rede (110V/220V AC), adicione avisos de segurança rigorosos com destaque ("⚠️ ALERTA DE SEGURANÇA 110V/220V").
+4. 'pdf_documentacao':
+   - Fluxograma lógico do firmware embarcado: máquina de estados, tempos de amostragem, tópicos MQTT suportados e política de tolerância a falhas.
+5. 'pdf_setup':
+   - Passo a passo infalível em português: instalação de drivers USB (CH340/CP2102), configuração da placa na IDE Arduino, instalação das bibliotecas requeridas e procedimento de gravação do firmware.
+
+${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, use white-label corporativo.\n' : ''}`;
 
         const responseIoT = await callGeminiApi('gemini-3.6-flash', iotPrompt, {
           temperature: 0.2,
@@ -1181,52 +1222,60 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
     addLog('> Iniciando geração baseada no Modelo Avançado...', 'done');
 
     try {
-      const answersText = Object.entries(answers).map(([k, v]) => {
-        const q = template.perguntas_customizacao?.find((q: any) => q.id === k);
-        return `${q?.pergunta || k}: ${v}`;
-      }).join('\n');
-
+      const answersText = Object.entries(answers).map(([k, v]) => `Pergunta ${k}: ${v}`).join('\n');
       let currentHtml = '';
       let currentNode: GeneratedNode | null = null;
 
-      // 1. Generate Frontend with AI
-      setGeneratingProgress(35);
-      addLog('> Arquitetando solução de interface do template com IA...', 'active');
-
-      const frontendPrompt = `Você é um engenheiro frontend de elite da Parvus Automate. Sua missão é gerar uma interface web magnífica, luxuosa, totalmente interativa e customizada a partir do modelo "${template.nome}" (${template.descricao}).
+      const frontendPrompt = `Você é o Arquiteto Frontend de Elite da Parvus Automate. Sua missão é gerar uma aplicação web completa (Single Page Application), magnífica, visualmente deslumbrante e 100% INTERATIVA a partir do modelo "${template.nome}" (${template.descricao}).
 
 PARÂMETROS DE CUSTOMIZAÇÃO DO USUÁRIO:
 ${answersText}
 
 TECNOLOGIAS USADAS: ${template.tecnologias?.join(', ')}
 
-⚡ REQUISITOS DE DESIGN E UX (ULTRA POLIDO):
-1. CORES E TEMA: Use um tema dark cibernético luxuoso (fundo principal em tom profundo como bg-[#0d0e12] ou bg-[#070709]). Use gradientes e efeitos de bordas brilhantes/glowing com tons como verde esmeralda (#00ff88), azul cobalto profundo (#0066ff) ou laranja neon/yellow.
-2. GLASSMORPHISM: Aplique nas divisões de cards ou painéis a classe "backdrop-blur-md bg-white/[0.02] border border-white/10" para um acabamento limpo.
-3. ESTILO DE BOTÕES: Efeitos de transição ricos (duration-300), sombras de hover sutis e cantos arredondados modernos (rounded-xl ou rounded-2xl). Evite botões básicos cinzas ou azuis padrão.
-4. ÍCONES E FONTES: Carregue fontes elegantes do Google Fonts (como "Plus Jakarta Sans" ou "Space Grotesk") e use ícones modernos (use SVGs Inline refinados ou Lucide Icons via CDN para renderizar ícones bonitos).
-5. RESPONSIVIDADE: O layout deve rodar magnificamente em computadores desktop (com barra lateral estruturada e painel de controle principal espaçoso) e adaptar-se perfeitamente a dispositivos móveis.
+⚡ PADRÃO VISUAL & DESIGN SYSTEM (NÍVEL AAA - APRESENTAÇÃO DE TCC):
+1. TEMA DARK CYBERPUNK LUXUOSO:
+   - Fundo principal ultra profundo: bg-[#08090d] ou bg-[#0a0c13] com gradiente radial sutil.
+   - Cards e painéis com Glassmorphism refinado: "backdrop-blur-xl bg-white/[0.03] border border-white/10 shadow-[0_10px_35px_rgba(0,0,0,0.6)] rounded-2xl".
+   - Cores de destaque vibrantes com gradientes: Esmeralda (#10b981), Ciano Neon (#06b6d4), Âmbar (#f59e0b) ou Violeta Elétrico (#8b5cf6).
+   - Badges e Pills elegantes: "px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider".
+   - Tipografia: Importe Google Fonts ("Plus Jakarta Sans" ou "Inter" e "JetBrains Mono" para métricas/código) via <link>.
+2. ÍCONES INFALÍVEIS:
+   - Se utilizar Lucide Icons via CDN (<script src="https://unpkg.com/lucide@latest"></script>), é OBRIGATÓRIO invocar "lucide.createIcons();" no window.onload E SEMPRE que qualquer elemento dinâmico for adicionado ou re-renderizado pelo script! Ou use SVGs inline desenhados com stroke/fill explícitos.
+3. RESPONSIVIDADE TOTAL:
+   - Header high-tech, barra lateral retrátil no mobile e área de trabalho central expansiva com scroll suave.
 
-⚡ ARQUITETURA DA INTERFACE (COMPONENTES OBRIGATÓRIOS TEMPLATE):
-- HEADER HIGH-TECH: Logo bonita do sistema customizado, indicador ativo com animação pulsante ("● SIMULAÇÃO DE FLUXO ATIVA"), latência simulada (ex: 18ms) e contador de novos eventos ou notificações.
-- SIDEBAR DE NAVEGAÇÃO: Abas navegáveis adaptadas ao domínio (ex: se for CRM, use "Kanban, Métricas, Leads"; se for Calculadora ou Utilitário, use "Painel de Cálculo, Histórico, Configurações de Fórmulas"; de forma geral crie abas que façam sentido para o problema do usuário!).
-- CARDS DE MÉTRICAS / KPI (MÍNIMO 3 CARDS): Mostre dados em tempo real ou simulações relevantes à aplicação (ex: taxa de conversão %, total de comissões calculadas, ou transações criadas, alertas emitidos). Inclua mini-charts visuais usando SVG.
-- ÁREA DE TRABALHO CENTRAL (TOTALMENTE INTERATIVA E FUNCIONAL):
-  - Se for CRM/Pipelines: Quadro Kanban real com colunas estilizadas. Permita arrastar leads de um estágio para outro, criar novos leads através de modal com campos detalhados, e abrir detalhes do lead para editar e salvar! 
-  - Se for Agenda/Calendário: Visualizador de agenda em grid mensal ou semanal. Mostre slots brilhando e permita clicar num horário livre para agendar verdadeiramente (abre modal, define dados, adiciona à lista com som visual de sucesso).
-  - Se for WhatsApp / Automações de Chat / Robôs: Um editor de fluxos gráfico interativo na tela (caixas conectáveis simulando nós ou sequência lógica), um chat de simulação ao vivo (onde é possível digitar algo e ver o chatbot simulado responder imediatamente), e um histórico de logs rolável.
-  - Se for Dashboards / Painéis Industriais / IoT: Gráficos de telemetria SVG dinâmicos que se atualizam solos a cada 2 segundos. Toggle botões para ligar/desligar atuadores/relés virtuais com animação e som visual realista.
-  - Se for Finanças, Pagamentos, Checkout ou Calculadoras Técnicas: Simulador e processador dinâmico de cálculos/fórmulas matemáticas ou link de faturamento de forma 100% interativa. Adicione formulários interativos para preenchimento de dados de simulação (como valor da venda, metas, descontos, alíquotas), recalcule e plote instantaneamente gráficos SVG de pizza ou barras com o resultado dividido! Ofereça controles para salvar simulações na tabela do histórico, editar taxas diretamente no painel e simular relatório.
-- CONSOLE DE LOGS DO SISTEMA: Um painel no rodapé ou na lateral direita simulando a recepção de webhooks em tempo real e processamento do sistema (ex: "[WEBHOOK] Novo lead de Mariana Silveira (marianasilveira@email.com) recebido", "[DISPARO] Automatização 'Boas-vindas' executada com sucesso", etc.). Use um timer para injetar novos logs a cada poucos segundos!
-- SUPORTE A MODO DEMO ROBUSTO (COM CONTROLES DE SIMULAÇÃO E DESATIVADOR): Inclua um painel explícito ("Painel de Simulação") com botões rápidos como: "Simular Entrada", "Limpar Histórico". IMPORTANTÍSSIMO: SEMPRE ADICIONE um botão de alternância "Desativar Demo" ou "Modo Demo: ON/OFF" em TODAS as automações construídas. Ao desativar o demo, a rotina \`setInterval\` de telemetria/simulação DEVE ser completamente parada e o painel esvaziado, para uso manual e livre de dados pela pessoa. O sistema inicia com o demo ativado por padrão.
+⚡ MOTOR DE ESTADO REATIVO & INTERATIVIDADE REAL (ZERO TELAS ESTÁTICAS):
+1. STORE DE DADOS LOCAL:
+   - Crie no Javascript um store de dados reativo completo: "const store = { items: [...], stats: {...}, filter: 'ALL', search: '', demoActive: true };"
+   - PRÉ-CARREGUE com 10 a 15 registros hiper-realistas e detalhados em português (nomes completos, empresas brasileiras, valores em R$, status reais, datas e métricas).
+2. BARRA DE BUSCA & FILTROS EM TEMPO REAL:
+   - Um campo de pesquisa (<input>) funcional que filtra instantaneamente as linhas da tabela/cards conforme o usuário digita.
+   - Botões de filtro (ex: "Todos", "Ativos", "Pendentes", "Concluídos") com estado ativo visual e filtragem imediata.
+3. MODAL DE "NOVO REGISTRO / AÇÃO RÁPIDA" 100% OPERACIONAL:
+   - Botão de destaque "Novo Registro" ou "Nova Automação" que ABRE um modal moderno com campos de formulário detalhados.
+   - Ao submeter o formulário: valida os campos, insere o novo item no store de dados, atualiza a tabela/cards na hora, recalcula as métricas dos KPI cards, exibe um Toast animado de sucesso no canto da tela e gera um log no terminal do sistema!
+4. AÇÕES DE LINHA FUNCIONAIS:
+   - Botão de Excluir (remove do store e atualiza tela) e botão de Ver Detalhes (abre modal/drawer com informações completas).
+5. GRÁFICOS VISUAIS DINÂMICOS (SVG):
+   - Pelo menos 2 gráficos SVG interativos (ex: Gráfico de Área com gradiente e pontos de dados, Sparklines nos KPI cards, Gráfico de Barras comparativo ou Medidores circulares). Os gráficos DEVEM recalcular e redesenhar dinamicamente quando novos registros forem inseridos!
+6. CONSOLE DE TELEMETRIA & TERMINAL DE EVENTOS AO VIVO:
+   - Painel terminal estilizado (no rodapé ou lateral) simulando o recebimento contínuo de eventos/webhooks em tempo real com timestamps [15:30:12].
+   - Controles do Terminal:
+     * Botão "Simular Disparo / Novo Evento" (injeta manualmente um novo evento realista ao vivo para demonstrar na apresentação!).
+     * Botão "Limpar Logs".
+     * Botão de alternância "Modo Demo: ON/OFF" (ao desligar, a simulação automática por setInterval é completamente pausada).
+7. COMPONENTES ESPECÍFICOS DO TEMPLATE (${template.nome}):
+   - Se for WhatsApp/Chat/Leads: Simulador de conversa ao vivo onde o usuário digita e vê a resposta automática, lista de disparos com status (Entregue/Lido) e nós conectáveis.
+   - Se for IoT/Dashboard em Tempo Real: Gráficos dinâmicos SVG atualizados continuamente e toggles com som visual para controle de relés/dispositivos.
+   - Se for Detecção de EPI/Visão Computacional: Feed simulado de câmera IP com caixas delimitadoras (bounding boxes) dinâmicas identificando capacete/colete, e alerta sonoro/visual de infração.
+   - Se for Automação de E-mails: Caixa de entrada dinâmica com classificação inteligente por sentimento/urgência e respostas automáticas sugeridas.
 
 REGRAS TÉCNICAS ABSOLUTAS:
-- Retorne APENAS o código HTML/JS/CSS limpo. NÃO inclua delimitadores markdown de bloco HTML (como as três crases com a palavra html) em hipótese alguma! Comece diretamente com <!DOCTYPE html>.
-- Garanta que o HTML contenha estilização com Tailwind para que a tag <body> preencha 100% da largura e altura da tela (adicionando as classes w-full, h-full, min-h-screen) para evitar bugs de exibição quando o usuário abrir a pré-visualização em tela cheia.
-- O código Javascript inserido no script deve gerenciar de forma impecável todo o estado simulado em memória local (use arrays de objetos pré-carregados com pelo menos 10 registros fictícios detalhados para parecer preenchido).
-- Zero placeholders ou comentários do tipo "// adicione código aqui". Tudo precisa estar totalmente implementado e funcional de ponta a ponta.
-- Use Tailwind CSS via CDN (<script src="https://unpkg.com/@tailwindcss/browser@4"></script>).
-${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, sem qualquer menção à "Parvus Automate". Insira no cabeçalho ou nas configurações rápidas uma marca personalizável ou um local para o cliente final logar.\n' : ''}`;
+- Retorne APENAS o código HTML/JS/CSS limpo. NÃO inclua delimitadores markdown de bloco HTML (como as três crases com a palavra html). Comece diretamente com <!DOCTYPE html>.
+- O CSS deve usar Tailwind via CDN (<script src="https://unpkg.com/@tailwindcss/browser@4"></script>). Garanta que a tag <body> preencha 100% da tela (w-full h-full min-h-screen).
+- Zero placeholders como "// adicione código aqui". Todo o código Javascript deve estar 100% implementado, sem erros de console.
+${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, sem menção à Parvus Automate.\n' : ''}`;
 
       const responseHtml = await callGeminiApi('gemini-3.6-flash', frontendPrompt, {
         temperature: 0.2
@@ -1243,22 +1292,53 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
       setGeneratingProgress(75);
       addLog('> Projetando microsserviço de backend customizado...', 'active');
       
-      const backendPrompt = `Você é um engenheiro sênior de infraestrutura e backend Node.js da Parvus Automate. Sua missão é projetar e gerar um microsserviço Express completo, limpo e super funcional em português para apoiar o modelo customizado "${template.nome}" (${template.descricao}).
-      
-      PARÂMETROS DE CUSTOMIZAÇÃO DO USUÁRIO:
-      ${answersText}
+      const backendPrompt = `Você é o Arquiteto Chefe de Backend e Infraestrutura da Parvus Automate.
+Sua missão é projetar e gerar um projeto de microsserviço Node.js/Express COMPLETO, MODULAR, ROBUSTO e pronto para produção para apoiar o modelo customizado "${template.nome}" (${template.descricao}).
 
-      TECNOLOGIAS ESPECIFICADAS: ${template.tecnologias.join(', ')}
+PARÂMETROS DE CUSTOMIZAÇÃO DO USUÁRIO:
+${answersText}
 
-      ⚡ REQUISITOS DO PROJETO NODE.JS:
-      1. TRATAMENTO COMPLETO DE ROTAS:
-         - Endpoint GET /api/health retornando status de saúde do sistema e versão.
-         - Endpoints de CRUD para o modelo (GET, POST, PUT, DELETE) com tratamento transparente de dados em memória local simulando persistência correta de dados.
-         - Endpoint POST /api/webhooks para capturar eventos de plataformas de terceiros.
-      2. MIDDLEWARES OBRIGATÓRIOS: Configure express.json(), cors(), helmet() e um logger de requisições detalhado.
-      3. SCHEMAS DE BANCO DE DADOS (README): Liste detalhadamente as tabelas SQL (PostgreSQL/Supabase) necessárias para o modelo de negócios do template, com colunas e tipos precisos.
-      4. DOCUMENTAÇÃO PREMIUM: Crie um README.md contendo o diagrama de arquitetura ASCII do sistema, instruções de variáveis do .env e guia rápido de uso com curl/scripts de teste.
-      ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate para manter white-label absoluto.\n' : ''}`;
+TECNOLOGIAS ESPECIFICADAS: ${template.tecnologias.join(', ')}
+
+⚡ ESPECIFICAÇÕES DE ENGENHARIA DE BACKEND (NÍVEL ENTERPRISE PARA APRESENTAÇÃO DE TCC):
+1. ESTRUTURA DO 'server_js':
+   - Servidor Express 4/5 completo e profissional com documentação JSDoc clara em português.
+   - MIDDLEWARES DE PRODUÇÃO:
+     * helmet() para segurança de headers HTTP.
+     * cors({ origin: '*' }) com tratamento de pre-flight.
+     * express.json({ limit: '10mb' }) e express.urlencoded({ extended: true }).
+     * LOGGER CUSTOMIZADO: Middleware que registra no console todas as requisições recebidas com método, rota, status HTTP, IP e tempo de resposta em milissegundos formatado com cores e timestamps [ISO 8601].
+   - REPOSITÓRIO EM MEMÓRIA ROBUSTO:
+     * Implemente uma classe/objeto de repositório com dados pré-carregados estruturados (mínimo 10 registros fictícios realistas).
+     * Geração de IDs usando crypto.randomUUID().
+     * Suporte a buscas por texto, filtros por status e paginação (?page=1&limit=10) retornando meta-informações (total, page, totalPages).
+   - ENDPOINTS RESTFUL DE PRODUÇÃO:
+     * GET /api/v1/health: Verificação de integridade com status, uptime do processo, versão e métricas de memória (process.memoryUsage()).
+     * GET /api/v1/metrics: Resumo estatístico com contadores de registros, volume processado e taxa de sucesso.
+     * CRUD COMPLETO: GET (listagem paginada e filtrada), GET /:id (busca por ID com 404), POST (criação com validação estrita de payload e retorno 201), PUT /:id (atualização e validação de transição de estado), DELETE /:id.
+     * ENDPOINT DE WEBHOOK: POST /api/v1/webhooks para ingestão de eventos externos (com validação simulada de assinatura 'x-signature-sha256' e log detalhado em português).
+     * ENDPOINTS ESPECÍFICOS DO TEMPLATE: Endpoints dedicados para disparos, relatórios ou telemetria conforme o propósito do modelo.
+   - TRATAMENTO DE ERROS PADRONIZADO (RFC 7807):
+     * Middleware global de erro devolvendo JSON uniforme: { statusCode, error, message, timestamp, path }.
+     * Tratamento de rotas inexistentes (404 Not Found).
+
+2. DOCUMENTAÇÃO 'readme_md' DE ALTO IMPACTO:
+   - Diagrama de arquitetura ASCII do sistema completo (Arquitetura C4: Cliente Web -> API Gateway/Proxy -> Microsserviço Express -> Repositório/Banco -> Webhooks Externos).
+   - SCRIPT SQL COMPLETO PARA POSTGRESQL / SUPABASE:
+     * Criação de tabelas completas com UUID PRIMARY KEY DEFAULT gen_random_uuid(), TIMESTAMPTZ DEFAULT now().
+     * Chaves estrangeiras com ON DELETE CASCADE, restrições CHECK e NOT NULL.
+     * Índices de performance recomendados (CREATE INDEX idx_...).
+     * Triggers para atualização automática de updated_at.
+     * Políticas de segurança RLS (Row Level Security) com exemplo de auth.uid().
+   - GUIA DE TESTE COM cURL: Exemplos prontos de comandos cURL para testar cada um dos endpoints da API.
+   - GUIA DE DEPLOY: Passos claros para deploy no Docker, Railway, Render e Vercel.
+
+3. ARQUIVOS AUXILIARES:
+   - 'package_json': Dependências reais (express, cors, helmet, dotenv, pg, zod) com scripts ("start", "dev", "test").
+   - 'env_example': Todas as variáveis documentadas com comentários explicativos (PORT, DATABASE_URL, JWT_SECRET, WEBHOOK_SECRET, ENVIRONMENT).
+   - 'arquitetura_ascii': Diagrama ASCII refinado e limpo.
+
+${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate para manter white-label absoluto.\n' : ''}`;
 
       const responseNode = await callGeminiApi('gemini-3.6-flash', backendPrompt, {
         temperature: 0.2,
@@ -1306,17 +1386,32 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
         setGeneratingProgress(90);
         addLog('> Gerando circuito eletrônico e documentação física...', 'active');
         
-        const iotPrompt = `Você é um engenheiro de hardware e eletrônica sênior especializado em sistemas embarcados e IoT da Parvus Automate. Sua missão é projetar e documentar a solução física completa e customizada para o hardware do modelo "${template.nome}".
-        Customização do Usuário: ${answersText}
-        
-        ⚡ REQUISITOS TÉCNICOS DETALHADOS DE HARDWARE:
-        1. 'codigo_placa': Deve ser um código C++ extremamente robusto e compilável para Arduino IDE (visando ESP32 ou ESP8266), ou código em MicroPython limpo. Inclua comentários ricos e didáticos em português para que o usuário saiba quais pinos conectar de forma exata e como configurar sua rede Wi-Fi/Server Webhooks.
-        2. 'pdf_pecas': Liste de forma minuciosa todos os componentes eletrônicos necessários (ex: tipo exato de sensor, microcontrolador, resistores de pull-up, relés, cabos, fontes de alimentação recomendadas com especificações de proteção). Adicione preços médios realistas de mercado em reais (R$) para cada item e links fictícios de comércio elétrico seguro no Brasil.
-        3. 'pdf_montagem': Explique de forma EXTREMAMENTE DETALHADA E DIDÁTICA todas as conexões físicas fio a fio. Imagine que o usuário é um iniciante absoluto. Diga exatamente de onde sai cada fio e onde se conecta no módulo/sensor. Inclua tabelas ASCII para mapear os pinos e diagramas esquemáticos com formatação limpa e clara. Dê avisos sobre tensões corretas (3.3V vs 5V) para evitar queimar a placa.
-        4. 'pdf_documentacao': Documente o fluxo lógico do firmware embarcado (como funciona o loop infinito, tempos de amostragem/debounce de botões, e controle de watchdog para evitar panes).
-        5. 'pdf_setup': Um passo a passo infalível em português ensinando como instalar drivers de placas (CH340/CP2102), configurar as preferências da IDE Arduino, instalar bibliotecas necessárias (PubSubClient, DHT, Adafruit, etc.) e carregar o código para a placa física.
-        - Se houver manuseio de corrente alternada (110V/220V), adicione avisos de segurança rigorosos com destaque ("⚠️ ALERTA DE SEGURANÇA 110V/220V").
-        ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, use white-label e torne tudo vendível.\n' : ''}`;
+        const iotPrompt = `Você é o Engenheiro Chefe de Hardware e Sistemas Embarcados da Parvus Automate.
+Sua missão é projetar e documentar a solução física completa, industrial e impecável para o hardware do modelo "${template.nome}".
+
+Customização do Usuário: ${answersText}
+
+⚡ REQUISITOS TÉCNICOS DETALHADOS DE HARDWARE & FIRMWARE INDUSTRIAL:
+1. 'codigo_placa':
+   - Código C++ completo de nível de produção compilável na Arduino IDE / PlatformIO para ESP32 ou ESP8266 (ou MicroPython se aplicável).
+   - ARQUITETURA NÃO-BLOQUEANTE: PROIBIDO usar delay() no loop principal! Implemente temporização com millis() ou tarefas FreeRTOS no ESP32.
+   - CONECTIVIDADE & PROTOCOLOS: Rotina de reconexão Wi-Fi resiliente e cliente MQTT (PubSubClient) com serialização JSON (ArduinoJson), tópicos estruturados de telemetria e comandos.
+   - FILTROS & ESTABILIDADE: Média móvel para leituras analógicas, debounce de 50ms para botões e Watchdog Timer habilitado para evitar travamento físico.
+   - Logs seriais detalhados em português a 115200 baud com tags de identificação ([BOOT], [WIFI], [MQTT], [TELEMETRY], [ALERTA]).
+2. 'pdf_pecas':
+   - Lista minuciosa de componentes eletrônicos: sensores com part-number exato, microcontrolador, módulos de relé isolados por optoacoplador, resistores de pull-up/pull-down, capacitores de desacoplamento, fonte de alimentação regulada recomendada.
+   - Preços médios de mercado no Brasil em Reais (R$) e lojas de eletrônica recomendadas (FilipeFlop, Baú da Eletrônica, Mercado Livre).
+3. 'pdf_montagem':
+   - Manual didático de montagem física fio a fio: especifique exatamente a saída de cada pino da placa, a cor sugerida do cabo (vermelho para 3.3V/5V, preto para GND, amarelo/verde para sinal) e o borne de conexão no módulo.
+   - Tabela ASCII de mapeamento de pinagem completa e avisos claros sobre níveis de tensão (3.3V vs 5V) para evitar danos à placa.
+   - Se houver chaveamento de tensão de rede (110V/220V AC), adicione avisos de segurança rigorosos com destaque ("⚠️ ALERTA DE SEGURANÇA 110V/220V").
+4. 'pdf_documentacao':
+   - Fluxograma lógico do firmware embarcado: máquina de estados, tempos de amostragem, tópicos MQTT suportados e política de tolerância a falhas.
+5. 'pdf_setup':
+   - Passo a passo infalível em português: instalação de drivers USB (CH340/CP2102), configuração da placa na IDE Arduino, instalação das bibliotecas requeridas e procedimento de gravação do firmware.
+   - Se houver manuseio de corrente alternada (110V/220V), adicione avisos de segurança rigorosos com destaque ("⚠️ ALERTA DE SEGURANÇA 110V/220V").
+
+${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, use white-label e torne tudo vendível.\n' : ''}`;
 
         const responseIoT = await callGeminiApi('gemini-3.6-flash', iotPrompt, {
           temperature: 0.2,
@@ -1445,13 +1540,41 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
     setProblemDescription("Interpretando briefing...");
     
     const promptInterpreter = `
-    ROLE: Você é um especialista em engenharia de prompts para geração de código.
-    TASK: O usuário respondeu um briefing. Converta em um PROMPT PROFISSIONAL.
-    INPUT:
+    VOCÊ É UM CHIEF SOLUTIONS ARCHITECT & LEAD SYSTEMS ENGINEER DE NÍVEL INTERNACIONAL.
+    O usuário preencheu um briefing interativo com os seguintes requisitos técnicos de projeto:
     ${JSON.stringify(briefingData, null, 2)}
+
+    SUA MISSÃO:
+    Transformar este briefing bruto em uma ESPECIFICAÇÃO TÉCNICA E ARQUITETURAL DE ALTO IMPACTO (System Requirements Specification - SRS), ultra detalhada, profissional e rigorosa, pronta para guiar a geração de código frontend, backend microservice e firmware IoT sem nenhuma ambiguidade.
+
+    A ESPECIFICAÇÃO GERADA DEVE CONTER:
+    1. TÍTULO EXECUTIVO & ESCOPO DE MERCADO:
+       - Nome formal e profissional da plataforma/solução.
+       - Setor de aplicação (${briefingData.setor || 'Indústria/Mercado Corporativo'}), proposta de valor tangível e resolução definitiva do problema.
     
-    OUTPUT:
-    Retorne apenas o prompt estruturado gerado.
+    2. FONTES DE ENTRADA & TELEMETRIA:
+       - Ingestão de dados detalhada: ${Array.isArray(briefingData.entrada) ? briefingData.entrada.join(', ') : briefingData.entrada || 'Sensores e APIs'}.
+       - Protocolos, payloads esperados (JSON schemas, frequências de amostragem, webhooks seguros com validação de payload).
+
+    3. MOTOR DE PROCESSAMENTO & REGRAS DE NEGÓCIO:
+       - Pipeline de processamento: ${Array.isArray(briefingData.processamento) ? briefingData.processamento.join(', ') : briefingData.processamento || 'Processamento em tempo real'}.
+       - Máquina de estados clara, validações estritas de dados, tratamento de limites operacionais, alarmes e automações.
+       - Regime de execução: Frequência '${briefingData.frequencia || 'Tempo real'}' sob volume '${briefingData.volume || 'Escalável'}'.
+
+    4. SAÍDAS, TELEMETRIA & ATUAÇÃO:
+       - Saídas requeridas: ${Array.isArray(briefingData.saida) ? briefingData.saida.join(', ') : briefingData.saida || 'Dashboard e Notificações'}.
+       - Dashboards operacionais reativos, métricas em tempo real, canais de notificação e gatilhos de acionamento físico ou lógico.
+
+    5. DIRETRIZES ARQUITETURAIS:
+       - Interface: Padrão Dark-Luxo AAA, glassmorphism, micro-interações, gráficos vetoriais/SVG reativos, filtros em tempo real e controles táteis.
+       - Backend: RESTful Express robusto, middlewares de segurança (Helmet, CORS, Rate Limit), paginação, UUIDs e DDL PostgreSQL/Supabase com índices e integridade referencial.
+       - Hardware/Firmware (se IoT): Arquitetura não-bloqueante (millis), sensores com filtro de ruído (moving average), mapeamento preciso de pinos GPIO e reconexão autônoma.
+
+    6. PARTICULARIDADES FORNECIDAS PELO USUÁRIO:
+       - Contexto adicional: "${briefingData.descricao || 'Implementar a solução com foco em confiabilidade e apresentação executiva.'}"
+
+    FORMATO DE SAÍDA:
+    Retorne DIRETAMENTE o texto da especificação técnica estruturada em Português do Brasil, sem introduções genéricas ("Aqui está...") nem preâmbulos.
     `;
     
     try {
