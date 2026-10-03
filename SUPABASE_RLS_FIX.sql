@@ -70,6 +70,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Ativa o trigger automaticamente no cadastro de novos usuários:
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 
 -- 5. ATUALIZAR AS OUTRAS TABELAS PARA ACEITAR O DEUS (rehitutcontato)
 DROP POLICY IF EXISTS "Apenas admin atualiza compras" ON public.marketplace_purchases;
@@ -101,3 +107,25 @@ DROP POLICY IF EXISTS "Admin visualiza todos os workflows" ON workflows;
 CREATE POLICY "Admin visualiza todos os workflows"
   ON workflows FOR SELECT
   USING ( auth.uid() = user_id OR public.is_admin_jwt() );
+
+-- 6. TABELA E POLÍTICAS DE DISPOSITIVOS E PROJETOS IOT
+CREATE TABLE IF NOT EXISTS public.iot_devices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  nome TEXT NOT NULL,
+  tipo TEXT,
+  hardware TEXT,
+  descricao TEXT,
+  status TEXT DEFAULT 'offline',
+  dados_atuais JSONB,
+  ultimo_ping TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.iot_devices ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Usuários gerenciam seus próprios dispositivos IoT" ON public.iot_devices;
+CREATE POLICY "Usuários gerenciam seus próprios dispositivos IoT"
+  ON public.iot_devices FOR ALL
+  USING ( auth.uid() = user_id OR public.is_admin_jwt() )
+  WITH CHECK ( auth.uid() = user_id OR public.is_admin_jwt() );
