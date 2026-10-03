@@ -31,6 +31,7 @@ import { UpgradeModal } from './components/modals/UpgradeModal';
 import { LandingPage } from './components/LandingPage';
 import { generateDockerFiles } from './lib/dockerGenerator';
 import { useAutoSaveDraft } from './lib/hooks/useAutoSaveDraft';
+import { Analytics } from '@vercel/analytics/react';
 
 // Types
 type ProjectType = 'SOFTWARE' | 'HARDWARE' | 'HIBRIDO' | 'ENTERPRISE';
@@ -3155,6 +3156,7 @@ Sem markdown no retorno. Apenas o JSON válido.`;
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   );
 }
