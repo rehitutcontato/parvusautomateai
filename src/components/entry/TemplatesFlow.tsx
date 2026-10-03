@@ -8,9 +8,10 @@ interface TemplatesFlowProps {
   onBack: () => void;
   onGenerate: (template: any, answers: any) => void;
   onGoToAI: () => void;
+  onLoadDirectly?: (template: CustomTemplate) => void;
 }
 
-export function TemplatesFlow({ onBack, onGenerate, onGoToAI }: TemplatesFlowProps) {
+export function TemplatesFlow({ onBack, onGenerate, onGoToAI, onLoadDirectly }: TemplatesFlowProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [templateSourceTab, setTemplateSourceTab] = useState<'official' | 'custom'>('official');
@@ -124,11 +125,20 @@ export function TemplatesFlow({ onBack, onGenerate, onGoToAI }: TemplatesFlowPro
                 </motion.div>
               ))}
 
-              <div className="pt-8 mt-8 border-t border-white/5 flex justify-end">
+              <div className="pt-8 mt-8 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
+                {selectedTemplate.isCustom && onLoadDirectly && (
+                  <button
+                    type="button"
+                    onClick={() => onLoadDirectly(selectedTemplate)}
+                    className="px-6 py-4 rounded-xl border border-[#00ff88]/50 bg-[#00ff88]/10 text-[#00ff88] hover:bg-[#00ff88] hover:text-black font-extrabold text-xs tracking-widest uppercase transition-all flex items-center gap-2"
+                  >
+                    ⚡ Carregar Versão Salva Sem IA
+                  </button>
+                )}
                 <button
                   onClick={handleGenerate}
                   disabled={answeredCount < totalQuestions}
-                  className="px-8 py-4 bg-[#0066ff] rounded-xl text-white font-black text-sm tracking-widest uppercase shadow-[0_0_20px_rgba(0,102,255,0.2)] hover:shadow-[0_0_30px_rgba(0,102,255,0.4)] disabled:hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-8 py-4 bg-[#0066ff] rounded-xl text-white font-black text-sm tracking-widest uppercase shadow-[0_0_20px_rgba(0,102,255,0.2)] hover:shadow-[0_0_30px_rgba(0,102,255,0.4)] disabled:hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ml-auto"
                 >
                   <Play size={16} fill="currentColor" />
                   Gerar Automação
@@ -320,12 +330,22 @@ export function TemplatesFlow({ onBack, onGenerate, onGoToAI }: TemplatesFlowPro
                     <p className="text-sm text-[#888888] leading-relaxed mb-6 flex-1 line-clamp-3">
                       {tpl.descricao}
                     </p>
-                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                      <span className="text-xs text-emerald-400 font-medium flex items-center gap-1">
-                        Salvo em {new Date(tpl.created_at).toLocaleDateString('pt-BR')}
-                      </span>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white group-hover:text-[#00ff88] transition-colors flex items-center">
-                        Usar Modelo <ChevronRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                    <div className="flex items-center justify-between pt-4 border-t border-white/5 gap-2">
+                      {onLoadDirectly && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onLoadDirectly(tpl);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-[#00ff88]/15 border border-[#00ff88]/50 text-[#00ff88] hover:bg-[#00ff88] hover:text-black font-extrabold text-[10px] uppercase tracking-wider transition-all"
+                          title="Carregar o código gerado salvo instantaneamente sem gastar IA"
+                        >
+                          ⚡ Carregar
+                        </button>
+                      )}
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white group-hover:text-[#00ff88] transition-colors flex items-center ml-auto">
+                        Customizar <ChevronRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                       </span>
                     </div>
                   </motion.div>

@@ -50,7 +50,23 @@ const normalizeProject = (savedData: any, hardware: string, nome: string, descri
   };
 };
 
-export function IotMonitor({ onBack }: { onBack?: () => void }) {
+export interface IotMonitorProps {
+  onBack?: () => void;
+  onGenerationStart?: (info: { title: string; placa: string }) => void;
+  onGenerationProgress?: (progress: number, message: string) => void;
+  onGenerationComplete?: (project: any) => void;
+  onGenerationError?: (error: string) => void;
+  initialProject?: any;
+}
+
+export function IotMonitor({ 
+  onBack,
+  onGenerationStart,
+  onGenerationProgress,
+  onGenerationComplete,
+  onGenerationError,
+  initialProject
+}: IotMonitorProps) {
   const isTermoAceitoInicial = () => {
     try {
       return localStorage.getItem('parvus_iot_termo') === 'aceito' || sessionStorage.getItem('parvus_iot_termo') === 'aceito';
@@ -136,6 +152,13 @@ export function IotMonitor({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     checkAccess();
   }, []);
+
+  useEffect(() => {
+    if (initialProject) {
+      setProjeto(initialProject);
+      setActiveTab('VISÃO GERAL');
+    }
+  }, [initialProject]);
 
   useEffect(() => {
     if (terminalEndRef.current) {
@@ -300,6 +323,11 @@ export function IotMonitor({ onBack }: { onBack?: () => void }) {
     setProjeto(null);
     setIsGenerating(true);
     setLoadingMsg('Analisando especificações...');
+    onGenerationStart?.({
+      title: (iotConstructionMode === 'agency' ? iotBriefing.objetivo : descricao).substring(0, 45),
+      placa: selectedPlaca
+    });
+    onGenerationProgress?.(20, 'Analisando especificações e pinagem da placa...');
 
     try {
       let prompt = '';
@@ -493,6 +521,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
       }
 
       setLoadingMsg('Projetando esquema de ligação e simulando componentes...');
+      onGenerationProgress?.(55, 'Projetando circuito de hardware, firmware C++ e BOM...');
       let apiUrl = import.meta.env.VITE_API_URL || '';
       if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
       const userKey = localStorage.getItem('parvus_key') || '';
@@ -532,6 +561,8 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
 
       setProjeto(data);
       setActiveTab('VISÃO GERAL');
+      onGenerationProgress?.(95, 'Finalizando documentação técnica e simulador...');
+      onGenerationComplete?.(data);
 
       // Auto-save
       try {
@@ -561,6 +592,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Falha na comunicação com a API NVIDIA.');
+      onGenerationError?.(err.message || 'Falha na geração do projeto IoT.');
     } finally {
       setIsGenerating(false);
     }
@@ -572,6 +604,11 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
     setErrorMsg("");
     setIsGenerating(true);
     setLoadingMsg('Aplicando modificações ao projeto...');
+    onGenerationStart?.({
+      title: `Revisão: ${projeto.titulo || 'Projeto IoT'}`.substring(0, 45),
+      placa: projeto.placa || selectedPlaca
+    });
+    onGenerationProgress?.(35, 'Aplicando alterações no firmware e circuito...');
     
     try {
       const prompt = `Você é um Engenheiro Chefe de Hardware e Sistemas Embarcados revisando um projeto IoT existente. 
@@ -633,6 +670,8 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
 
       setProjeto(data);
       setEditPrompt(""); // Clear input on success
+      onGenerationProgress?.(100, 'Revisão concluída com sucesso!');
+      onGenerationComplete?.(data);
       
       // Auto-save update
       try {
@@ -663,6 +702,7 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Falha na comunicação com a API NVIDIA.');
+      onGenerationError?.(err.message || 'Falha na revisão do projeto.');
     } finally {
       setIsGenerating(false);
     }
@@ -777,9 +817,9 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
     // Add components BOM
     if (projeto.componentes) {
       const bomText = projeto.componentes.map((c: any) => 
-        `- ${c.quantidade}x ${c.nome} (Pino: ${c.pino_sugerido || 'N/A'})\n  Specs: ${c.especificacao_tecnica}\n  Uso: ${c.motivo_uso}`
+        `- ${c.quantidade || 1}x ${c.nome} (Pino: ${c.pino_sugerido || 'N/A'})\n  Specs: ${c.especificacao || c.especificacao_tecnica || 'Padrão'}\n  Preço Estimado: R$ ${(c.preco_estimado_brl || 0).toFixed(2)}\n  Onde comprar: ${c.onde_comprar || 'Lojas de eletrônica no Brasil'}${c.link_sugerido ? ` (${c.link_sugerido})` : ''}`
       ).join('\n\n');
-      zip.file('BOM.md', `# Bill of Materials\n\n${bomText}`);
+      zip.file('BOM.md', `# Bill of Materials (BOM)\n\nCusto Total Estimado: R$ ${(projeto.preco_total_estimado_brl || 0).toFixed(2)}\n\n${bomText}`);
     }
 
     // Add Wokwi Simulation Bundle

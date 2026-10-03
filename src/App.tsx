@@ -14,7 +14,8 @@ import {
   Cpu, HardDrive, Globe, Zap, Loader2, Target, CheckCircle2, 
   Factory, Play, Network, Archive, Clock, ChevronRight, X, RefreshCw,
   Maximize, Minimize, TrendingUp, Users, DollarSign, History,
-  Database, Sliders, Bookmark, GitFork, Shield, Sparkles, Send, Box
+  Database, Sliders, Bookmark, GitFork, Shield, Sparkles, Send, Box,
+  Copy, Check, FileCode
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -36,7 +37,8 @@ import { BackgroundGenerationWidget } from './components/common/BackgroundGenera
 import { LandingPage } from './components/LandingPage';
 import { generateDockerFiles } from './lib/dockerGenerator';
 import { exportCompleteProjectZip, downloadBlob } from './lib/projectExporter';
-import { saveProjectAsTemplate } from './lib/customTemplatesService';
+import { saveProjectAsTemplate, CustomTemplate } from './lib/customTemplatesService';
+import { extractOrGenerateSqlSchema } from './lib/sqlSchemaHelper';
 import { useAutoSaveDraft } from './lib/hooks/useAutoSaveDraft';
 
 // Types
@@ -67,6 +69,7 @@ interface GeneratedNode {
   env_example: string;
   readme_md: string;
   arquitetura_ascii: string;
+  schema_sql?: string;
   codigo_placa?: string;
   pdf_pecas?: string;
   pdf_montagem?: string;
@@ -246,6 +249,38 @@ export default function App() {
   const [generatedNode, setGeneratedNode] = useState<GeneratedNode | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('preview');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  // Active IoT project for preloading into IoT Studio
+  const [activeIotProject, setActiveIotProject] = useState<any>(null);
+
+  // Active file selector for the Code tab
+  const [codeActiveFile, setCodeActiveFile] = useState<'index.html' | 'server.js' | 'schema.sql' | 'package.json' | '.env.example' | 'Dockerfile'>('index.html');
+  const [copiedFile, setCopiedFile] = useState(false);
+
+  const currentCodeFileContent = useMemo(() => {
+    switch (codeActiveFile) {
+      case 'index.html':
+        return generatedHtml || '<!-- Nenhum HTML gerado ainda -->';
+      case 'server.js':
+        return generatedNode?.server_js || '// Nenhum backend server.js gerado ainda';
+      case 'schema.sql':
+        return generatedNode?.schema_sql || (generatedNode ? extractOrGenerateSqlSchema({ titulo: classification?.resumo, problema: problemDescription, tipo: classification?.tipo, nodeGerado: generatedNode }) : '-- Nenhum esquema SQL gerado ainda');
+      case 'package.json':
+        return generatedNode?.package_json || '{\n  "name": "parvus-app",\n  "version": "1.0.0"\n}';
+      case '.env.example':
+        return generatedNode?.env_example || '# PORT=3000\n# DATABASE_URL=postgresql://postgres:password@localhost:5432/parvus_db';
+      case 'Dockerfile':
+        return generateDockerFiles({
+          projectName: 'parvus-app',
+          port: 3000,
+          includeDatabase: true,
+          includeMqtt: false,
+          nodeVersion: '20-alpine'
+        }).dockerfile;
+      default:
+        return generatedHtml || '';
+    }
+  }, [codeActiveFile, generatedHtml, generatedNode]);
   
   // Generation state
   const [logs, setLogs] = useState<{message: string, status: 'pending' | 'done' | 'active' | 'error'}[]>([]);
@@ -747,6 +782,7 @@ RESPOSTAS: \n${answersText}
    - GUIA DE DEPLOY: Passos claros para deploy no Docker, Railway, Render e Vercel.
 
 3. ARQUIVOS AUXILIARES:
+   - 'schema_sql': Script SQL completo e executável para PostgreSQL / Supabase (UUIDs gen_random_uuid(), chaves estrangeiras com CASCADE, índices B-Tree e GIN, trigger handle_updated_at e políticas RLS completas de SELECT, INSERT, UPDATE, DELETE).
    - 'package_json': Dependências reais (express, cors, helmet, dotenv, pg, zod) com scripts ("start", "dev", "test").
    - 'env_example': Todas as variáveis documentadas com comentários explicativos (PORT, DATABASE_URL, JWT_SECRET, WEBHOOK_SECRET, ENVIRONMENT).
    - 'arquitetura_ascii': Diagrama ASCII refinado e limpo.
@@ -763,9 +799,10 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer menção à "Parvus Aut
             package_json: { type: Type.STRING },
             env_example: { type: Type.STRING },
             readme_md: { type: Type.STRING },
-            arquitetura_ascii: { type: Type.STRING }
+            arquitetura_ascii: { type: Type.STRING },
+            schema_sql: { type: Type.STRING }
           },
-          required: ['server_js', 'package_json', 'env_example', 'readme_md', 'arquitetura_ascii']
+          required: ['server_js', 'package_json', 'env_example', 'readme_md', 'arquitetura_ascii', 'schema_sql']
         }
       });
 
@@ -1053,6 +1090,14 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
     zip.file('.env.example', generatedNode.env_example);
     zip.file('README.md', generatedNode.readme_md);
     
+    // Add PostgreSQL / Supabase Schema SQL
+    const schemaSql = generatedNode.schema_sql || extractOrGenerateSqlSchema({ titulo: classification?.resumo, problema: problemDescription, tipo: classification?.tipo, nodeGerado: generatedNode });
+    zip.file('schema.sql', schemaSql);
+    const supabaseMigrations = zip.folder('supabase')?.folder('migrations');
+    if (supabaseMigrations) {
+      supabaseMigrations.file('20260101000000_init_schema.sql', schemaSql);
+    }
+    
     // Add Docker & DevContainer files
     const dockerFiles = generateDockerFiles({
       projectName: 'parvus-app',
@@ -1176,8 +1221,43 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
     showToast(`🔱 Projeto clonado como "${forkedTitle}"! Você pode customizá-lo agora.`, 'success');
   };
 
+  const handleLoadTemplateDirectly = (template: CustomTemplate) => {
+    if (template.htmlGerado) {
+      setGeneratedHtml(template.htmlGerado);
+    }
+    if (template.nodeGerado) {
+      setGeneratedNode(template.nodeGerado);
+    }
+    setClassification({
+      tipo: template.tipo || 'SOFTWARE',
+      complexidade: (template.complexidade as any) || 'INTERMEDIARIO',
+      resumo: template.nome,
+      perguntas_necessarias: [],
+      tecnologias: template.tecnologias || ['React', 'Tailwind', 'Node.js'],
+      estimativa_minutos: template.tempo_minutos || 2
+    });
+    setProblemDescription(template.descricao || template.nome);
+    setPhase('done');
+    setActiveTab('preview');
+    setEntryFlow('ai');
+    showToast(`Template "${template.nome}" carregado instantaneamente!`, 'success');
+  };
+
+  const sanitizeTextForPdf = (str: string): string => {
+    return str
+      .replace(/[⚠️❗]/g, '[ATENÇÃO] ')
+      .replace(/[✅✔]/g, '[OK] ')
+      .replace(/[❌✖]/g, '[ERRO] ')
+      .replace(/[⚙️🔧]/g, '[CONFIG] ')
+      .replace(/[⚡💡]/g, '[NOTA] ')
+      .replace(/[━─═]/g, '-')
+      .replace(/[□■]/g, '[ ] ')
+      .replace(/[^\x00-\x7F\xA0-\xFF]/g, ' ');
+  };
+
   const gerarPDF = (conteudo: string, nomeArquivo: string) => {
     if (!conteudo) return;
+    const safeContent = sanitizeTextForPdf(conteudo);
     
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     
@@ -1204,7 +1284,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
     doc.setFont('helvetica', 'normal');
 
     let y = 30;
-    const linhas = doc.splitTextToSize(conteudo, 182);
+    const linhas = doc.splitTextToSize(safeContent, 182);
 
     for (let i = 0; i < linhas.length; i++) {
         const linha = linhas[i];
@@ -1213,15 +1293,15 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
             y = 20;
         }
 
-        if (linha.includes('━') || linha.match(/^[A-Z\s]{5,}$/)) {
+        if (linha.includes('-') || linha.match(/^[A-Z\s]{5,}$/)) {
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(11);
             doc.setTextColor(cores.verde[0], cores.verde[1], cores.verde[2]);
-        } else if (linha.startsWith('⚠️') || linha.startsWith('ATENÇÃO')) {
+        } else if (linha.includes('[ATENÇÃO]') || linha.startsWith('ATENÇÃO')) {
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(9);
             doc.setTextColor(220, 80, 0);
-        } else if (linha.startsWith('□')) {
+        } else if (linha.startsWith('[ ]')) {
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(10);
             doc.setTextColor(cores.preto[0], cores.preto[1], cores.preto[2]);
@@ -1246,15 +1326,16 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         doc.text(`Página ${i} de ${totalPaginas}`, 196, 292, { align: 'right' });
     }
 
-    doc.save(`parvus-${nomeArquivo}-${Date.now()}.pdf`);
+    doc.save(`parvus-${nomeArquivo.toLowerCase().replace(/\s+/g, '_')}-${Date.now()}.pdf`);
   };
 
   const createPdfBlob = (conteudo: string): Blob => {
+    const safeContent = sanitizeTextForPdf(conteudo);
     const doc = new jsPDF();
     let y = 20;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    const linhas = doc.splitTextToSize(conteudo, 180);
+    const linhas = doc.splitTextToSize(safeContent, 180);
     for (let i = 0; i < linhas.length; i++) {
       if (y > 280) { doc.addPage(); y = 20; }
       doc.text(linhas[i], 15, y);
@@ -1459,6 +1540,7 @@ TECNOLOGIAS ESPECIFICADAS: ${template.tecnologias.join(', ')}
    - GUIA DE DEPLOY: Passos claros para deploy no Docker, Railway, Render e Vercel.
 
 3. ARQUIVOS AUXILIARES:
+   - 'schema_sql': Script SQL completo e executável para PostgreSQL / Supabase (UUIDs gen_random_uuid(), chaves estrangeiras com CASCADE, índices B-Tree e GIN, trigger handle_updated_at e políticas RLS completas de SELECT, INSERT, UPDATE, DELETE).
    - 'package_json': Dependências reais (express, cors, helmet, dotenv, pg, zod) com scripts ("start", "dev", "test").
    - 'env_example': Todas as variáveis documentadas com comentários explicativos (PORT, DATABASE_URL, JWT_SECRET, WEBHOOK_SECRET, ENVIRONMENT).
    - 'arquitetura_ascii': Diagrama ASCII refinado e limpo.
@@ -1475,9 +1557,10 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
             package_json: { type: Type.STRING },
             env_example: { type: Type.STRING },
             readme_md: { type: Type.STRING },
-            arquitetura_ascii: { type: Type.STRING }
+            arquitetura_ascii: { type: Type.STRING },
+            schema_sql: { type: Type.STRING }
           },
-          required: ['server_js', 'package_json', 'env_example', 'readme_md', 'arquitetura_ascii']
+          required: ['server_js', 'package_json', 'env_example', 'readme_md', 'arquitetura_ascii', 'schema_sql']
         }
       });
 
@@ -1852,6 +1935,10 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         <button onClick={() => setCurrentView('app')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider whitespace-nowrap px-2 py-1 ${currentView === 'app' ? 'text-white font-bold border-b-2 border-[#00ff88]' : ''}`}>
           GERADOR
         </button>
+        <button onClick={() => setCurrentView('iot')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 px-2 py-1 ${currentView === 'iot' ? 'text-white font-bold border-b-2 border-[#00d4ff]' : ''}`}>
+          <Network size={15} className={currentView === 'iot' ? 'text-[#00d4ff]' : ''} />
+          IOT MONITOR <span className="px-1.5 py-0.2 rounded bg-[#00d4ff]/15 text-[#00d4ff] text-[8px] font-bold">NOVO</span>
+        </button>
         {session && (
           <>
             <button onClick={() => setCurrentView('marketplace')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider flex items-center gap-1 whitespace-nowrap px-2 py-1 ${currentView === 'marketplace' ? 'text-white font-bold border-b-2 border-[#00ff88]' : ''}`}>
@@ -1859,10 +1946,6 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
             </button>
             <button onClick={() => setCurrentView('purchases')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider whitespace-nowrap px-2 py-1 ${currentView === 'purchases' ? 'text-white font-bold border-b-2 border-[#00ff88]' : ''}`}>
               MINHAS COMPRAS
-            </button>
-            <button onClick={() => setCurrentView('iot')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 px-2 py-1 ${currentView === 'iot' ? 'text-white font-bold border-b-2 border-[#00d4ff]' : ''}`}>
-              <Network size={15} className={currentView === 'iot' ? 'text-[#00d4ff]' : ''} />
-              IOT MONITOR <span className="px-1.5 py-0.2 rounded bg-[#00d4ff]/15 text-[#00d4ff] text-[8px] font-bold">NOVO</span>
             </button>
           </>
         )}
@@ -2077,12 +2160,30 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
                 </div>
               ))}
             </div>
-            <button 
-              onClick={() => handleGenerate(classification, answers)}
-              className="w-full mt-4 py-4 rounded-xl bg-[#ff6600] text-black font-black text-sm tracking-widest uppercase shadow-[0_0_20px_rgba(255,102,0,0.3)] hover:shadow-[0_0_30px_rgba(255,102,0,0.5)] hover:bg-[#ff7700] transition-all flex justify-center items-center gap-2"
-            >
-              GERAR SISTEMA <Play fill="currentColor" size={14} />
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 mt-4">
+              <button 
+                onClick={() => {
+                  const defaultAnswers: Record<string, string> = {};
+                  classification.perguntas_necessarias.forEach(q => {
+                    defaultAnswers[q.id] = q.tipo === 'opcoes' && q.opcoes && q.opcoes.length > 0
+                      ? q.opcoes[0]
+                      : 'Padrão recomendado para produção enterprise';
+                  });
+                  setAnswers(defaultAnswers);
+                  handleGenerate(classification, defaultAnswers);
+                }}
+                className="flex-1 py-3.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-1.5"
+                title="Preencher com os padrões recomendados pela arquitetura e gerar imediatamente"
+              >
+                <Zap size={13} className="text-[#ff6600]" /> PULAR E USAR PADRÕES
+              </button>
+              <button 
+                onClick={() => handleGenerate(classification, answers)}
+                className="flex-1 py-3.5 rounded-xl bg-[#ff6600] text-black font-black text-xs tracking-widest uppercase shadow-[0_0_20px_rgba(255,102,0,0.3)] hover:shadow-[0_0_30px_rgba(255,102,0,0.5)] hover:bg-[#ff7700] transition-all flex justify-center items-center gap-2"
+              >
+                GERAR SISTEMA <Play fill="currentColor" size={14} />
+              </button>
+            </div>
             <div className="text-[9px] text-[#666666] mt-2 text-center leading-relaxed px-4">
               Ao gerar, você recebe licença vitalícia de uso. O código fornecido é arquitetado de ponta a ponta.
             </div>
@@ -2464,8 +2565,72 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
                 </div>
               )}
               {activeTab === 'code' && (
-                <div className="w-full h-full bg-[#111111] sm:border border-white/10 text-[#d4d4d4] font-mono text-[13px] p-6 overflow-auto">
-                  <pre><code>{generatedHtml}</code></pre>
+                <div className="w-full h-full flex flex-col bg-[#111111] sm:border border-white/10 overflow-hidden">
+                  {/* File switcher bar */}
+                  <div className="h-10 bg-[#0d0d0d] border-b border-white/10 flex items-center justify-between px-3 gap-2 shrink-0 overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-1">
+                      {[
+                        { id: 'index.html', label: 'index.html', badge: 'SPA' },
+                        { id: 'server.js', label: 'server.js', badge: 'NODE' },
+                        { id: 'schema.sql', label: 'schema.sql', badge: 'SQL' },
+                        { id: 'package.json', label: 'package.json', badge: 'JSON' },
+                        { id: '.env.example', label: '.env.example', badge: 'ENV' },
+                        { id: 'Dockerfile', label: 'Dockerfile', badge: 'DOCKER' }
+                      ].map(file => (
+                        <button
+                          key={file.id}
+                          onClick={() => setCodeActiveFile(file.id as any)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-mono transition-colors ${
+                            codeActiveFile === file.id
+                              ? 'bg-white/15 text-white font-bold border-b border-[#00ff88]'
+                              : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <FileCode size={12} className={codeActiveFile === file.id ? 'text-[#00ff88]' : 'text-gray-500'} />
+                          {file.label}
+                          <span className={`text-[8px] px-1 py-0.2 rounded font-sans uppercase ${
+                            codeActiveFile === file.id ? 'bg-[#00ff88]/20 text-[#00ff88]' : 'bg-white/5 text-gray-500'
+                          }`}>
+                            {file.badge}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(currentCodeFileContent);
+                            setCopiedFile(true);
+                            setTimeout(() => setCopiedFile(false), 2000);
+                            showToast(`${codeActiveFile} copiado para a área de transferência!`, 'success');
+                          } catch {
+                            showToast('Erro ao copiar arquivo.', 'error');
+                          }
+                        }}
+                        className="px-2.5 py-1 text-[10px] bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 hover:text-white rounded flex items-center gap-1 transition-colors uppercase font-mono"
+                        title="Copiar conteúdo deste arquivo"
+                      >
+                        {copiedFile ? <Check size={11} className="text-[#00ff88]" /> : <Copy size={11} />}
+                        {copiedFile ? 'COPIADO' : 'COPIAR'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          const blob = new Blob([currentCodeFileContent], { type: 'text/plain;charset=utf-8' });
+                          downloadBlob(blob, codeActiveFile);
+                          showToast(`Arquivo ${codeActiveFile} baixado!`, 'success');
+                        }}
+                        className="px-2.5 py-1 text-[10px] bg-[#00ff88]/15 border border-[#00ff88]/40 hover:bg-[#00ff88]/30 text-[#00ff88] rounded flex items-center gap-1 transition-colors uppercase font-mono font-bold"
+                        title="Baixar este arquivo individualmente"
+                      >
+                        <Download size={11} /> BAIXAR
+                      </button>
+                    </div>
+                  </div>
+                  {/* Code editor / pre */}
+                  <div className="flex-1 p-6 overflow-auto text-[#d4d4d4] font-mono text-[12px] leading-relaxed select-text bg-[#0b0c10]">
+                    <pre><code>{currentCodeFileContent}</code></pre>
+                  </div>
                 </div>
               )}
               {activeTab === 'architecture' && generatedNode && (
@@ -2509,11 +2674,59 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
               {activeTab === 'hardware' && generatedNode && (
                 <div className="w-full h-full bg-[#111111] sm:border border-white/10 font-mono text-xs p-8 overflow-auto leading-relaxed">
                   <div className="mb-8 border-b border-white/10 pb-4">
-                    <h2 className="text-white text-sm mb-4 font-bold tracking-widest uppercase flex items-center justify-between">
-                      Código da Placa (C++/MicroPython)
-                      <span className="text-[#ff6600] text-[10px]">FIRMWARE IOT</span>
-                    </h2>
-                    <pre className="whitespace-pre-wrap text-[#f0f0f0] bg-black/50 p-4 border border-white/5">{generatedNode.codigo_placa || 'Nenhum código gerado.'}</pre>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                      <div>
+                        <h2 className="text-white text-sm font-bold tracking-widest uppercase flex items-center gap-2">
+                          Código da Placa (C++/ESP32/Arduino)
+                          <span className="text-[#ff6600] text-[10px] px-2 py-0.5 rounded bg-[#ff6600]/10 border border-[#ff6600]/30 font-bold">FIRMWARE IOT</span>
+                        </h2>
+                        <p className="text-[10px] text-gray-400 font-sans mt-0.5">Firmware não-bloqueante pronto para compilar no Arduino IDE ou PlatformIO.</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={async () => {
+                            if (!generatedNode.codigo_placa) return;
+                            await navigator.clipboard.writeText(generatedNode.codigo_placa);
+                            showToast('Código C++ do firmware copiado!', 'success');
+                          }}
+                          className="px-3 py-1.5 text-[10px] bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded flex items-center gap-1.5 transition-colors uppercase font-mono font-bold"
+                          title="Copiar código C++"
+                        >
+                          <Copy size={11} /> COPIAR C++
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!generatedNode.codigo_placa) return;
+                            const blob = new Blob([generatedNode.codigo_placa], { type: 'text/plain;charset=utf-8' });
+                            downloadBlob(blob, 'main.cpp');
+                            showToast('main.cpp baixado com sucesso!', 'success');
+                          }}
+                          className="px-3 py-1.5 text-[10px] bg-[#ff6600]/15 border border-[#ff6600]/40 hover:bg-[#ff6600]/30 text-[#ff6600] rounded flex items-center gap-1.5 transition-colors uppercase font-mono font-bold"
+                          title="Baixar arquivo main.cpp"
+                        >
+                          <Download size={11} /> BAIXAR MAIN.CPP
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveIotProject({
+                              titulo: classification?.resumo || 'Projeto IoT',
+                              placa: 'ESP32 DevKit v1',
+                              codigo_c: generatedNode.codigo_placa,
+                              pdf_pecas: generatedNode.pdf_pecas,
+                              pdf_montagem: generatedNode.pdf_montagem,
+                              pdf_documentacao: generatedNode.pdf_documentacao
+                            });
+                            setCurrentView('iot');
+                            showToast('Projeto enviado para o IoT Studio & Simuladores!', 'success');
+                          }}
+                          className="px-3.5 py-1.5 text-[10px] bg-[#00d4ff] hover:bg-[#33ddff] text-black rounded flex items-center gap-1.5 transition-all uppercase font-mono font-extrabold shadow-[0_0_15px_rgba(0,212,255,0.3)]"
+                          title="Carregar este hardware no IoT Studio completo com simuladores Wokwi, pinout e diagramas"
+                        >
+                          <Zap size={12} fill="black" /> ABRIR NO IOT STUDIO & SIMULADORES
+                        </button>
+                      </div>
+                    </div>
+                    <pre className="whitespace-pre-wrap text-[#f0f0f0] bg-black/50 p-4 border border-white/5 rounded">{generatedNode.codigo_placa || 'Nenhum código gerado.'}</pre>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
@@ -3119,7 +3332,43 @@ Sem markdown no retorno. Apenas o JSON válido.`;
       <main className="flex flex-1 overflow-hidden relative z-10 w-full">
         {/* Persistent IoT Monitor container so switching tabs doesn't destroy state */}
         <div className={currentView === 'iot' ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
-          <IotMonitor onBack={() => setCurrentView('app')} />
+          <IotMonitor 
+            onBack={() => setCurrentView('app')} 
+            initialProject={activeIotProject}
+            onGenerationStart={(info) => {
+              setBackgroundGen({
+                active: true,
+                progress: 15,
+                message: `Iniciando síntese de hardware: ${info.title} (${info.placa})...`,
+                model: 'DeepSeek R1 / GLM-5.1 Hardware Eng',
+                type: 'iot',
+                title: info.title
+              });
+              showToast(`Síntese IoT iniciada: ${info.title}`, 'info');
+            }}
+            onGenerationProgress={(prog, msg) => {
+              setBackgroundGen(prev => ({
+                ...prev,
+                progress: prog,
+                message: msg
+              }));
+            }}
+            onGenerationComplete={(proj) => {
+              setBackgroundGen({
+                active: false,
+                progress: 100,
+                message: 'Hardware sintetizado com sucesso!',
+                model: 'DeepSeek R1 / GLM-5.1 Hardware Eng',
+                type: 'iot',
+                title: proj?.titulo || 'Projeto IoT'
+              });
+              showToast(`Firmware e esquemático de "${proj?.titulo || 'Projeto IoT'}" gerados com sucesso!`, 'success');
+            }}
+            onGenerationError={(err) => {
+              setBackgroundGen(prev => ({ ...prev, active: false }));
+              showToast(`Falha na síntese IoT: ${err}`, 'error');
+            }}
+          />
         </div>
 
         {currentView === 'app' ? (
@@ -3132,6 +3381,7 @@ Sem markdown no retorno. Apenas o JSON válido.`;
                 onBack={() => setEntryFlow('selection')}
                 onGoToAI={() => setEntryFlow('ai')}
                 onGenerate={handleTemplateGenerate}
+                onLoadDirectly={handleLoadTemplateDirectly}
               />
             ) : entryFlow === 'briefing' ? (
               <BriefingFlow 

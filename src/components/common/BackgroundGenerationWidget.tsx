@@ -25,9 +25,9 @@ export function BackgroundGenerationWidget({
   // If not generating, don't show widget
   if (!isGenerating) return null;
 
-  // If the user is already looking at the full-screen generator build area, we can render a subtle floating pill or hide
-  // But if they navigate to marketplace, purchases, iot, settings, admin, etc., show full prominent floating badge!
+  // If user is already on the exact generation view and hasn't explicitly opened the widget, keep it compact
   const isElsewhere = !isMainViewActive;
+  const isExpanded = !collapsed && isElsewhere;
 
   return (
     <div className="fixed bottom-12 right-6 z-[999] animate-in fade-in slide-in-from-bottom-5 duration-300">
@@ -35,7 +35,7 @@ export function BackgroundGenerationWidget({
         generationType === 'iot'
           ? 'bg-[#0a0f1d]/95 border-[#00d4ff]/40 shadow-[0_0_35px_rgba(0,212,255,0.15)]'
           : 'bg-[#0c120e]/95 border-[#00ff88]/40 shadow-[0_0_35px_rgba(0,255,136,0.15)]'
-      } ${collapsed ? 'w-auto' : 'w-80 sm:w-96'}`}>
+      } ${!isExpanded ? 'w-auto' : 'w-80 sm:w-96'}`}>
         
         {/* Header / Bar */}
         <div className="p-3.5 flex items-center justify-between gap-3 border-b border-white/10 bg-black/40">
@@ -73,7 +73,7 @@ export function BackgroundGenerationWidget({
         </div>
 
         {/* Body (when expanded) */}
-        {!collapsed && (
+        {isExpanded && (
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-300 font-mono truncate pr-2 text-[11px]">

@@ -394,10 +394,11 @@ app.post("/api/tools/simulate-webhook", async (req, res) => {
     // Se houver uma URL externa real válida e configurada
     if (targetUrl && (targetUrl.startsWith("http://") || targetUrl.startsWith("https://")) && !targetUrl.includes("localhost:3000")) {
       try {
+        const hasBody = method !== "GET" && method !== "HEAD";
         const response = await fetch(targetUrl, {
           method,
           headers: headersSent,
-          body: method !== "GET" ? bodyStr : undefined
+          body: hasBody ? bodyStr : undefined
         });
         latencyMs = Date.now() - start;
         const text = await response.text();

@@ -9,7 +9,12 @@ export function extractOrGenerateSqlSchema(project: {
   tipo?: string;
   nodeGerado?: any;
 }): string {
-  // 1. Try extracting ```sql block from readme_md or server_js
+  // 1. Direct explicit schema_sql if generated
+  if (project.nodeGerado?.schema_sql && project.nodeGerado.schema_sql.trim().length > 60) {
+    return project.nodeGerado.schema_sql.trim();
+  }
+
+  // 2. Try extracting ```sql block from readme_md or server_js
   if (project.nodeGerado?.readme_md) {
     const readme = project.nodeGerado.readme_md;
     const match = readme.match(/```sql([\s\S]*?)```/i);
@@ -18,7 +23,7 @@ export function extractOrGenerateSqlSchema(project: {
     }
   }
 
-  // 2. Synthesize a production-ready Supabase schema
+  // 3. Synthesize a production-ready Supabase schema
   const cleanTitle = (project.titulo || 'automacao')
     .toLowerCase()
     .normalize('NFD')

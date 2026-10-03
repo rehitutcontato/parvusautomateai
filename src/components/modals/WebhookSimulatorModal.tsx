@@ -160,39 +160,60 @@ export function WebhookSimulatorModal({
         throw new Error('Payload JSON inválido: ' + e.message);
       }
 
-      // Try calling local or remote endpoint, or simulate instant mock response if localhost unreachable
+      // Dispatch through backend proxy /api/tools/simulate-webhook to avoid browser CORS and compute exact server HMAC
+      let apiUrl = import.meta.env.VITE_API_URL || '';
+      if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
+
       let resData: any = null;
       let status = 200;
       let isMock = false;
+      let latency = 0;
+      let headersUsed: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Signature-SHA256': calculatedSignature,
+        'X-Timestamp': new Date().toISOString()
+      };
 
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 4000);
-        
-        const response = await fetch(endpoint, {
-          method,
+        const timeout = setTimeout(() => controller.abort(), 8000);
+
+        const response = await fetch(`${apiUrl}/api/tools/simulate-webhook`, {
+          method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'X-Signature-SHA256': calculatedSignature,
-            'X-Timestamp': new Date().toISOString(),
-            'X-Event-Source': 'Parvus-Automate-Webhook-Tester'
+            'Content-Type': 'application/json'
           },
-          body: method !== 'GET' ? JSON.stringify(parsedPayload) : undefined,
+          body: JSON.stringify({
+            targetUrl: endpoint,
+            payload: parsedPayload,
+            secret: secretKey,
+            method
+          }),
           signal: controller.signal
         });
         clearTimeout(timeout);
-        status = response.status;
-        const text = await response.text();
-        try {
-          resData = JSON.parse(text);
-        } catch {
-          resData = { raw: text };
+
+        if (!response.ok) {
+          throw new Error(`Erro HTTP ${response.status} ao comunicar com o servidor proxy.`);
         }
-      } catch (networkErr: any) {
-        // High fidelity sandbox simulation for local offline testing
+
+        const data = await response.json();
+        latency = data.latencyMs || Math.round(performance.now() - startTime);
+        if (data.headersSent) headersUsed = data.headersSent;
+
+        if (data.result) {
+          status = data.result.status || (data.result.dispatched ? 200 : 500);
+          isMock = Boolean(data.result.simulation);
+          resData = data.result.response || data.result.error || data.result;
+        } else {
+          resData = data;
+        }
+      } catch (backendErr: any) {
+        // High fidelity sandbox simulation for local offline testing if backend is unreachable
         isMock = true;
         await new Promise(r => setTimeout(r, 120)); // Realistic latency
         status = 200;
+        latency = Math.round(performance.now() - startTime);
         resData = {
           success: true,
           status: 'PROCESSED',
@@ -211,8 +232,6 @@ export function WebhookSimulatorModal({
         };
       }
 
-      const latency = Math.round(performance.now() - startTime);
-
       setTestResult({
         success: status >= 200 && status < 300,
         status,
@@ -220,11 +239,7 @@ export function WebhookSimulatorModal({
         latencyMs: latency,
         isMock,
         response: resData,
-        headersSent: {
-          'Content-Type': 'application/json',
-          'X-Signature-SHA256': calculatedSignature,
-          'X-Timestamp': new Date().toISOString()
-        }
+        headersSent: headersUsed
       });
     } catch (err: any) {
       setTestResult({
