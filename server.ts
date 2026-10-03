@@ -4,6 +4,7 @@ dotenv.config();
 import express from "express";
 import path from "path";
 import cors from "cors";
+import crypto from "crypto";
 import OpenAI from "openai";
 import { GoogleGenAI, Type } from "@google/genai";
 import { jsonrepair } from "jsonrepair";
@@ -83,6 +84,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
         
         const genConfig: any = {
           temperature: config?.temperature !== undefined ? config.temperature : 0.2,
+          maxOutputTokens: config?.maxOutputTokens || 8192,
         };
         
         if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
@@ -153,7 +155,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
             messages,
             temperature: config?.temperature !== undefined ? config.temperature : 0.2,
             top_p: 1,
-            max_tokens: 4096,
+            max_tokens: config?.max_tokens || 12288,
           };
           
           if (withResponseFormat) {
@@ -362,6 +364,91 @@ app.post("/api/ai/generate", async (req, res) => {
       res.write(JSON.stringify({ error: error.message || String(error) }));
       res.end();
     }
+  }
+});
+
+// Endpoint para simulação e teste de webhooks empresariais com HMAC-SHA256
+app.post("/api/tools/simulate-webhook", async (req, res) => {
+  const reqId = Math.random().toString(36).substring(7);
+  try {
+    const { targetUrl, payload, secret = "whsec_parvus_default", method = "POST", customHeaders = {} } = req.body;
+    const bodyStr = typeof payload === "string" ? payload : JSON.stringify(payload || {});
+    const signature = crypto.createHmac("sha256", secret).update(bodyStr).digest("hex");
+    const timestamp = new Date().toISOString();
+    
+    console.log(`[REQ ${reqId}] Simulador de Webhook acionado: method=${method} url=${targetUrl || 'local_mock'}`);
+
+    // Headers enviados
+    const headersSent = {
+      "Content-Type": "application/json",
+      "X-Signature-SHA256": signature,
+      "X-Timestamp": timestamp,
+      "X-Delivery-Id": "dlv_" + crypto.randomUUID(),
+      ...customHeaders
+    };
+
+    let dispatchResult: any = null;
+    let latencyMs = 0;
+    const start = Date.now();
+
+    // Se houver uma URL externa real válida e configurada
+    if (targetUrl && (targetUrl.startsWith("http://") || targetUrl.startsWith("https://")) && !targetUrl.includes("localhost:3000")) {
+      try {
+        const response = await fetch(targetUrl, {
+          method,
+          headers: headersSent,
+          body: method !== "GET" ? bodyStr : undefined
+        });
+        latencyMs = Date.now() - start;
+        const text = await response.text();
+        let parsed;
+        try { parsed = JSON.parse(text); } catch { parsed = text; }
+        dispatchResult = {
+          dispatched: true,
+          status: response.status,
+          statusText: response.statusText,
+          response: parsed
+        };
+      } catch (err: any) {
+        latencyMs = Date.now() - start;
+        dispatchResult = {
+          dispatched: false,
+          error: err.message
+        };
+      }
+    } else {
+      // Simulação local de alta fidelidade
+      latencyMs = Math.floor(15 + Math.random() * 45);
+      dispatchResult = {
+        dispatched: true,
+        simulation: true,
+        status: 200,
+        statusText: "OK",
+        response: {
+          success: true,
+          message: "Webhook verificado e processado com sucesso pelo receptor!",
+          audit: {
+            signatureVerified: true,
+            algorithm: "HMAC-SHA256",
+            digest: signature,
+            receivedAt: timestamp,
+            event: payload?.event || "custom.event"
+          }
+        }
+      };
+    }
+
+    res.json({
+      success: true,
+      signature,
+      timestamp,
+      latencyMs,
+      headersSent,
+      result: dispatchResult
+    });
+  } catch (error: any) {
+    console.error(`[REQ ${reqId}] Erro ao simular webhook:`, error);
+    res.status(500).json({ success: false, error: error.message || String(error) });
   }
 });
 

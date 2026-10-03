@@ -13,7 +13,8 @@ import {
   Terminal, Code2, Layout as LayoutIcon, Download, Settings, 
   Cpu, HardDrive, Globe, Zap, Loader2, Target, CheckCircle2, 
   Factory, Play, Network, Archive, Clock, ChevronRight, X, RefreshCw,
-  Maximize, Minimize, TrendingUp, Users, DollarSign, History
+  Maximize, Minimize, TrendingUp, Users, DollarSign, History,
+  Database, Sliders, Bookmark, GitFork, Shield, Sparkles, Send, Box
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -28,8 +29,14 @@ import { incrementGenerationCount } from './lib/services/generationLimitService'
 import { SettingsPage } from './components/SettingsPage';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { UpgradeModal } from './components/modals/UpgradeModal';
+import { WebhookSimulatorModal } from './components/modals/WebhookSimulatorModal';
+import { SqlSchemaModal } from './components/modals/SqlSchemaModal';
+import { EnvConfigModal } from './components/modals/EnvConfigModal';
+import { BackgroundGenerationWidget } from './components/common/BackgroundGenerationWidget';
 import { LandingPage } from './components/LandingPage';
 import { generateDockerFiles } from './lib/dockerGenerator';
+import { exportCompleteProjectZip, downloadBlob } from './lib/projectExporter';
+import { saveProjectAsTemplate } from './lib/customTemplatesService';
 import { useAutoSaveDraft } from './lib/hooks/useAutoSaveDraft';
 
 // Types
@@ -171,6 +178,28 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showLanding, setShowLanding] = useState<boolean>(() => !localStorage.getItem('parvus_has_seen_landing'));
   const generationLimit = useGenerationLimit();
+
+  // New enterprise modals states
+  const [showWebhookModal, setShowWebhookModal] = useState(false);
+  const [showSqlSchemaModal, setShowSqlSchemaModal] = useState(false);
+  const [showEnvConfigModal, setShowEnvConfigModal] = useState(false);
+
+  // Background generation state (decoupled from single view)
+  const [backgroundGen, setBackgroundGen] = useState<{
+    active: boolean;
+    progress: number;
+    message: string;
+    model: string;
+    type: 'software' | 'iot';
+    title: string;
+  }>({
+    active: false,
+    progress: 0,
+    message: '',
+    model: 'NVIDIA NIM GLM-5.1',
+    type: 'software',
+    title: ''
+  });
 
   const handleSelectEntryFlow = (flow: 'ai' | 'templates' | 'briefing') => {
     if (!generationLimit.loading && !generationLimit.allowed) {
@@ -581,9 +610,18 @@ Problema: ${descToUse}`;
   };
 
   const handleGenerate = async (classData: Classification, userAnswers: Record<string, string>) => {
+    const isHardwareOrHybrid = classData.tipo === 'HARDWARE' || classData.tipo === 'HIBRIDO';
     setPhase('generating');
     setGeneratingProgress(10);
     setLogs([]);
+    setBackgroundGen({
+      active: true,
+      progress: 10,
+      message: 'Iniciando engenharia e arquitetura de solução...',
+      model: 'NVIDIA NIM GLM-5.1',
+      type: isHardwareOrHybrid ? 'iot' : 'software',
+      title: problemDescription.substring(0, 40)
+    });
     
     addLog('> Iniciando geração de solução...', 'done');
     
@@ -598,6 +636,7 @@ Problema: ${descToUse}`;
 
       // 1. Generate Frontend
       setGeneratingProgress(30);
+      setBackgroundGen(prev => ({ ...prev, progress: 30, message: 'Arquitetando Frontend SPA interativo...' }));
       addLog('> Arquitetando solução frontend...', 'active');
       
       const frontendPrompt = `Você é o Arquiteto Frontend de Elite da Parvus Automate. Sua missão é gerar uma aplicação web completa (Single Page Application), magnífica, visualmente deslumbrante e 100% INTERATIVA para resolver com maestria o seguinte problema.
@@ -664,6 +703,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
 
       // 2. Generate Backend Node.js
       setGeneratingProgress(70);
+      setBackgroundGen(prev => ({ ...prev, progress: 70, message: 'Projetando microsserviço Node.js, Express & SQL...' }));
       addLog('> Arquitetando solução backend...', 'active');
       
       const backendPrompt = `Você é o Arquiteto Chefe de Backend e Infraestrutura da Parvus Automate.
@@ -757,6 +797,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer menção à "Parvus Aut
       // 3. Generate Hardware / IoT specific codes if necessary
       if (classData.tipo === 'HARDWARE' || classData.tipo === 'HIBRIDO') {
         setGeneratingProgress(85);
+        setBackgroundGen(prev => ({ ...prev, progress: 85, message: 'Compilando firmware C++ ESP32 & Manuais...' }));
         addLog('> Gerando artefatos de hardware e PDFs...', 'active');
         
         const iotPrompt = `Você é o Engenheiro Chefe de Hardware e Sistemas Embarcados da Parvus Automate.
@@ -837,6 +878,14 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
       
       // 4. Finalize
       setGeneratingProgress(100);
+      setBackgroundGen({
+        active: false,
+        progress: 100,
+        message: 'Sistema gerado com sucesso!',
+        model: 'NVIDIA NIM GLM-5.1',
+        type: isHardwareOrHybrid ? 'iot' : 'software',
+        title: problemDescription.substring(0, 40)
+      });
       addLog('> Configurando integrações...', 'active');
       await new Promise(r => setTimeout(r, 1000));
       updateLog('> Configurando integrações...', 'done');
@@ -893,10 +942,18 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         generationLimit.refreshLimit();
       }
 
-      setTimeout(() => setPhase('done'), 1000);
+      setTimeout(() => {
+        setPhase('done');
+        if (currentView !== 'app') {
+          showToast('🎉 Sistema gerado com sucesso! Clique em "GERADOR" para visualizar.', 'success');
+        } else {
+          showToast('🎉 Sistema 100% gerado e pronto!', 'success');
+        }
+      }, 1000);
 
     } catch (error: any) {
       console.error(error);
+      setBackgroundGen(prev => ({ ...prev, active: false }));
       updateLog(`> Falha na geração: ${error}`, 'done');
       showToast("Falha ao gerar código. Verifique o alerta.", "error");
       setProblemDescription(prev => `[FALHA NA ÚLTIMA TENTATIVA: ${error.message}]\n\n` + prev);
@@ -1061,6 +1118,64 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
     a.click();
   };
 
+  const handleExportAllZip = async () => {
+    try {
+      showToast('Empacotando projeto completo (HTML, Node.js, SQL, Docker)...', 'info');
+      const blob = await exportCompleteProjectZip({
+        projectName: classification?.resumo || 'parvus-automacao',
+        problemDescription,
+        projectType: classification?.tipo || 'SOFTWARE',
+        generatedHtml,
+        generatedNode
+      });
+      downloadBlob(blob, `parvus-enterprise-${Date.now()}.zip`);
+      showToast('Pacote empresarial baixado com sucesso!', 'success');
+    } catch (err: any) {
+      showToast('Erro ao exportar projeto: ' + err.message, 'error');
+    }
+  };
+
+  const handleSaveAsTemplate = () => {
+    if (!generatedHtml) {
+      showToast('Nenhum projeto gerado para salvar como template.', 'error');
+      return;
+    }
+    const templateTitle = classification?.resumo?.substring(0, 40) || problemDescription.substring(0, 40) || 'Template Customizado';
+    saveProjectAsTemplate({
+      nome: templateTitle,
+      descricao: problemDescription || 'Template salvo a partir do Parvus Automate.',
+      tipo: classification?.tipo || 'SOFTWARE',
+      complexidade: classification?.complexidade || 'INTERMEDIARIO',
+      tecnologias: classification?.tecnologias || [],
+      htmlGerado: generatedHtml,
+      nodeGerado: generatedNode
+    });
+    showToast('⭐ Projeto salvo em "Meus Modelos Salvos"! Acesse pela aba Templates.', 'success');
+  };
+
+  const handleForkProject = () => {
+    if (!generatedHtml) {
+      showToast('Nenhum projeto ativo para clonar.', 'error');
+      return;
+    }
+    const baseTitle = classification?.resumo || problemDescription || 'Automação';
+    const forkedTitle = `${baseTitle.substring(0, 40)} (Fork)`;
+    
+    const forkedItem: HistoryItem = {
+      id: Date.now(),
+      titulo: forkedTitle,
+      tipo: classification?.tipo || 'SOFTWARE',
+      data: new Date().toLocaleString('pt-BR'),
+      htmlGerado: generatedHtml,
+      nodeGerado: generatedNode
+    };
+    
+    setHistory(prev => [forkedItem, ...prev]);
+    setCurrentProjectId(String(forkedItem.id));
+    setProblemDescription(`[CLONE / FORK]: ` + problemDescription);
+    showToast(`🔱 Projeto clonado como "${forkedTitle}"! Você pode customizá-lo agora.`, 'success');
+  };
+
   const gerarPDF = (conteudo: string, nomeArquivo: string) => {
     if (!conteudo) return;
     
@@ -1196,15 +1311,24 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
       return;
     }
     
+    // Normalize HÍBRIDO vs HIBRIDO
+    const normalizedTipo = template.tipo === 'HÍBRIDO' ? 'HIBRIDO' : template.tipo;
+    const isHardwareOrHybrid = normalizedTipo === 'HARDWARE' || normalizedTipo === 'HIBRIDO';
     setEntryFlow('ai');
     setPhase('generating');
     setGeneratingProgress(15);
     setLogs([]);
     setCurrentProjectId(null);
     setProblemDescription(`Template: ${template.nome}\nRespostas: ${JSON.stringify(answers)}`);
+    setBackgroundGen({
+      active: true,
+      progress: 15,
+      message: `Iniciando compilação do template ${template.nome}...`,
+      model: 'NVIDIA NIM GLM-5.1',
+      type: isHardwareOrHybrid ? 'iot' : 'software',
+      title: template.nome
+    });
     
-    // Normalize HÍBRIDO vs HIBRIDO
-    const normalizedTipo = template.tipo === 'HÍBRIDO' ? 'HIBRIDO' : template.tipo;
     const isBasic = template.complexidade === 'BÁSICO';
     const isMedium = template.complexidade === 'MÉDIO';
     const estMinutes = isBasic ? 35 : (isMedium ? 70 : 120);
@@ -1290,6 +1414,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, se
 
       // 2. Generate Backend Node.js
       setGeneratingProgress(75);
+      setBackgroundGen(prev => ({ ...prev, progress: 75, message: `Projetando microsserviço Node.js & SQL de ${template.nome}...` }));
       addLog('> Projetando microsserviço de backend customizado...', 'active');
       
       const backendPrompt = `Você é o Arquiteto Chefe de Backend e Infraestrutura da Parvus Automate.
@@ -1384,6 +1509,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
       // 3. Optional Hardware parts
       if (normalizedTipo === 'HARDWARE' || normalizedTipo === 'HIBRIDO') {
         setGeneratingProgress(90);
+        setBackgroundGen(prev => ({ ...prev, progress: 90, message: 'Compilando circuito eletrônico e firmware IoT...' }));
         addLog('> Gerando circuito eletrônico e documentação física...', 'active');
         
         const iotPrompt = `Você é o Engenheiro Chefe de Hardware e Sistemas Embarcados da Parvus Automate.
@@ -1513,10 +1639,28 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         generationLimit.refreshLimit();
       }
 
-      setTimeout(() => setPhase('done'), 1000);
+      setGeneratingProgress(100);
+      setBackgroundGen({
+        active: false,
+        progress: 100,
+        message: 'Template gerado com sucesso!',
+        model: 'NVIDIA NIM GLM-5.1',
+        type: isHardwareOrHybrid ? 'iot' : 'software',
+        title: template.nome
+      });
+
+      setTimeout(() => {
+        setPhase('done');
+        if (currentView !== 'app') {
+          showToast('🎉 Template compilado com sucesso! Clique em "GERADOR" para visualizar.', 'success');
+        } else {
+          showToast('🎉 Template compilado e pronto para uso!', 'success');
+        }
+      }, 1000);
 
     } catch (error) {
       console.error(error);
+      setBackgroundGen(prev => ({ ...prev, active: false }));
       updateLog(`> Falha na geração do template: ${error}`, 'done');
       showToast("Falha ao gerar o projeto por inteligência artificial. Tente novamente.", "error");
       setPhase('input');
@@ -2038,130 +2182,6 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
   };
 
   const renderBuildArea = () => {
-    if (classification && (classification.tipo === 'ENTERPRISE' || classification.complexidade === 'ENTERPRISE')) {
-      return (
-        <div className="flex-1 p-8 overflow-y-auto relative z-10 bg-[#0a0a0a]">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,102,0,0.05),transparent_50%)] pointer-events-none"></div>
-          <div className="max-w-3xl mx-auto relative z-10">
-             <div className="border border-[#ff6600]/30 bg-[#ff6600]/5 p-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#ff6600]/10 blur-[80px] pointer-events-none"></div>
-              
-              <div className="inline-block border border-[#ff6600] text-[#ff6600] text-[10px] font-bold uppercase tracking-widest px-3 py-1 mb-6">
-                INDÚSTRIA 4.0 — ENTERPRISE
-              </div>
-              
-              <h2 className="text-3xl font-display font-bold mb-4 flex items-center gap-3 tracking-tighter text-white">
-                <Factory className="text-[#ff6600]" /> Engenharia Especializada
-              </h2>
-              
-              <p className="text-[#888888] text-sm mb-8 leading-relaxed">
-                Automações de nível industrial — linhas de produção autônomas, robótica com IA, controle de manufatura sem intervenção humana — exigem uma equipe dedicada com engenheiros de controle, especialistas em robótica e arquitetos de sistemas críticos.
-              </p>
-              
-              <div className="grid grid-cols-2 gap-6 mb-8">
-                <div className="border border-white/10 bg-[#111111] p-5">
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest mb-2 text-[#888888] border-b border-white/10 pb-2">Escopo Técnico</h3>
-                  <div className="text-xs text-white leading-relaxed mt-3 whitespace-pre-wrap">
-                    {classification.resumo}
-                  </div>
-                </div>
-                
-                <div className="border border-white/10 bg-[#111111] p-5">
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest mb-2 text-[#888888] border-b border-white/10 pb-2">Stack Recomendada</h3>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {classification.tecnologias.map(t => (
-                      <span key={t} className="bg-[#1a1a1a] border border-[#ff6600]/30 px-2 py-1 text-[10px] text-[#ff6600]">
-                        {t}
-                      </span>
-                    ))}
-                    <span className="bg-[#1a1a1a] border border-white/10 px-2 py-1 text-[10px] text-white">EDGE_AI</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-[#111111] border border-white/10 p-6">
-                <h3 className="text-xs font-bold uppercase tracking-widest mb-4 text-[#888888]">Solicitar Proposta</h3>
-                {enterpriseSubmitted ? (
-                  <div className="bg-[#00ff88]/10 border border-[#00ff88]/30 p-4 text-[#00ff88] text-center font-bold text-[10px] uppercase tracking-widest">
-                    SOLICITAÇÃO ENVIADA. EQUIPE PARVUS ENTRARÁ EM CONTATO.
-                  </div>
-                ) : (
-                  <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setEnterpriseSubmitted(true); }}>
-                    <div className="grid grid-cols-2 gap-4">
-                      <input required placeholder="Nome Completo" className="bg-[#1a1a1a] border border-white/10 p-3 text-xs focus:border-[#ff6600] text-white outline-none" />
-                      <input required placeholder="Empresa" className="bg-[#1a1a1a] border border-white/10 p-3 text-xs focus:border-[#ff6600] text-white outline-none" />
-                      <input required type="email" placeholder="E-mail" className="bg-[#1a1a1a] border border-white/10 p-3 text-xs focus:border-[#ff6600] text-white outline-none" />
-                      <input required placeholder="Telefone" className="bg-[#1a1a1a] border border-white/10 p-3 text-xs focus:border-[#ff6600] text-white outline-none" />
-                    </div>
-                    <textarea 
-                      required 
-                      className="w-full min-h-[100px] bg-[#1a1a1a] border border-white/10 p-3 text-xs focus:border-[#ff6600] text-white outline-none resize-none" 
-                      placeholder="Descreva a infraestrutura atual"
-                      defaultValue={problemDescription}
-                    ></textarea>
-                    <button type="submit" className="w-full bg-[#ff6600] hover:brightness-110 text-black font-bold text-sm tracking-tighter uppercase py-4 transition-all shadow-[0_0_15px_rgba(255,102,0,0.3)]">
-                      ENVIAR SOLICITAÇÃO
-                    </button>
-                  </form>
-                )}
-              </div>
-             </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (classification && (classification.tipo === 'HARDWARE' || classification.tipo === 'HIBRIDO') && phase !== 'done') {
-      return (
-        <div className="flex-1 p-8 overflow-y-auto relative z-10 bg-[#0a0a0a]">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,102,255,0.05),transparent_50%)] pointer-events-none"></div>
-          <div className="max-w-3xl mx-auto relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-             <div className="border border-[#0066ff]/30 bg-[#0066ff]/5 p-8 relative overflow-hidden rounded-2xl shadow-[0_0_50px_rgba(0,102,255,0.05)]">
-              <div className="absolute top-0 right-0 w-80 h-80 bg-[#0066ff]/10 blur-[100px] pointer-events-none"></div>
-              
-              <div className="inline-block border border-[#0066ff] text-[#0066ff] bg-[#0066ff]/10 text-[10px] font-bold uppercase tracking-widest px-3 py-1 mb-6 rounded">
-                LABS — PARVUS IOT VISION
-              </div>
-              
-              <h2 className="text-3xl lg:text-4xl font-display font-black mb-4 flex items-center gap-4 tracking-tighter text-white">
-                <div className="w-12 h-12 rounded-xl bg-[#0066ff]/20 flex items-center justify-center border border-[#0066ff]/40 shadow-[0_0_20px_rgba(0,102,255,0.2)]">
-                  <Network size={24} className="text-[#0066ff]" />
-                </div>
-                Hardware Intelligence
-              </h2>
-              
-              <div className="text-[#888888] space-y-4 mb-8 leading-relaxed font-light">
-                <p>
-                  Sua ideia envolve automação física, robótica, sensores ou dispositivos IoT integrados. O potencial disso é gigantesco!
-                </p>
-                <p>
-                  No momento a <strong>Engine da Parvus</strong> gera código full-stack para web e integrações lógicas de forma impecável. No entanto, para o mundo físico, nosso objetivo é construir um estúdio de engenharia na nuvem revolucionário (similar a um Tinkercad de altíssimo nível, mas concebido por Inteligência Artificial).
-                </p>
-                <p>
-                  Para entregar diagramas elétricos exatos, validação de circuitos em tempo real e compilação para microcontroladores (como ESP32 e Arduino) com 100% de segurança, estamos formatando e levantando os insumos focados nessa tecnologia junto aos melhores profissionais embarcados do mercado.
-                </p>
-              </div>
-              
-              <div className="bg-[#111111]/80 backdrop-blur-md border border-[#0066ff]/20 rounded-xl p-6 relative overflow-hidden">
-                 <div className="absolute right-0 top-0 p-4 opacity-5 pointer-events-none">
-                    <Cpu size={120} className="text-[#0066ff]" />
-                 </div>
-                 <h3 className="text-xs font-black uppercase tracking-widest mb-2 text-white">Junte-se à Revolução IoT</h3>
-                 <p className="text-sm text-[#888888] mb-6">Estamos cadastrando visionários e empresas parceiras (Early Adopters) que necessitam desta feature num futuro breve. Você receberá acesso beta antes de ir ao mercado.</p>
-                 
-                 <form className="flex max-sm:flex-col gap-3" onSubmit={(e) => { e.preventDefault(); showToast('Inscrição enviada para a lista de early adopters!', 'success'); }}>
-                    <input type="email" placeholder="Seu e-mail..." required className="flex-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-3 text-sm text-white focus:border-[#0066ff] focus:ring-1 focus:ring-[#0066ff] outline-none transition-all shadow-inner relative z-10" />
-                    <button type="submit" className="px-6 py-3 rounded-lg bg-[#0066ff] text-white font-black text-xs tracking-widest uppercase hover:bg-[#0055dd] hover:shadow-[0_0_20px_rgba(0,102,255,0.4)] transition-all relative z-10">
-                      Entrar para o Beta
-                    </button>
-                 </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     if (phase === 'input' || phase === 'classifying' || phase === 'questions' || phase === 'inviavel') {
       return (
         <main className="flex-1 flex flex-col items-center justify-center relative bg-[#0a0a0a] z-10 overflow-hidden">
@@ -2328,48 +2348,95 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
                 </button>
               )}
               <div className="flex-1"></div>
-              <div className="flex items-center px-4 sm:px-6 gap-3">
+              <div className="flex items-center px-4 sm:px-6 gap-2 flex-wrap py-2">
+                {/* Enterprise action buttons */}
                 <button 
-                  onClick={() => setIsFullscreen(!isFullscreen)}
-                  className="text-[#888888] hover:text-white transition-colors flex items-center justify-center p-2 rounded hover:bg-white/5"
-                  title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
+                  onClick={() => setShowWebhookModal(true)}
+                  className="text-[9px] sm:text-[10px] bg-[#ff6600]/10 border border-[#ff6600]/40 px-2.5 py-1 hover:bg-[#ff6600]/20 hover:border-[#ff6600] text-[#ff6600] transition-colors uppercase tracking-widest whitespace-nowrap font-bold flex items-center gap-1"
+                  title="Simular e disparar webhooks com assinatura criptográfica HMAC-SHA256"
                 >
-                  {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+                  <Zap size={11} /> WEBHOOK
                 </button>
-                <div className="w-px h-6 bg-white/10 mx-1"></div>
+                <button 
+                  onClick={() => setShowSqlSchemaModal(true)}
+                  className="text-[9px] sm:text-[10px] bg-[#0066ff]/10 border border-[#0066ff]/40 px-2.5 py-1 hover:bg-[#0066ff]/20 hover:border-[#0066ff] text-[#0066ff] transition-colors uppercase tracking-widest whitespace-nowrap font-bold flex items-center gap-1"
+                  title="Inspecionar e copiar esquema SQL de migração para Supabase / PostgreSQL"
+                >
+                  <Database size={11} /> ESQUEMA SQL
+                </button>
+                <button 
+                  onClick={() => setShowEnvConfigModal(true)}
+                  className="text-[9px] sm:text-[10px] bg-purple-500/10 border border-purple-500/40 px-2.5 py-1 hover:bg-purple-500/20 hover:border-purple-400 text-purple-400 transition-colors uppercase tracking-widest whitespace-nowrap font-bold flex items-center gap-1"
+                  title="Gerenciar variáveis de ambiente e segredos .env"
+                >
+                  <Sliders size={11} /> .ENV
+                </button>
+                <button 
+                  onClick={handleSaveAsTemplate}
+                  className="text-[9px] sm:text-[10px] bg-amber-500/10 border border-amber-500/40 px-2.5 py-1 hover:bg-amber-500/20 hover:border-amber-400 text-amber-400 transition-colors uppercase tracking-widest whitespace-nowrap font-bold flex items-center gap-1"
+                  title="Salvar projeto como template corporativo em Meus Templates"
+                >
+                  <Bookmark size={11} /> TEMPLATE
+                </button>
+                <button 
+                  onClick={handleForkProject}
+                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/20 px-2.5 py-1 hover:border-white hover:text-white text-[#888888] transition-colors uppercase tracking-widest whitespace-nowrap font-bold flex items-center gap-1"
+                  title="Clonar / Fork deste projeto para criar uma nova variação"
+                >
+                  <GitFork size={11} /> FORK
+                </button>
+                <button 
+                  onClick={handleExportAllZip}
+                  className="text-[9px] sm:text-[10px] bg-[#00ff88]/15 border border-[#00ff88]/60 px-3 py-1 hover:bg-[#00ff88]/30 hover:border-[#00ff88] text-[#00ff88] transition-colors uppercase tracking-widest whitespace-nowrap font-black flex items-center gap-1 shadow-[0_0_15px_rgba(0,255,136,0.2)]"
+                  title="Baixar pacote empresarial completo em arquivo ZIP (HTML, Node.js, SQL, Docker e Docs)"
+                >
+                  <Archive size={11} /> EXPORTAR TUDO (ZIP)
+                </button>
+
+                <div className="w-px h-5 bg-white/10 mx-1 hidden sm:block"></div>
+
                 <button 
                   onClick={downloadHtml}
-                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-3 py-1 hover:border-[#00ff88] hover:text-[#00ff88] transition-colors text-[#888888] uppercase tracking-widest whitespace-nowrap"
+                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-2.5 py-1 hover:border-[#00ff88] hover:text-[#00ff88] transition-colors text-[#888888] uppercase tracking-widest whitespace-nowrap"
                 >
-                  HTML ZIP
+                  HTML
                 </button>
                 <button 
                   onClick={downloadNode}
-                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-3 py-1 hover:border-[#0066ff] hover:text-[#0066ff] transition-colors text-[#888888] uppercase tracking-widest whitespace-nowrap"
+                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-2.5 py-1 hover:border-[#0066ff] hover:text-[#0066ff] transition-colors text-[#888888] uppercase tracking-widest whitespace-nowrap"
                 >
-                  NODE.JS PKG
+                  NODE.JS
                 </button>
                 <button 
                   onClick={downloadDockerPkg}
-                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-3 py-1 hover:border-[#00d4ff] hover:text-[#00d4ff] transition-colors text-[#888888] uppercase tracking-widest whitespace-nowrap"
-                  title="Baixar pacote completo com Dockerfile, Compose e DevContainer"
+                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-2.5 py-1 hover:border-[#00d4ff] hover:text-[#00d4ff] transition-colors text-[#888888] uppercase tracking-widest whitespace-nowrap"
+                  title="Baixar pacote Docker, Compose e DevContainer"
                 >
-                  🐳 DOCKER PKG
+                  🐳 DOCKER
                 </button>
                 {(classification?.tipo === 'HARDWARE' || classification?.tipo === 'HIBRIDO') && (
                   <button 
                     onClick={downloadTodosIoT}
-                    className="text-[9px] sm:text-[10px] bg-[#ff6600]/10 border border-[#ff6600]/50 px-3 py-1 hover:bg-[#ff6600]/20 hover:text-white transition-colors text-[#ff6600] uppercase tracking-widest whitespace-nowrap font-bold"
+                    className="text-[9px] sm:text-[10px] bg-[#ff6600]/10 border border-[#ff6600]/50 px-2.5 py-1 hover:bg-[#ff6600]/20 hover:text-white transition-colors text-[#ff6600] uppercase tracking-widest whitespace-nowrap font-bold"
                   >
-                    BAIXAR IOT (ZIP)
+                    IOT ZIP
                   </button>
                 )}
-                <div className="w-px h-6 bg-white/10 mx-1"></div>
                 <button 
                   onClick={handlePublishToMarketplace}
-                  className="text-[9px] sm:text-[10px] bg-[#00ff88]/10 border border-[#00ff88]/50 px-3 py-1 hover:bg-[#00ff88]/20 hover:text-white transition-colors text-[#00ff88] uppercase tracking-widest whitespace-nowrap font-bold"
+                  className="text-[9px] sm:text-[10px] bg-[#00ff88]/10 border border-[#00ff88]/50 px-2.5 py-1 hover:bg-[#00ff88]/20 hover:text-white transition-colors text-[#00ff88] uppercase tracking-widest whitespace-nowrap font-bold"
                 >
-                  📤 PUBLICAR
+                  PUBLICAR
+                </button>
+
+                <div className="w-px h-5 bg-white/10 mx-1"></div>
+
+                <button 
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="text-[#888888] hover:text-white transition-colors flex items-center justify-center p-1.5 rounded hover:bg-white/5"
+                  title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
+                >
+                  {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
                 </button>
               </div>
             </nav>
@@ -2403,6 +2470,24 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
               )}
               {activeTab === 'architecture' && generatedNode && (
                 <div className="w-full h-full bg-[#111111] sm:border border-white/10 text-[#00ff88] font-mono text-xs p-8 overflow-auto leading-relaxed">
+                  {(classification?.tipo === 'ENTERPRISE' || classification?.complexidade === 'ENTERPRISE') && (
+                    <div className="mb-8 border border-[#ff6600]/40 bg-[#ff6600]/10 p-5 rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-[#ff6600] flex items-center gap-2 mb-1">
+                          <Factory size={14} /> CERTIFICAÇÃO INDUSTRIAL & ARQUITETURA MISSÃO CRÍTICA
+                        </div>
+                        <p className="text-white/80 text-xs font-sans leading-relaxed">
+                          Projeto sintetizado com padrões de alta tolerância a falhas, concorrência desacoplada e isolamento de banco.
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => showToast('Solicitação de homologação enterprise enviada! Nossa equipe entrará em contato.', 'success')}
+                        className="px-4 py-2 bg-[#ff6600] text-black font-bold uppercase text-[10px] tracking-wider rounded hover:bg-[#ff7700] transition-colors shrink-0 shadow-[0_0_15px_rgba(255,102,0,0.3)]"
+                      >
+                        Homologação On-Premise
+                      </button>
+                    </div>
+                  )}
                   <div className="mb-8 border-b border-white/10 pb-4">
                     <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Arquitetura de Sistemas</h2>
                     <pre className="whitespace-pre-wrap">{generatedNode.arquitetura_ascii}</pre>
@@ -3032,6 +3117,11 @@ Sem markdown no retorno. Apenas o JSON válido.`;
 
       {!isFullscreen && renderTopbar()}
       <main className="flex flex-1 overflow-hidden relative z-10 w-full">
+        {/* Persistent IoT Monitor container so switching tabs doesn't destroy state */}
+        <div className={currentView === 'iot' ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+          <IotMonitor onBack={() => setCurrentView('app')} />
+        </div>
+
         {currentView === 'app' ? (
           <>
             {entryFlow === 'ai' && !isFullscreen && renderLeftPanel()}
@@ -3062,8 +3152,6 @@ Sem markdown no retorno. Apenas o JSON válido.`;
           isAdmin ? renderAdmin() : <div className="text-center mt-20 text-red-500">Acesso negado. Funcionalidade exclusiva para administradores.</div>
         ) : currentView === 'settings' ? (
           <SettingsPage onLogout={handleLogout} />
-        ) : currentView === 'iot' ? (
-          <IotMonitor onBack={() => setCurrentView('app')} />
         ) : null}
       </main>
       
@@ -3185,6 +3273,49 @@ Sem markdown no retorno. Apenas o JSON válido.`;
           </div>
         </div>
       )}
+
+      {/* BACKGROUND GENERATION FLOATING WIDGET */}
+      <BackgroundGenerationWidget
+        isGenerating={backgroundGen.active}
+        progress={backgroundGen.progress}
+        currentMessage={backgroundGen.message}
+        generationType={backgroundGen.type}
+        activeModel={backgroundGen.model}
+        onReturnToBuild={() => {
+          if (backgroundGen.type === 'iot') {
+            setCurrentView('iot');
+          } else {
+            setCurrentView('app');
+            setEntryFlow('ai');
+          }
+        }}
+        isMainViewActive={currentView === 'app' && entryFlow === 'ai'}
+      />
+
+      {/* WEBHOOK SIMULATOR MODAL */}
+      <WebhookSimulatorModal
+        isOpen={showWebhookModal}
+        onClose={() => setShowWebhookModal(false)}
+        projectName={classification?.resumo || problemDescription || 'Automação'}
+      />
+
+      {/* SUPABASE / POSTGRESQL DDL MODAL */}
+      <SqlSchemaModal
+        isOpen={showSqlSchemaModal}
+        onClose={() => setShowSqlSchemaModal(false)}
+        projectName={classification?.resumo || problemDescription || 'Automação'}
+        problemDescription={problemDescription}
+        projectType={classification?.tipo || 'SOFTWARE'}
+        generatedNode={generatedNode}
+      />
+
+      {/* ENVIRONMENT VARIABLES CONFIG MODAL */}
+      <EnvConfigModal
+        isOpen={showEnvConfigModal}
+        onClose={() => setShowEnvConfigModal(false)}
+        projectName={classification?.resumo || problemDescription || 'Automação'}
+        isIot={classification?.tipo === 'HARDWARE' || classification?.tipo === 'HIBRIDO'}
+      />
     </div>
   );
 }

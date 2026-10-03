@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DEFAULT_TEMPLATES } from '../../lib/templatesData';
-import { ArrowLeft, CheckCircle2, Play, ChevronRight, Zap } from 'lucide-react';
+import { getCustomTemplates, deleteCustomTemplate, CustomTemplate } from '../../lib/customTemplatesService';
+import { ArrowLeft, CheckCircle2, Play, ChevronRight, Zap, Bookmark, Trash2, FolderPlus } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface TemplatesFlowProps {
@@ -12,6 +13,12 @@ interface TemplatesFlowProps {
 export function TemplatesFlow({ onBack, onGenerate, onGoToAI }: TemplatesFlowProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [templateSourceTab, setTemplateSourceTab] = useState<'official' | 'custom'>('official');
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>(() => getCustomTemplates());
+
+  useEffect(() => {
+    setCustomTemplates(getCustomTemplates());
+  }, [templateSourceTab]);
 
   const handleSelectTemplate = (tpl: any) => {
     setSelectedTemplate(tpl);
@@ -194,48 +201,139 @@ export function TemplatesFlow({ onBack, onGenerate, onGoToAI }: TemplatesFlowPro
           <ArrowLeft size={14} /> Voltar
         </motion.button>
         
-        <motion.div variants={itemVariants} className="mb-12">
+        <motion.div variants={itemVariants} className="mb-8">
           <h1 className="text-3xl md:text-5xl font-display font-black mb-4 tracking-tighter text-white">
             Templates Estruturados
           </h1>
-          <p className="text-[#888888] text-lg max-w-2xl font-light">
+          <p className="text-[#888888] text-lg max-w-2xl font-light mb-8">
             Soluções validadas prontas para implantação. Selecione um padrão e injete suas regras de negócio.
           </p>
+
+          {/* Tab Selector */}
+          <div className="flex gap-3 border-b border-white/10 pb-4">
+            <button
+              onClick={() => setTemplateSourceTab('official')}
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${
+                templateSourceTab === 'official'
+                  ? 'bg-[#0066ff] text-white shadow-[0_0_20px_rgba(0,102,255,0.3)]'
+                  : 'bg-white/5 text-gray-400 hover:text-white border border-white/10'
+              }`}
+            >
+              Templates Oficiais ({DEFAULT_TEMPLATES.length})
+            </button>
+            <button
+              onClick={() => setTemplateSourceTab('custom')}
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${
+                templateSourceTab === 'custom'
+                  ? 'bg-[#00ff88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
+                  : 'bg-white/5 text-gray-400 hover:text-white border border-white/10'
+              }`}
+            >
+              <Bookmark size={13} />
+              Meus Modelos Salvos ({customTemplates.length})
+            </button>
+          </div>
         </motion.div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-          {DEFAULT_TEMPLATES.map((tpl, i) => (
-            <motion.div 
-              key={tpl.id} 
-              variants={itemVariants} 
-              whileHover={{ y: -4 }}
-              onClick={() => handleSelectTemplate(tpl)}
-              className="border border-white/10 rounded-2xl bg-[#111111]/80 backdrop-blur-sm p-6 flex flex-col hover:border-[#0066ff]/50 hover:shadow-[0_10px_40px_-10px_rgba(0,102,255,0.2)] transition-all cursor-pointer group"
-            >
-              <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-2xl mb-6 shadow-inner group-hover:bg-[#0066ff]/10 group-hover:scale-110 transition-all">
-                {tpl.icone}
+        {templateSourceTab === 'official' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+            {DEFAULT_TEMPLATES.map((tpl) => (
+              <motion.div 
+                key={tpl.id} 
+                variants={itemVariants} 
+                whileHover={{ y: -4 }}
+                onClick={() => handleSelectTemplate(tpl)}
+                className="border border-white/10 rounded-2xl bg-[#111111]/80 backdrop-blur-sm p-6 flex flex-col hover:border-[#0066ff]/50 hover:shadow-[0_10px_40px_-10px_rgba(0,102,255,0.2)] transition-all cursor-pointer group"
+              >
+                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-2xl mb-6 shadow-inner group-hover:bg-[#0066ff]/10 group-hover:scale-110 transition-all">
+                  {tpl.icone}
+                </div>
+                <h2 className="text-xl font-black text-white mb-3 leading-tight tracking-tight">
+                  {tpl.nome}
+                </h2>
+                <div className="flex gap-2 mb-4">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#0066ff] bg-[#0066ff]/10 px-2 py-1 rounded">{tpl.tipo}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#888888] bg-white/5 px-2 py-1 rounded">{tpl.complexidade}</span>
+                </div>
+                <p className="text-sm text-[#888888] leading-relaxed mb-8 flex-1">
+                  {tpl.descricao}
+                </p>
+                <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                  <span className="text-xs text-[#666666] font-medium flex items-center gap-1">
+                    <Play size={10} className="text-[#0066ff]" /> {tpl.tempo_minutos} min deploy
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white group-hover:text-[#0066ff] transition-colors flex items-center">
+                    Customizar <ChevronRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                  </span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="mb-16">
+            {customTemplates.length === 0 ? (
+              <div className="p-12 border border-dashed border-white/15 rounded-3xl text-center bg-black/30">
+                <FolderPlus size={40} className="mx-auto text-gray-500 mb-4" />
+                <h3 className="text-lg font-bold text-white mb-2">Nenhum template salvo ainda</h3>
+                <p className="text-xs text-gray-400 max-w-md mx-auto mb-6">
+                  Ao gerar qualquer sistema via Parvus Automate, clique em <strong>"⭐ SALVAR COMO TEMPLATE"</strong> para armazenar seu projeto como um modelo corporativo reutilizável aqui.
+                </p>
+                <button
+                  onClick={onGoToAI}
+                  className="px-6 py-3 rounded-xl bg-[#00ff88] text-black font-extrabold text-xs uppercase tracking-wider hover:brightness-110"
+                >
+                  Criar Primeiro Sistema com IA
+                </button>
               </div>
-              <h2 className="text-xl font-black text-white mb-3 leading-tight tracking-tight">
-                {tpl.nome}
-              </h2>
-              <div className="flex gap-2 mb-4">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#0066ff] bg-[#0066ff]/10 px-2 py-1 rounded">{tpl.tipo}</span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#888888] bg-white/5 px-2 py-1 rounded">{tpl.complexidade}</span>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {customTemplates.map((tpl) => (
+                  <motion.div 
+                    key={tpl.id} 
+                    variants={itemVariants} 
+                    whileHover={{ y: -4 }}
+                    onClick={() => handleSelectTemplate(tpl)}
+                    className="border border-[#00ff88]/30 rounded-2xl bg-[#0c1410]/80 backdrop-blur-sm p-6 flex flex-col hover:border-[#00ff88] hover:shadow-[0_10px_40px_-10px_rgba(0,255,136,0.2)] transition-all cursor-pointer group relative"
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteCustomTemplate(tpl.id);
+                        setCustomTemplates(getCustomTemplates());
+                      }}
+                      className="absolute top-5 right-5 text-gray-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                      title="Excluir Template Salvo"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+
+                    <div className="w-12 h-12 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/20 flex items-center justify-center text-2xl mb-6 shadow-inner group-hover:scale-110 transition-all">
+                      {tpl.icone || '⚡'}
+                    </div>
+                    <h2 className="text-xl font-black text-white mb-2 leading-tight tracking-tight">
+                      {tpl.nome}
+                    </h2>
+                    <div className="flex gap-2 mb-4">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#00ff88] bg-[#00ff88]/10 px-2 py-1 rounded">{tpl.tipo}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">CUSTOMIZADO</span>
+                    </div>
+                    <p className="text-sm text-[#888888] leading-relaxed mb-6 flex-1 line-clamp-3">
+                      {tpl.descricao}
+                    </p>
+                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                      <span className="text-xs text-emerald-400 font-medium flex items-center gap-1">
+                        Salvo em {new Date(tpl.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white group-hover:text-[#00ff88] transition-colors flex items-center">
+                        Usar Modelo <ChevronRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-              <p className="text-sm text-[#888888] leading-relaxed mb-8 flex-1">
-                {tpl.descricao}
-              </p>
-              <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                <span className="text-xs text-[#666666] font-medium flex items-center gap-1">
-                  <Play size={10} className="text-[#0066ff]" /> {tpl.tempo_minutos} min deploy
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-white group-hover:text-[#0066ff] transition-colors flex items-center">
-                  Customizar <ChevronRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                </span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+            )}
+          </div>
+        )}
         
         <motion.div variants={itemVariants} className="text-center p-8 rounded-2xl border border-dashed border-white/20 bg-white/5 flex flex-col sm:flex-row items-center justify-center gap-6">
           <span className="text-[#888888]">Sua regra de negócio não se encaixa nos moldes?</span>
