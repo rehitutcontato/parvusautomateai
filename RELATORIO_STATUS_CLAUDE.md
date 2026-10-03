@@ -9,8 +9,8 @@ O sistema abandonou integralmente a antiga proposta de desenvolvimento focado em
 ## 1. Status Geral do Sistema ✅
 - **Estabilidade:** Executando de forma estável, sem bugs críticos ou loops de renderização no React.
 - **Integração Front e Back:** Comunicação fluida entre o cliente Vite/React19 e o servidor proxy Node/Express.
-- **Integração de IA:** Prompting e extração de respostas no formato JSON gerados com sucesso utilizando a versão mais recente do Gemini (`gemini-2.0-flash` através do recém implementado SDK `@google/genai`).
-- **Ambiente de Desenvolvimento:** Operando via Vibecode/Google AI Studio sem inconsistências ambientais.
+- **Integração de IA:** Broker unificado e resiliente combinando **NVIDIA NIM API** (`z-ai/glm-5.1`, `z-ai/glm-5.2`, `nvidia/nemotron-3-super-120b-a12b`, `deepseek-ai/deepseek-r1`, `meta/llama-3.3-70b-instruct`) com fallback automático para **Google Gemini** (`gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-2.5-flash`), com tratamento inteligente de `response_format` e reparo/extração cirúrgica de JSON.
+- **Ambiente de Desenvolvimento:** Operando com scripts de build e validação TypeScript estrita 100% aprovados.
 
 ## 2. A Nova Identidade: Parvus Automate
 Já não geramos sites focados em conversão ou "landing pages premium". Nosso foco agora é:
@@ -23,7 +23,7 @@ Já não geramos sites focados em conversão ou "landing pages premium". Nosso f
 * **Frontend:** React + TypeScript + Vite.
 * **Estilização UI:** Tailwind CSS (focado no padrão "Cyber/Glassmorphism" com tons neon em um fundo minimalista escuro). Ícones através do pacote `lucide-react`. Interações e animações visuais com `motion/react`.
 * **Backend:** Node.js/Express resolvendo rotas na porta 3000, e servindo o proxy seguro focado em IA e segurança de autenticação.
-* **Inteligência Artificial (O Cerebro do Sistema):** SDK `@google/genai` focado no modelo `gemini-2.0-flash` para lidar com toda a geração técnica do briefing em steps, categorização de arquitetura e simulador de telemetria baseada em prompt.
+* **Inteligência Artificial (O Cérebro do Sistema):** Motor primário NVIDIA NIM com chave própria ou do ambiente, com contingência automática multi-modelo para Google Gemini, suportando extração de JSON complexos (firmware, esquemas ASCII e diagramas SVG) sem falha de preâmbulo.
 * **Banco de Dados & Autenticação:** **Supabase** via API e SDK oficial `@supabase/supabase-js`. 
     - Autenticação de Usuários implementada (`signUp`, `signInWithPassword`, `signOut`).
     - Supabase cuidando do PostgreSQL relacional para tabelas de perfis, salvando propriedades e tokens. Banco de dados testado.

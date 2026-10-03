@@ -28,6 +28,28 @@ function getCleanApiKey(userKey: string | undefined, envKeyName: string): string
   return apiKey;
 }
 
+// Extrator robusto de JSON que isola o objeto/array mais externo ignorando preâmbulos e notas
+function extractJsonSubstring(text: string): string {
+  let cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const firstBrace = cleaned.indexOf('{');
+  const firstBracket = cleaned.indexOf('[');
+  let startIdx = -1;
+  let endIdx = -1;
+
+  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+    startIdx = firstBrace;
+    endIdx = cleaned.lastIndexOf('}');
+  } else if (firstBracket !== -1) {
+    startIdx = firstBracket;
+    endIdx = cleaned.lastIndexOf(']');
+  }
+
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    return cleaned.substring(startIdx, endIdx + 1);
+  }
+  return cleaned;
+}
+
 // Unified robust runner that tries the user preferred key/model, automatically falling back dynamically
 async function executeGenerativeTask(prompt: string, config: any, userKey?: string, reqId?: string): Promise<string> {
   const isUserGeminiKey = userKey && (userKey.startsWith("AIzaSy") || userKey.startsWith("aizasy") || userKey.includes("AIzaSy"));
@@ -42,35 +64,46 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
   // FUNÇÕES DE EXECUÇÃO
   const runGemini = async () => {
     if (!geminiKey) return false;
-    try {
-      console.log(`[REQ ${reqId}] Tentativa com Google Gemini (gemini-3.6-flash)...`);
-      const ai = new GoogleGenAI({
-        apiKey: geminiKey,
-        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
-      });
-      
-      const genConfig: any = {
-        temperature: config?.temperature !== undefined ? config.temperature : 0.2,
-      };
-      
-      if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
-        genConfig.responseMimeType = 'application/json';
-        if (config?.responseSchema) {
-          genConfig.responseSchema = config?.responseSchema;
-        }
-      }
+    const geminiModelsToTry = [
+      config?.model || 'gemini-3.6-flash',
+      'gemini-3.5-flash',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash'
+    ];
+    const uniqueGeminiModels = Array.from(new Set(geminiModelsToTry));
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: prompt,
-        config: genConfig
-      });
-      return response.text || "";
-    } catch (err: any) {
-      console.error(`[REQ ${reqId}] Falha no Gemini: ${err.message}. ${nvidiaKey ? 'Alternando provider...' : ''}`);
-      errors.push(`Gemini: ${err.message}`);
-      return false;
+    for (const geminiModel of uniqueGeminiModels) {
+      try {
+        console.log(`[REQ ${reqId}] Tentativa com Google Gemini (${geminiModel})...`);
+        const ai = new GoogleGenAI({
+          apiKey: geminiKey,
+          httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+        });
+        
+        const genConfig: any = {
+          temperature: config?.temperature !== undefined ? config.temperature : 0.2,
+        };
+        
+        if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
+          genConfig.responseMimeType = 'application/json';
+          if (config?.responseSchema) {
+            genConfig.responseSchema = config?.responseSchema;
+          }
+        }
+
+        const response = await ai.models.generateContent({
+          model: geminiModel,
+          contents: prompt,
+          config: genConfig
+        });
+        if (response.text) return response.text;
+      } catch (err: any) {
+        console.warn(`[REQ ${reqId}] Falha no Gemini (${geminiModel}): ${err.message}.`);
+        errors.push(`Gemini (${geminiModel}): ${err.message}`);
+      }
     }
+    return false;
   };
 
   const runNvidia = async () => {
@@ -78,53 +111,86 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
       errors.push("Chave NVIDIA inválida ou ausente.");
       return false;
     }
-    const nvidiaModelsToTry = ["glm-5.2", "deepseek-ai/deepseek-v4-pro", "nvidia/nemotron-3-ultra-550b-a55b"];
+    // Catálogo atualizado e oficial de modelos NVIDIA NIM
+    const nvidiaModelsToTry = [
+      "z-ai/glm-5.1",
+      "z-ai/glm-5.2",
+      "z-ai/glm-5.3",
+      "nvidia/nemotron-3-super-120b-a12b",
+      "nvidia/nemotron-3-ultra-550b-a55b",
+      "deepseek-ai/deepseek-r1",
+      "deepseek-ai/deepseek-v3",
+      "meta/llama-3.3-70b-instruct"
+    ];
     
+    const isJson = config?.responseMimeType === 'application/json' || Boolean(config?.responseSchema);
+
     for (const nvidiaModel of nvidiaModelsToTry) {
-      try {
-        console.log(`[REQ ${reqId}] Tentativa com NVIDIA (${nvidiaModel})...`);
-        const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
-        
-        let openAiConfig: any = {
-          model: nvidiaModel,
-          messages: [{ role: "user", content: prompt }],
-          temperature: config?.temperature !== undefined ? config.temperature : 0.2,
-          top_p: 1,
-          max_tokens: 8192,
-        };
-        
-        if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
-          openAiConfig.response_format = { type: "json_object" };
-          let systemPrompt = "You must output strictly JSON format only. Do not output anything else.";
-          if (config?.responseSchema) {
-            const schemaStr = JSON.stringify(config.responseSchema).replace(/"type":"([A-Z]+)"/g, (match, p1) => `"type":"${p1.toLowerCase()}"`);
-            systemPrompt += ` The JSON must exactly match this schema and populate all required fields: ${schemaStr}`;
-          }
-          openAiConfig.messages = [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: prompt }
-          ];
+      const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
+      
+      let messages: any[] = [{ role: "user", content: prompt }];
+      if (isJson) {
+        let systemPrompt = "You must output strictly JSON format only. Do not output any markdown code blocks, explanation or introductory text.";
+        if (config?.responseSchema) {
+          const schemaStr = JSON.stringify(config.responseSchema).replace(/"type":"([A-Z]+)"/g, (_, p1) => `"type":"${p1.toLowerCase()}"`);
+          systemPrompt += ` The JSON must strictly conform to this schema: ${schemaStr}`;
         }
-  
-        const response = await openai.chat.completions.create(openAiConfig);
-        return response.choices[0].message?.content || "";
-      } catch (err: any) {
-        console.warn(`[REQ ${reqId}] Falha no NVIDIA (${nvidiaModel}): ${err.message}. Tentando próximo modelo NVIDIA...`);
-        errors.push(`NVIDIA (${nvidiaModel}): ${err.message}`);
+        messages = [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ];
+      }
+
+      // Alguns modelos da NVIDIA não aceitam `response_format: { type: "json_object" }` e lançam erro 400.
+      // Tentamos com response_format; se der erro 400/incompatibilidade, tentamos sem response_format.
+      const attempts = isJson ? [true, false] : [false];
+
+      for (const withResponseFormat of attempts) {
+        try {
+          console.log(`[REQ ${reqId}] Tentativa com NVIDIA (${nvidiaModel}) [response_format=${withResponseFormat}]...`);
+          const openAiConfig: any = {
+            model: nvidiaModel,
+            messages,
+            temperature: config?.temperature !== undefined ? config.temperature : 0.2,
+            top_p: 1,
+            max_tokens: 4096,
+          };
+          
+          if (withResponseFormat) {
+            openAiConfig.response_format = { type: "json_object" };
+          }
+    
+          const response = await openai.chat.completions.create(openAiConfig);
+          const content = response.choices[0].message?.content;
+          if (content) return content;
+        } catch (err: any) {
+          const errMsg = err.message || String(err);
+          console.warn(`[REQ ${reqId}] Falha no NVIDIA (${nvidiaModel}, response_format=${withResponseFormat}): ${errMsg}`);
+          if (withResponseFormat && (errMsg.includes('response_format') || errMsg.includes('400') || errMsg.includes('json_object') || errMsg.includes('unrecognized') || errMsg.includes('not supported'))) {
+            // Continua para a tentativa sem response_format
+            continue;
+          }
+          errors.push(`NVIDIA (${nvidiaModel}): ${errMsg}`);
+          break; // Passa para o próximo modelo
+        }
       }
     }
     return false;
   };
 
-  // ORDEM DE EXECUÇÃO: Prioriza o que o usuário colocou na dashboard.
-  if (isUserNvidiaKey) {
+  // ORDEM DE EXECUÇÃO:
+  // Se o usuário enviou chave NVIDIA, ou se o ambiente possui NVIDIA_API_KEY (e não for explicitamente AI_PROVIDER=gemini),
+  // priorizamos NVIDIA como o motor de IA principal.
+  const preferNvidia = isUserNvidiaKey || (Boolean(nvidiaKey) && (!geminiKey || process.env.AI_PROVIDER === 'nvidia' || !isUserGeminiKey));
+
+  if (preferNvidia) {
     const res = await runNvidia();
     if (res !== false) return res;
     // Fallback: Gemini
     const fallbackRes = await runGemini();
     if (fallbackRes !== false) return fallbackRes;
   } else {
-    // Default/Gemini Priority
+    // Gemini Priority
     const res = await runGemini();
     if (res !== false) return res;
     // Fallback: Nvidia
@@ -155,7 +221,7 @@ app.post("/api/ai/generate-iot", async (req, res) => {
     try {
       const aiText = await executeGenerativeTask(prompt, config, userKey, reqId);
       clearInterval(heartbeat);
-      let cleanedText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
+      let cleanedText = extractJsonSubstring(aiText);
       
       console.log(`[REQ ${reqId}] Sucesso na geração IoT usando broker unificado. Tamanho: ${cleanedText.length}`);
       
@@ -273,7 +339,8 @@ app.post("/api/ai/generate", async (req, res) => {
     }, 15000);
 
     try {
-      const aiText = await executeGenerativeTask(contents, config, userKey, reqId);
+      const effectiveConfig = { ...config, model: model || config?.model };
+      const aiText = await executeGenerativeTask(contents, effectiveConfig, userKey, reqId);
       clearInterval(heartbeat);
       console.log(`[REQ ${reqId}] Sucesso na geração geral usando broker de IA. Tamanho: ${aiText.length} chars.`);
       res.write(JSON.stringify({ text: aiText }));

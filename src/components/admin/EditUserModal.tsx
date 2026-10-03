@@ -15,7 +15,7 @@ export function EditUserModal({ user, onClose, onSave }: EditUserModalProps) {
   const [error, setError] = useState('');
 
   const limitesPadrao: Record<string, number> = {
-    free: 0,
+    free: 1,
     starter: 5,
     creator: 10,
     pro: 20,
@@ -94,7 +94,7 @@ export function EditUserModal({ user, onClose, onSave }: EditUserModalProps) {
               onChange={handlePlanChange}
               className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[#00ff88]"
             >
-              <option value="free">Free (0)</option>
+              <option value="free">Free (1)</option>
               <option value="starter">Starter (5)</option>
               <option value="creator">Creator (10)</option>
               <option value="pro">Pro (20)</option>

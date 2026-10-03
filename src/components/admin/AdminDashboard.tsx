@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Users, DollarSign, Activity, Settings2, ShoppingCart } from 'lucide-react';
 import { UsersTable } from './UsersTable';
+import { PLANS } from '../../lib/plans.config';
 
 export function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
@@ -28,18 +29,20 @@ export function AdminDashboard() {
         starter: profiles?.filter(p => p.plano === 'starter').length || 0,
         creator: profiles?.filter(p => p.plano === 'creator').length || 0,
         pro: profiles?.filter(p => p.plano === 'pro').length || 0,
+        agency: profiles?.filter(p => p.plano === 'agency').length || 0,
         enterprise: profiles?.filter(p => p.plano === 'enterprise').length || 0,
         admin: profiles?.filter(p => p.plano === 'admin').length || 0,
       };
       
       const revenuePlanos = {
-        starter: counts.starter * 99,
-        creator: counts.creator * 149, // Placeholder price if not specified
-        pro: counts.pro * 247,
-        enterprise: counts.enterprise * 497,
+        starter: counts.starter * (PLANS.starter?.price || 197),
+        creator: counts.creator * (PLANS.creator?.price || 397),
+        pro: counts.pro * (PLANS.pro?.price || 597),
+        agency: counts.agency * (PLANS.agency?.price || 1197),
+        enterprise: counts.enterprise * (PLANS.enterprise?.price || 2497),
       };
 
-      const totalRevenuePlanos = revenuePlanos.starter + revenuePlanos.creator + revenuePlanos.pro + revenuePlanos.enterprise;
+      const totalRevenuePlanos = revenuePlanos.starter + revenuePlanos.creator + revenuePlanos.pro + revenuePlanos.agency + revenuePlanos.enterprise;
       const totalGenerations = profiles?.reduce((acc, curr) => acc + (curr.geracoes_usadas_mes || 0), 0) || 0;
 
       // 2. Fetch Marketplace Stats
@@ -150,6 +153,7 @@ export function AdminDashboard() {
             <div className="flex justify-between w-full"><span className="text-[#00ff88]">Starter:</span> <span className="text-white">{stats.counts.starter}</span></div>
             <div className="flex justify-between w-full"><span className="text-[#9b59b6]">Creator:</span> <span className="text-white">{stats.counts.creator}</span></div>
             <div className="flex justify-between w-full"><span className="text-purple-400">Pro:</span> <span className="text-white">{stats.counts.pro}</span></div>
+            <div className="flex justify-between w-full"><span className="text-[#f1c40f]">Agency:</span> <span className="text-white">{stats.counts.agency}</span></div>
             <div className="flex justify-between w-full"><span className="text-blue-400">Enterprise:</span> <span className="text-white">{stats.counts.enterprise}</span></div>
           </div>
         </div>

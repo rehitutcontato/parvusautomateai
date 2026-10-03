@@ -63,7 +63,7 @@ BEGIN
     new.id, 
     COALESCE(new.raw_user_meta_data->>'nome', 'Novo Usuário'), 
     CASE WHEN new.email = 'rehitutcontato@gmail.com' THEN 'admin' ELSE 'free' END, 
-    CASE WHEN new.email = 'rehitutcontato@gmail.com' THEN 999999 ELSE 0 END,
+    CASE WHEN new.email = 'rehitutcontato@gmail.com' THEN 999999 ELSE 1 END,
     CASE WHEN new.email = 'rehitutcontato@gmail.com' THEN true ELSE false END
   );
   RETURN new;
