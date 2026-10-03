@@ -2421,111 +2421,113 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         {/* Result Area */}
         {phase === 'done' && (
           <div className={isFullscreen ? "fixed inset-0 z-[100] bg-[#0a0a0a] flex flex-col overflow-hidden" : "flex-1 flex flex-col bg-[#0a0a0a] overflow-hidden"}>
-            <nav className="flex border-b border-white/10 shrink-0 overflow-x-auto items-center">
-              <button 
-                onClick={() => setActiveTab('preview')}
-                className={`px-8 py-4 text-[10px] sm:text-xs font-bold transition-colors whitespace-nowrap ${activeTab === 'preview' ? 'border-b-2 border-[#00ff88] bg-[#00ff88]/5 text-[#00ff88]' : 'text-[#888888] hover:text-white'}`}
-              >
-                PREVIEW AO VIVO
-              </button>
-              <button 
-                onClick={() => setActiveTab('code')}
-                className={`px-8 py-4 text-[10px] sm:text-xs font-bold transition-colors whitespace-nowrap ${activeTab === 'code' ? 'border-b-2 border-[#00ff88] bg-[#00ff88]/5 text-[#00ff88]' : 'text-[#888888] hover:text-white'}`}
-              >
-                CÓDIGO FONTE
-              </button>
-              <button 
-                onClick={() => setActiveTab('architecture')}
-                className={`px-8 py-4 text-[10px] sm:text-xs font-bold transition-colors whitespace-nowrap ${activeTab === 'architecture' ? 'border-b-2 border-[#00ff88] bg-[#00ff88]/5 text-[#00ff88]' : 'text-[#888888] hover:text-white'}`}
-              >
-                ARQUITETURA
-              </button>
-              {(classification?.tipo === 'HARDWARE' || classification?.tipo === 'HIBRIDO') && (
+            <nav className="flex flex-wrap lg:flex-nowrap border-b border-white/10 shrink-0 bg-[#090b10] items-center justify-between px-2 sm:px-4 py-2 gap-2 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-1 shrink-0 overflow-x-auto no-scrollbar">
                 <button 
-                  onClick={() => setActiveTab('hardware')}
-                  className={`px-8 py-4 text-[10px] sm:text-xs font-bold transition-colors whitespace-nowrap ${activeTab === 'hardware' ? 'border-b-2 border-[#ff6600] bg-[#ff6600]/5 text-[#ff6600]' : 'text-[#888888] hover:text-white'}`}
+                  onClick={() => setActiveTab('preview')}
+                  className={`px-3 sm:px-5 py-2 text-[10px] sm:text-xs font-bold transition-colors whitespace-nowrap rounded-lg ${activeTab === 'preview' ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30' : 'text-[#888888] hover:text-white'}`}
                 >
-                  HARDWARE & PDFS
+                  PREVIEW AO VIVO
                 </button>
-              )}
-              <div className="flex-1"></div>
-              <div className="flex items-center px-4 sm:px-6 gap-2 flex-wrap py-2">
+                <button 
+                  onClick={() => setActiveTab('code')}
+                  className={`px-3 sm:px-5 py-2 text-[10px] sm:text-xs font-bold transition-colors whitespace-nowrap rounded-lg ${activeTab === 'code' ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30' : 'text-[#888888] hover:text-white'}`}
+                >
+                  CÓDIGO FONTE
+                </button>
+                <button 
+                  onClick={() => setActiveTab('architecture')}
+                  className={`px-3 sm:px-5 py-2 text-[10px] sm:text-xs font-bold transition-colors whitespace-nowrap rounded-lg ${activeTab === 'architecture' ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30' : 'text-[#888888] hover:text-white'}`}
+                >
+                  ARQUITETURA
+                </button>
+                {(classification?.tipo === 'HARDWARE' || classification?.tipo === 'HIBRIDO') && (
+                  <button 
+                    onClick={() => setActiveTab('hardware')}
+                    className={`px-3 sm:px-5 py-2 text-[10px] sm:text-xs font-bold transition-colors whitespace-nowrap rounded-lg ${activeTab === 'hardware' ? 'bg-[#ff6600]/15 text-[#ff6600] border border-[#ff6600]/30' : 'text-[#888888] hover:text-white'}`}
+                  >
+                    HARDWARE & PDFS
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                 {/* Enterprise action buttons */}
                 <button 
                   onClick={() => setShowWebhookModal(true)}
-                  className="text-[9px] sm:text-[10px] bg-[#ff6600]/10 border border-[#ff6600]/40 px-2.5 py-1 hover:bg-[#ff6600]/20 hover:border-[#ff6600] text-[#ff6600] transition-colors uppercase tracking-widest whitespace-nowrap font-bold flex items-center gap-1"
+                  className="text-[9px] sm:text-[10px] bg-[#ff6600]/10 border border-[#ff6600]/40 px-2 py-1.5 hover:bg-[#ff6600]/20 hover:border-[#ff6600] text-[#ff6600] rounded transition-colors uppercase tracking-wider whitespace-nowrap font-bold flex items-center gap-1"
                   title="Simular e disparar webhooks com assinatura criptográfica HMAC-SHA256"
                 >
                   <Zap size={11} /> WEBHOOK
                 </button>
                 <button 
                   onClick={() => setShowSqlSchemaModal(true)}
-                  className="text-[9px] sm:text-[10px] bg-[#0066ff]/10 border border-[#0066ff]/40 px-2.5 py-1 hover:bg-[#0066ff]/20 hover:border-[#0066ff] text-[#0066ff] transition-colors uppercase tracking-widest whitespace-nowrap font-bold flex items-center gap-1"
+                  className="text-[9px] sm:text-[10px] bg-[#0066ff]/10 border border-[#0066ff]/40 px-2 py-1.5 hover:bg-[#0066ff]/20 hover:border-[#0066ff] text-[#0066ff] rounded transition-colors uppercase tracking-wider whitespace-nowrap font-bold flex items-center gap-1"
                   title="Inspecionar e copiar esquema SQL de migração para Supabase / PostgreSQL"
                 >
                   <Database size={11} /> ESQUEMA SQL
                 </button>
                 <button 
                   onClick={() => setShowEnvConfigModal(true)}
-                  className="text-[9px] sm:text-[10px] bg-purple-500/10 border border-purple-500/40 px-2.5 py-1 hover:bg-purple-500/20 hover:border-purple-400 text-purple-400 transition-colors uppercase tracking-widest whitespace-nowrap font-bold flex items-center gap-1"
+                  className="text-[9px] sm:text-[10px] bg-purple-500/10 border border-purple-500/40 px-2 py-1.5 hover:bg-purple-500/20 hover:border-purple-400 text-purple-400 rounded transition-colors uppercase tracking-wider whitespace-nowrap font-bold flex items-center gap-1"
                   title="Gerenciar variáveis de ambiente e segredos .env"
                 >
                   <Sliders size={11} /> .ENV
                 </button>
                 <button 
                   onClick={handleSaveAsTemplate}
-                  className="text-[9px] sm:text-[10px] bg-amber-500/10 border border-amber-500/40 px-2.5 py-1 hover:bg-amber-500/20 hover:border-amber-400 text-amber-400 transition-colors uppercase tracking-widest whitespace-nowrap font-bold flex items-center gap-1"
+                  className="text-[9px] sm:text-[10px] bg-amber-500/10 border border-amber-500/40 px-2 py-1.5 hover:bg-amber-500/20 hover:border-amber-400 text-amber-400 rounded transition-colors uppercase tracking-wider whitespace-nowrap font-bold flex items-center gap-1"
                   title="Salvar projeto como template corporativo em Meus Templates"
                 >
                   <Bookmark size={11} /> TEMPLATE
                 </button>
                 <button 
                   onClick={handleForkProject}
-                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/20 px-2.5 py-1 hover:border-white hover:text-white text-[#888888] transition-colors uppercase tracking-widest whitespace-nowrap font-bold flex items-center gap-1"
+                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/20 px-2 py-1.5 hover:border-white hover:text-white text-[#888888] rounded transition-colors uppercase tracking-wider whitespace-nowrap font-bold flex items-center gap-1"
                   title="Clonar / Fork deste projeto para criar uma nova variação"
                 >
                   <GitFork size={11} /> FORK
                 </button>
                 <button 
                   onClick={handleExportAllZip}
-                  className="text-[9px] sm:text-[10px] bg-[#00ff88]/15 border border-[#00ff88]/60 px-3 py-1 hover:bg-[#00ff88]/30 hover:border-[#00ff88] text-[#00ff88] transition-colors uppercase tracking-widest whitespace-nowrap font-black flex items-center gap-1 shadow-[0_0_15px_rgba(0,255,136,0.2)]"
+                  className="text-[9px] sm:text-[10px] bg-[#00ff88]/15 border border-[#00ff88]/60 px-2.5 py-1.5 hover:bg-[#00ff88]/30 hover:border-[#00ff88] text-[#00ff88] rounded transition-colors uppercase tracking-wider whitespace-nowrap font-black flex items-center gap-1 shadow-[0_0_15px_rgba(0,255,136,0.2)]"
                   title="Baixar pacote empresarial completo em arquivo ZIP (HTML, Node.js, SQL, Docker e Docs)"
                 >
-                  <Archive size={11} /> EXPORTAR TUDO (ZIP)
+                  <Archive size={11} /> EXPORTAR TUDO
                 </button>
 
                 <div className="w-px h-5 bg-white/10 mx-1 hidden sm:block"></div>
 
                 <button 
                   onClick={downloadHtml}
-                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-2.5 py-1 hover:border-[#00ff88] hover:text-[#00ff88] transition-colors text-[#888888] uppercase tracking-widest whitespace-nowrap"
+                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-2 py-1.5 hover:border-[#00ff88] hover:text-[#00ff88] rounded transition-colors text-[#888888] uppercase tracking-wider whitespace-nowrap"
                 >
                   HTML
                 </button>
                 <button 
                   onClick={downloadNode}
-                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-2.5 py-1 hover:border-[#0066ff] hover:text-[#0066ff] transition-colors text-[#888888] uppercase tracking-widest whitespace-nowrap"
+                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-2 py-1.5 hover:border-[#0066ff] hover:text-[#0066ff] rounded transition-colors text-[#888888] uppercase tracking-wider whitespace-nowrap"
                 >
                   NODE.JS
                 </button>
                 <button 
                   onClick={downloadDockerPkg}
-                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-2.5 py-1 hover:border-[#00d4ff] hover:text-[#00d4ff] transition-colors text-[#888888] uppercase tracking-widest whitespace-nowrap"
+                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-2 py-1.5 hover:border-[#00d4ff] hover:text-[#00d4ff] rounded transition-colors text-[#888888] uppercase tracking-wider whitespace-nowrap"
                   title="Baixar pacote Docker, Compose e DevContainer"
                 >
-                  🐳 DOCKER
+                  DOCKER
                 </button>
                 {(classification?.tipo === 'HARDWARE' || classification?.tipo === 'HIBRIDO') && (
                   <button 
                     onClick={downloadTodosIoT}
-                    className="text-[9px] sm:text-[10px] bg-[#ff6600]/10 border border-[#ff6600]/50 px-2.5 py-1 hover:bg-[#ff6600]/20 hover:text-white transition-colors text-[#ff6600] uppercase tracking-widest whitespace-nowrap font-bold"
+                    className="text-[9px] sm:text-[10px] bg-[#ff6600]/10 border border-[#ff6600]/50 px-2 py-1.5 hover:bg-[#ff6600]/20 hover:text-white rounded transition-colors text-[#ff6600] uppercase tracking-wider whitespace-nowrap font-bold"
                   >
                     IOT ZIP
                   </button>
                 )}
                 <button 
                   onClick={handlePublishToMarketplace}
-                  className="text-[9px] sm:text-[10px] bg-[#00ff88]/10 border border-[#00ff88]/50 px-2.5 py-1 hover:bg-[#00ff88]/20 hover:text-white transition-colors text-[#00ff88] uppercase tracking-widest whitespace-nowrap font-bold"
+                  className="text-[9px] sm:text-[10px] bg-[#00ff88]/10 border border-[#00ff88]/50 px-2 py-1.5 hover:bg-[#00ff88]/20 hover:text-white rounded transition-colors text-[#00ff88] uppercase tracking-wider whitespace-nowrap font-bold"
                 >
                   PUBLICAR
                 </button>
@@ -3401,7 +3403,9 @@ Sem markdown no retorno. Apenas o JSON válido.`;
         ) : currentView === 'admin' ? (
           isAdmin ? renderAdmin() : <div className="text-center mt-20 text-red-500">Acesso negado. Funcionalidade exclusiva para administradores.</div>
         ) : currentView === 'settings' ? (
-          <SettingsPage onLogout={handleLogout} />
+          <div className="flex-1 w-full h-full min-h-0 overflow-hidden flex flex-col bg-[#07080c]">
+            <SettingsPage onLogout={handleLogout} />
+          </div>
         ) : null}
       </main>
       

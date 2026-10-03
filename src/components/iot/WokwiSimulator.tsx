@@ -73,10 +73,10 @@ export function WokwiSimulator({ projeto }: WokwiSimulatorProps) {
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex border-b border-[#222] bg-[#0a0a0a] px-4">
+      <div className="flex overflow-x-auto no-scrollbar shrink-0 border-b border-[#222] bg-[#0a0a0a] px-2 sm:px-4">
         <button
           onClick={() => setActiveTab('visual')}
-          className={`px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${
+          className={`px-3 sm:px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${
             activeTab === 'visual'
               ? 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5'
               : 'text-gray-500 border-transparent hover:text-gray-300'
@@ -86,7 +86,7 @@ export function WokwiSimulator({ projeto }: WokwiSimulatorProps) {
         </button>
         <button
           onClick={() => setActiveTab('diagram')}
-          className={`px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${
+          className={`px-3 sm:px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${
             activeTab === 'diagram'
               ? 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5'
               : 'text-gray-500 border-transparent hover:text-gray-300'
@@ -96,7 +96,7 @@ export function WokwiSimulator({ projeto }: WokwiSimulatorProps) {
         </button>
         <button
           onClick={() => setActiveTab('toml')}
-          className={`px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${
+          className={`px-3 sm:px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${
             activeTab === 'toml'
               ? 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5'
               : 'text-gray-500 border-transparent hover:text-gray-300'
@@ -107,7 +107,7 @@ export function WokwiSimulator({ projeto }: WokwiSimulatorProps) {
         {librariesTxt && (
           <button
             onClick={() => setActiveTab('libraries')}
-            className={`px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${
+            className={`px-3 sm:px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${
               activeTab === 'libraries'
                 ? 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5'
                 : 'text-gray-500 border-transparent hover:text-gray-300'
@@ -118,7 +118,7 @@ export function WokwiSimulator({ projeto }: WokwiSimulatorProps) {
         )}
         <button
           onClick={() => setActiveTab('instructions')}
-          className={`px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${
+          className={`px-3 sm:px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${
             activeTab === 'instructions'
               ? 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5'
               : 'text-gray-500 border-transparent hover:text-gray-300'

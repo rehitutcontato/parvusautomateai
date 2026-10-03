@@ -869,10 +869,10 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
 
   if (!hasAccess) {
     return (
-      <div className="flex h-[calc(100vh-64px)] w-full bg-[#0a0a0a] items-center justify-center relative overflow-hidden" 
+      <div className="flex-1 w-full h-full min-h-0 bg-[#0a0a0a] overflow-y-auto p-4 sm:p-8 flex items-center justify-center relative" 
            style={{ backgroundImage: 'linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px)', backgroundSize: '30px 30px' }}>
         <div className="absolute inset-0 bg-black/40 pointer-events-none z-0"></div>
-        <div className="max-w-5xl w-full mx-4 text-center z-10 p-8 border border-[rgba(0,212,255,0.1)] rounded-2xl bg-[#0f0f0f]/80 backdrop-blur-xl shadow-2xl">
+        <div className="max-w-5xl w-full mx-auto my-auto text-center z-10 p-6 sm:p-8 border border-[rgba(0,212,255,0.1)] rounded-2xl bg-[#0f0f0f]/80 backdrop-blur-xl shadow-2xl">
           <Lock size={64} className="mx-auto text-[#ff4444] mb-6 opacity-80 animate-pulse" />
           <h1 className="text-4xl font-black text-[#ff4444] tracking-widest uppercase mb-6" style={{ fontFamily: '"Syne", sans-serif' }}>
             ACESSO RESTRITO
@@ -1003,7 +1003,7 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)] w-full bg-[#0a0a0a] text-[#00d4ff] font-mono overflow-hidden relative" 
+    <div className="flex-1 w-full h-full min-h-0 bg-[#0a0a0a] text-[#00d4ff] font-mono flex flex-col overflow-hidden relative" 
          style={{ backgroundImage: 'linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px)', backgroundSize: '30px 30px' }}>
       
       {/* Scanlines Element */}
@@ -1120,29 +1120,29 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
       )}
 
       {/* HEADER IoT */}
-      <div className="absolute top-0 left-0 w-full h-14 bg-[#0a0a0a] border-b border-[rgba(0,212,255,0.1)] z-30 flex items-center justify-between px-6">
-         <div className="flex items-center gap-4 text-sm font-bold uppercase tracking-widest">
-           <Radio size={18} className="text-[#00ff88] animate-pulse" />
-           <span className="text-[#00d4ff]">&gt;_ IOT CREATOR</span>
-           <span className="text-[10px] text-[#00ff88] px-2 py-0.5 border border-[#00ff88]/30 bg-[#00ff88]/10 rounded flex items-center gap-2">
+      <div className="w-full h-14 bg-[#0a0a0a] border-b border-[rgba(0,212,255,0.1)] z-30 flex items-center justify-between px-4 sm:px-6 shrink-0">
+         <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm font-bold uppercase tracking-widest truncate">
+           <Radio size={18} className="text-[#00ff88] animate-pulse shrink-0" />
+           <span className="text-[#00d4ff] truncate">&gt;_ IOT CREATOR</span>
+           <span className="text-[10px] text-[#00ff88] px-2 py-0.5 border border-[#00ff88]/30 bg-[#00ff88]/10 rounded hidden sm:flex items-center gap-2 shrink-0">
              <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88]"></span> IA PRONTA
            </span>
            {draftStorage.hasDraft && (
-             <span className="hidden sm:flex text-[10px] text-gray-400 bg-white/5 border border-white/10 px-2.5 py-0.5 rounded items-center gap-1.5" title="Seu briefing está seguro offline no navegador">
+             <span className="hidden md:flex text-[10px] text-gray-400 bg-white/5 border border-white/10 px-2.5 py-0.5 rounded items-center gap-1.5 shrink-0" title="Seu briefing está seguro offline no navegador">
                <span className="w-1.5 h-1.5 rounded-full bg-[#00d4ff]"></span> Rascunho salvo offline
              </span>
            )}
          </div>
-         <button onClick={abrirSidebar} className="border border-[rgba(0,212,255,0.3)] hover:bg-[rgba(0,212,255,0.1)] text-[#00d4ff] px-4 py-1.5 rounded text-xs uppercase tracking-widest flex items-center gap-2 transition-colors">
-           <Layers size={14} /> Meus Projetos IoT
+         <button onClick={abrirSidebar} className="border border-[rgba(0,212,255,0.3)] hover:bg-[rgba(0,212,255,0.1)] text-[#00d4ff] px-3 sm:px-4 py-1.5 rounded text-xs uppercase tracking-widest flex items-center gap-2 transition-colors shrink-0">
+           <Layers size={14} /> <span className="hidden sm:inline">Meus Projetos</span> IoT
          </button>
       </div>
 
       {/* MAIN CONTENT SPLIT */}
-      <div className="flex w-full h-full pt-14 z-20">
+      <div className="flex-1 min-h-0 w-full flex flex-col lg:flex-row overflow-hidden z-20">
         
         {/* LEFT PANEL - INPUT */}
-        <div className="w-[40%] min-w-[400px] border-r border-[rgba(0,212,255,0.1)] bg-[#050505] p-6 overflow-y-auto custom-scrollbar flex flex-col relative">
+        <div className="w-full lg:w-[400px] xl:w-[460px] shrink-0 border-b lg:border-b-0 lg:border-r border-[rgba(0,212,255,0.12)] bg-[#050505] p-4 sm:p-6 overflow-y-auto custom-scrollbar flex flex-col relative max-h-[45vh] lg:max-h-none">
           
           {projeto ? (
             <div className="flex flex-col h-full animate-in fade-in duration-300">
@@ -1434,7 +1434,7 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
       </div>
 
       {/* RIGHT PANEL - OUTPUT */}
-      <div className="w-[60%] flex flex-col bg-[#080808]/50 backdrop-blur-sm">
+      <div className="flex-1 min-w-0 h-full flex flex-col bg-[#080808]/50 backdrop-blur-sm overflow-hidden">
           {!projeto && !isGenerating ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-20">
               <Cpu size={80} className="mb-6 text-[#00d4ff]" />
@@ -1455,8 +1455,8 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
           ) : projeto && (
             <>
               {/* TABS */}
-              <div className="flex border-b border-[rgba(0,212,255,0.1)] px-4 bg-[#050505] items-center">
-                <div className="flex">
+              <div className="flex flex-wrap lg:flex-nowrap border-b border-[rgba(0,212,255,0.1)] px-3 sm:px-4 bg-[#050505] items-center justify-between gap-2 shrink-0">
+                <div className="flex overflow-x-auto no-scrollbar py-1">
                   {(() => {
                     const tabs = ['VISÃO GERAL', 'ESQUEMA', 'CÓDIGO'];
                     if (projeto.aplicativo) {
@@ -1469,7 +1469,7 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
                     tabs.push('REFERÊNCIAS');
                     return tabs.map(t => (
                       <button key={t} onClick={() => setActiveTab(t)}
-                        className={`px-4 lg:px-6 py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                        className={`px-3 lg:px-5 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                           activeTab === t
                             ? (t === 'SIMULADOR WOKWI' ? 'text-[#00ff88] border-[#00ff88] bg-[#00ff88]/5' : t === 'WEB SERIAL (USB)' ? 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5' : 'text-[#00d4ff] border-[#00d4ff] bg-[#00d4ff]/5')
                             : 'text-gray-500 border-transparent hover:text-gray-300'
@@ -1481,25 +1481,25 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
                     ));
                   })()}
                 </div>
-                <div className="ml-auto">
-                   <button onClick={downloadProjectZip} className="flex items-center gap-2 text-[#00ff88] border border-[#00ff88]/30 px-4 py-2 rounded text-xs uppercase hover:bg-[#00ff88]/10 transition-colors">
-                     <Download size={14} /> Exportar Projeto (ZIP)
+                <div className="ml-auto shrink-0 py-1">
+                   <button onClick={downloadProjectZip} className="flex items-center gap-1.5 text-[#00ff88] border border-[#00ff88]/30 px-3 py-1.5 rounded text-[11px] sm:text-xs uppercase hover:bg-[#00ff88]/10 transition-colors whitespace-nowrap font-bold">
+                     <Download size={13} /> Exportar Projeto (ZIP)
                    </button>
                 </div>
               </div>
 
               {/* TAB CONTENT */}
-              <div className="flex-1 overflow-y-auto p-8 relative no-scrollbar">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 relative no-scrollbar">
                 
                 {/* 1. VISÃO GERAL */}
                 {activeTab === 'VISÃO GERAL' && (
                   <div className="animate-in fade-in duration-300">
-                    <h1 className="text-3xl font-black text-white uppercase tracking-wider mb-2 font-syne">{projeto.titulo}</h1>
-                    <div className="markdown-body mb-8 max-w-2xl">
+                    <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider mb-2 font-syne">{projeto.titulo}</h1>
+                    <div className="markdown-body mb-8 max-w-2xl text-sm">
                       <ReactMarkdown>{projeto.descricao_tecnica || ''}</ReactMarkdown>
                     </div>
                     
-                    <div className="flex gap-8 items-start">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
                        <div className="flex-1">
                           <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest mb-4">&gt;_ PLATAFORMA ALVO</h3>
                           <div className="border border-[#333] bg-[#0a0a0a] rounded-lg p-6 mb-8 text-center relative overflow-hidden group">
@@ -1560,24 +1560,26 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
                        <ReactMarkdown>{projeto?.esquema_ligacao?.descricao_textual || 'Sem descrição.'}</ReactMarkdown>
                      </div>
                      
-                     <table className="w-full text-sm text-left">
-                       <thead className="text-xs text-gray-500 uppercase bg-[#111]">
-                         <tr>
-                           <th className="px-6 py-3">Origem (DE)</th>
-                           <th className="px-6 py-3">Destino (PARA)</th>
-                           <th className="px-6 py-3">Intermediário (VIA)</th>
-                         </tr>
-                       </thead>
-                       <tbody>
-                         {projeto?.esquema_ligacao?.conexoes?.map((c: any, i: number) => (
-                           <tr key={i} className="bg-[#0a0a0a] border-b border-[#222]">
-                             <td className="px-6 py-4 font-bold text-white">{c.de}</td>
-                             <td className="px-6 py-4 text-gray-300">{c.para}</td>
-                             <td className="px-6 py-4 text-[#ffaa00]">{c.via}</td>
+                     <div className="overflow-x-auto w-full border border-[#222] rounded-lg">
+                       <table className="w-full text-sm text-left">
+                         <thead className="text-xs text-gray-500 uppercase bg-[#111]">
+                           <tr>
+                             <th className="px-6 py-3">Origem (DE)</th>
+                             <th className="px-6 py-3">Destino (PARA)</th>
+                             <th className="px-6 py-3">Intermediário (VIA)</th>
                            </tr>
-                         ))}
-                       </tbody>
-                     </table>
+                         </thead>
+                         <tbody>
+                           {projeto?.esquema_ligacao?.conexoes?.map((c: any, i: number) => (
+                             <tr key={i} className="bg-[#0a0a0a] border-b border-[#222] last:border-b-0">
+                               <td className="px-6 py-4 font-bold text-white">{c.de}</td>
+                               <td className="px-6 py-4 text-gray-300">{c.para}</td>
+                               <td className="px-6 py-4 text-[#ffaa00]">{c.via}</td>
+                             </tr>
+                           ))}
+                         </tbody>
+                       </table>
+                     </div>
                   </div>
                 )}
 

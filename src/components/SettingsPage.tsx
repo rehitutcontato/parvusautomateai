@@ -165,7 +165,7 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
 
   if (loading || limitLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-400 gap-3">
+      <div className="flex-1 w-full h-full min-h-0 flex flex-col items-center justify-center text-gray-400 gap-3 bg-[#07080c]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00ff88]"></div>
         <p className="text-sm font-medium">Carregando painel de controle...</p>
       </div>
@@ -191,7 +191,8 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
   const planBadge = getPlanBadgeStyles(plan);
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8 animate-in fade-in duration-300">
+    <div className="flex-1 w-full h-full min-h-0 overflow-y-auto bg-[#07080c] custom-scrollbar">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 md:p-8 pb-24 animate-in fade-in duration-300">
       
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-white/10">
@@ -679,5 +680,6 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
       </div>
 
     </div>
+  </div>
   );
 }

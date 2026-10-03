@@ -369,7 +369,7 @@ export function BriefingFlow({ onBack, onSubmit }: BriefingFlowProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-4 sm:p-8 bg-[#0a0a0a] w-full min-h-[calc(100vh-64px)] overflow-y-auto relative">
+    <div className="flex-1 w-full h-full min-h-0 overflow-y-auto flex flex-col p-4 sm:p-8 bg-[#0a0a0a] relative">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-2xl h-96 bg-[#ff6600]/5 blur-[120px] rounded-full pointer-events-none"></div>
 
       <div className="max-w-3xl w-full mx-auto relative z-10 flex flex-col h-full">

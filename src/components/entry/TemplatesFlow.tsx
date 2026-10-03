@@ -55,7 +55,7 @@ export function TemplatesFlow({ onBack, onGenerate, onGoToAI, onLoadDirectly }: 
     const progress = (answeredCount / totalQuestions) * 100;
 
     return (
-      <div className="flex-1 flex flex-col p-4 sm:p-8 bg-[#0a0a0a] w-full min-h-[calc(100vh-64px)] overflow-y-auto relative">
+      <div className="flex-1 w-full h-full min-h-0 overflow-y-auto flex flex-col p-4 sm:p-8 bg-[#0a0a0a] relative">
         <div className="absolute top-0 right-0 w-full max-w-lg h-96 bg-[#0066ff]/5 blur-[120px] rounded-full pointer-events-none"></div>
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
@@ -198,7 +198,7 @@ export function TemplatesFlow({ onBack, onGenerate, onGoToAI, onLoadDirectly }: 
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-start p-4 sm:p-8 bg-[#0a0a0a] w-full min-h-[calc(100vh-64px)] overflow-hidden relative">
+    <div className="flex-1 w-full h-full min-h-0 overflow-y-auto flex flex-col items-center justify-start p-4 sm:p-8 bg-[#0a0a0a] relative">
       <div className="absolute top-0 right-0 w-full max-w-3xl h-96 bg-[#0066ff]/5 blur-[120px] rounded-full pointer-events-none"></div>
       
       <motion.div 
