@@ -1,18 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Syne", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFRound, monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     margin: 0;
-    height: 100%;
-    overflow: hidden;
-    @apply bg-[#0a0a0a] text-[#f0f0f0] font-mono;
+    min-height: 100vh;
+    overflow-x: hidden;
+    @apply bg-[#050608] text-[#f0f0f0] font-sans antialiased selection:bg-[#00ff88]/30 selection:text-white;
   }
 }
 
@@ -23,6 +26,25 @@
   --iot-warning: #ffaa00;
   --iot-glow: rgba(0,212,255,0.2);
   --iot-border: rgba(0,212,255,0.15);
+}
+
+/* Custom modern scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090a0f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1f2430;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00ff88;
 }
 
 @keyframes ping-radar {

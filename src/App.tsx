@@ -1672,17 +1672,6 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
   //   return <Auth onSession={setSession} />;
   // }
 
-  if (!session && supabase && showLoginModal) {
-     return (
-       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-         <div className="relative w-full max-w-md">
-           <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-white z-50">✕</button>
-           <Auth onSession={(s) => { setSession(s); setShowLoginModal(false); }} />
-         </div>
-       </div>
-     );
-  }
-
   if (showLanding) {
     return (
       <LandingPage onEnter={() => {
@@ -1693,86 +1682,106 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
   }
 
   const renderTopbar = () => (
-    <header className="h-auto md:h-16 py-4 md:py-0 border-b border-white/10 flex flex-col md:flex-row items-center justify-between px-4 md:px-6 bg-[#0a0a0a] relative z-10 shrink-0 gap-4 overflow-x-auto no-scrollbar">
-      <div className="flex items-center gap-4 shrink-0">
-        <button onClick={() => setCurrentView('app')} className="text-[#00ff88] text-xl md:text-2xl font-black tracking-tighter hover:brightness-110 transition-all uppercase" style={{ fontFamily: "'Arial Black', sans-serif" }}>
-          PARVUS
+    <header className="h-auto md:h-16 py-3 md:py-0 border-b border-white/10 flex flex-col md:flex-row items-center justify-between px-4 md:px-6 bg-[#07080c]/90 backdrop-blur-xl relative z-10 shrink-0 gap-3 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-3 shrink-0">
+        <button onClick={() => setCurrentView('app')} className="group flex items-center gap-2.5 text-left cursor-pointer">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#00ff88] to-[#00d4ff] flex items-center justify-center font-black text-black text-base shadow-[0_0_15px_rgba(0,255,136,0.3)] group-hover:scale-105 transition-transform">
+            P
+          </div>
+          <div>
+            <div className="text-white text-base md:text-lg font-black tracking-tight font-display flex items-center gap-1 leading-none">
+              PARVUS<span className="text-[#00ff88]">AUTOMATE</span>
+            </div>
+            <div className="text-[9px] text-gray-500 font-mono tracking-wider uppercase">
+              by Parvus Space
+            </div>
+          </div>
         </button>
-        <div className="h-4 w-[1px] bg-white/20 hidden md:block"></div>
-        <div className="hidden lg:flex items-center gap-2 text-xs text-[#888888]">
+        <div className="h-5 w-[1px] bg-white/10 hidden md:block"></div>
+        <div className="hidden xl:flex items-center gap-2 text-[11px] text-gray-400 font-mono">
           <div className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88] animate-pulse"></div>
-          SISTEMA ONLINE
+          AI CORE ONLINE
         </div>
       </div>
       
-      <div className="flex flex-wrap md:flex-nowrap items-center gap-4 md:gap-6 text-xs text-[#888888]">
-        <button onClick={() => setCurrentView('app')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest whitespace-nowrap ${currentView === 'app' ? 'text-white font-bold border-b border-[#00ff88]' : ''}`}>
+      <div className="flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-5 text-xs text-[#888888]">
+        <button onClick={() => setCurrentView('app')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider whitespace-nowrap px-2 py-1 ${currentView === 'app' ? 'text-white font-bold border-b-2 border-[#00ff88]' : ''}`}>
           GERADOR
         </button>
         {session && (
           <>
-            <button onClick={() => setCurrentView('marketplace')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest flex items-center gap-1 whitespace-nowrap ${currentView === 'marketplace' ? 'text-white font-bold border-b border-[#00ff88]' : ''}`}>
+            <button onClick={() => setCurrentView('marketplace')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider flex items-center gap-1 whitespace-nowrap px-2 py-1 ${currentView === 'marketplace' ? 'text-white font-bold border-b-2 border-[#00ff88]' : ''}`}>
               MARKETPLACE
             </button>
-            <button onClick={() => setCurrentView('purchases')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest whitespace-nowrap ${currentView === 'purchases' ? 'text-white font-bold border-b border-[#00ff88]' : ''}`}>
+            <button onClick={() => setCurrentView('purchases')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider whitespace-nowrap px-2 py-1 ${currentView === 'purchases' ? 'text-white font-bold border-b-2 border-[#00ff88]' : ''}`}>
               MINHAS COMPRAS
             </button>
-            <button onClick={() => setCurrentView('iot')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest whitespace-nowrap flex items-center gap-1 ${currentView === 'iot' ? 'text-white font-bold border-b border-[#00d4ff]' : ''}`}>
-              <Network size={16} className={currentView === 'iot' ? 'text-[#00d4ff]' : ''} />
-              IOT MONITOR <span className="px-1.5 py-0.5 rounded bg-[#00d4ff]/10 text-[#00d4ff] text-[8px] font-bold">NOVO</span>
+            <button onClick={() => setCurrentView('iot')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 px-2 py-1 ${currentView === 'iot' ? 'text-white font-bold border-b-2 border-[#00d4ff]' : ''}`}>
+              <Network size={15} className={currentView === 'iot' ? 'text-[#00d4ff]' : ''} />
+              IOT MONITOR <span className="px-1.5 py-0.2 rounded bg-[#00d4ff]/15 text-[#00d4ff] text-[8px] font-bold">NOVO</span>
             </button>
           </>
         )}
         
-        <div className="text-white hidden lg:flex items-center gap-3 ml-4 border-l border-white/10 pl-6">
+        <div className="text-white hidden lg:flex items-center gap-3 ml-2 border-l border-white/10 pl-4 text-xs">
           {!generationLimit.loading && (
-            <span className="text-gray-400">
+            <span className="text-gray-400 flex items-center gap-1.5">
               Gerações: {generationLimit.plan === 'free' || !session
-                ? <span className={generationLimit.remainingGenerations > 0 ? "text-yellow-500 font-bold" : "text-[#ff3366] font-bold"}>
+                ? <span className={generationLimit.remainingGenerations > 0 ? "text-yellow-400 font-bold" : "text-[#ff3366] font-bold"}>
                     {generationLimit.usedThisMonth}/1 Teste Grátis {generationLimit.remainingGenerations === 0 && " (Limite)"}
                   </span>
                 : generationLimit.plan === 'admin' 
-                ? <span className="text-[#00ff88]">∞/∞</span>
-                : <span className="text-[#00ff88]">{generationLimit.usedThisMonth}/{generationLimit.limit}</span>
+                ? <span className="text-[#00ff88] font-bold">∞/∞ (Admin)</span>
+                : <span className="text-[#00ff88] font-bold">{generationLimit.usedThisMonth}/{generationLimit.limit}</span>
               }
             </span>
           )}
           {session && (
-            <span className="font-medium text-gray-300 border-l border-white/5 pl-3">{session.user?.user_metadata?.nome || session.user?.email}</span>
+            <span className="font-medium text-gray-300 border-l border-white/5 pl-3 truncate max-w-[150px]">{session.user?.user_metadata?.nome || session.user?.email}</span>
           )}
         </div>
+
         {isAdmin && (
           <div className="relative group">
-            <button onClick={() => setCurrentView('admin')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest text-[#00ff88] ${currentView === 'admin' ? 'font-bold border-b border-[#00ff88]' : ''}`}>
+            <button onClick={() => setCurrentView('admin')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider text-[#00ff88] px-2 py-1 ${currentView === 'admin' ? 'font-bold border-b-2 border-[#00ff88]' : ''}`}>
               👑 ADMIN
             </button>
           </div>
         )}
+
+        {/* PLANOS & UPGRADE BUTTON */}
+        <button 
+          onClick={() => setShowUpgradeModal(true)} 
+          className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-extrabold px-3.5 py-1.5 rounded-lg text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,255,136,0.3)] hover:scale-105 transition-all cursor-pointer"
+          title="Ver todos os planos disponíveis e fazer upgrade"
+        >
+          <Zap size={13} fill="black" />
+          PLANOS
+        </button>
+
         <div className="relative group">
-          <button onClick={() => setShowLanding(true)} className="hover:text-white cursor-pointer transition-colors uppercase tracking-widest text-gray-400 hover:text-white flex items-center gap-1" title="Ver apresentação e landing page">
+          <button onClick={() => setShowLanding(true)} className="hover:text-white cursor-pointer transition-colors uppercase tracking-wider text-gray-400 hover:text-white flex items-center gap-1 text-xs py-1" title="Ver apresentação e landing page">
             ✨ APRESENTAÇÃO
           </button>
         </div>
+
         <div className="relative group">
-          <button onClick={() => setCurrentView('settings')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-widest ${currentView === 'settings' ? 'text-white font-bold border-b border-[#00ff88]' : ''}`}>
+          <button onClick={() => setCurrentView('settings')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider px-2 py-1 ${currentView === 'settings' ? 'text-white font-bold border-b-2 border-[#00ff88]' : ''}`}>
             CONFIGURAÇÕES
           </button>
         </div>
         
         {session && supabase ? (
-          <button onClick={handleLogout} className="hover:text-white cursor-pointer transition-colors uppercase tracking-widest text-[#ff6600]">
+          <button onClick={handleLogout} className="hover:text-white cursor-pointer transition-colors uppercase tracking-wider text-[#ff6600] px-2 py-1">
             SAIR
           </button>
         ) : (
           supabase && (
-            <button onClick={() => setShowLoginModal(true)} className="hover:text-white cursor-pointer transition-colors uppercase tracking-widest text-[#00ff88]">
+            <button onClick={() => setShowLoginModal(true)} className="hover:text-white cursor-pointer transition-colors uppercase tracking-wider text-[#00ff88] border border-[#00ff88]/30 px-3 py-1 rounded bg-[#00ff88]/5">
               ENTRAR / CADASTRO
             </button>
           )
         )}
-        <div className="text-[#00ff88] border border-[#00ff88]/30 px-3 py-1 bg-[#00ff88]/5 tracking-widest hidden xl:block">
-          PRO VERSION
-        </div>
       </div>
     </header>
   );
@@ -3152,6 +3161,27 @@ Sem markdown no retorno. Apenas o JSON válido.`;
                <button onClick={() => setCheckoutListing(null)} className="px-6 py-3 border border-white/10 hover:bg-white/5 uppercase text-xs tracking-widest font-bold text-white transition-colors">◀ VOLTAR</button>
                <button onClick={() => processCheckout(checkoutListing)} className="flex-1 bg-[#00ff88] text-black px-6 py-3 uppercase text-xs tracking-widest font-bold hover:brightness-110 transition-colors flex justify-center items-center gap-2">CONTINUAR ▶</button>
              </div>
+          </div>
+        </div>
+      )}
+
+      {/* UPGRADE & PRICING MODAL */}
+      {showUpgradeModal && (
+        <UpgradeModal onClose={() => setShowUpgradeModal(false)} />
+      )}
+
+      {/* LOGIN / SIGNUP MODAL */}
+      {showLoginModal && !session && supabase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-[#0f1118] border border-white/15 rounded-3xl p-6 shadow-2xl">
+            <button 
+              onClick={() => setShowLoginModal(false)} 
+              className="absolute top-5 right-5 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 p-1.5 rounded-full transition-colors z-50"
+              title="Fechar"
+            >
+              <X size={18} />
+            </button>
+            <Auth onSession={(s) => { setSession(s); setShowLoginModal(false); }} />
           </div>
         </div>
       )}
