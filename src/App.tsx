@@ -40,6 +40,9 @@ import { exportCompleteProjectZip, downloadBlob } from './lib/projectExporter';
 import { saveProjectAsTemplate, CustomTemplate } from './lib/customTemplatesService';
 import { extractOrGenerateSqlSchema } from './lib/sqlSchemaHelper';
 import { useAutoSaveDraft } from './lib/hooks/useAutoSaveDraft';
+import { CanvasStudio } from './components/flow/CanvasStudio';
+import { FlowAST, FlowCompilationResult, WorkspaceMode } from './lib/flow/types';
+import { createDefaultFlowAST } from './lib/flow/compiler';
 
 // Types
 type ProjectType = 'SOFTWARE' | 'HARDWARE' | 'HIBRIDO' | 'ENTERPRISE';
@@ -75,6 +78,7 @@ interface GeneratedNode {
   pdf_montagem?: string;
   pdf_documentacao?: string;
   pdf_setup?: string;
+  flow_ast?: FlowAST;
 }
 
 interface HistoryItem {
@@ -186,6 +190,26 @@ export default function App() {
   const [showWebhookModal, setShowWebhookModal] = useState(false);
   const [showSqlSchemaModal, setShowSqlSchemaModal] = useState(false);
   const [showEnvConfigModal, setShowEnvConfigModal] = useState(false);
+
+  // Dual Mode e Visualização do Canvas Studio
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('express');
+  const [architectureViewMode, setArchitectureViewMode] = useState<'canvas' | 'ascii'>('canvas');
+
+  const handleCanvasCompileAndSync = (compiled: FlowCompilationResult) => {
+    setGeneratedNode(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        server_js: compiled.expressCode,
+        package_json: compiled.packageJson,
+        env_example: compiled.envExample,
+        schema_sql: compiled.schemaSql,
+        arquitetura_ascii: compiled.asciiArchitecture,
+        codigo_placa: compiled.codigoPlaca || prev.codigo_placa
+      };
+    });
+    showToast("Código de produção compilado e sincronizado com o Canvas Studio!", "success");
+  };
 
   // Background generation state (decoupled from single view)
   const [backgroundGen, setBackgroundGen] = useState<{
@@ -911,7 +935,14 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         updateLog('> Gerando artefatos de hardware e PDFs...', 'done');
       }
 
+      if (currentNode) {
+        currentNode.flow_ast = createDefaultFlowAST(problemDescription, classData.tipo);
+      }
+
       setGeneratedNode(currentNode);
+      if (workspaceMode === 'studio') {
+        setActiveTab('architecture');
+      }
       
       // 4. Finalize
       setGeneratingProgress(100);
@@ -1668,7 +1699,14 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         updateLog('> Gerando circuito eletrônico e documentação física...', 'done');
       }
 
+      if (currentNode) {
+        currentNode.flow_ast = createDefaultFlowAST(template.nome, normalizedTipo);
+      }
+
       setGeneratedNode(currentNode);
+      if (workspaceMode === 'studio') {
+        setActiveTab('architecture');
+      }
       setGeneratingProgress(100);
       addLog('> Automação gerada e compilada com sucesso!', 'done');
 
@@ -1975,6 +2013,30 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
             </button>
           </div>
         )}
+
+        {/* DUAL MODE SELECTOR */}
+        <div className="flex items-center p-0.5 rounded-lg bg-white/[0.04] border border-white/10 shrink-0">
+          <button 
+            onClick={() => setWorkspaceMode('express')}
+            className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${workspaceMode === 'express' ? 'bg-white/15 text-white shadow-sm' : 'text-[#888888] hover:text-white'}`}
+            title="Modo Express: Geração direta via prompt sem exigir manipulação no grafo"
+          >
+            ⚡ Express
+          </button>
+          <button 
+            onClick={() => {
+              setWorkspaceMode('studio');
+              if (generatedNode) {
+                setActiveTab('architecture');
+                setArchitectureViewMode('canvas');
+              }
+            }}
+            className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${workspaceMode === 'studio' ? 'bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/40 shadow-sm' : 'text-[#888888] hover:text-white'}`}
+            title="Modo Studio: Edição arquitetural viva no canvas do ReactFlow"
+          >
+            🎨 Studio Canvas
+          </button>
+        </div>
 
         {/* PLANOS & UPGRADE BUTTON */}
         <button 
@@ -2636,40 +2698,95 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
                 </div>
               )}
               {activeTab === 'architecture' && generatedNode && (
-                <div className="w-full h-full bg-[#111111] sm:border border-white/10 text-[#00ff88] font-mono text-xs p-8 overflow-auto leading-relaxed">
-                  {(classification?.tipo === 'ENTERPRISE' || classification?.complexidade === 'ENTERPRISE') && (
-                    <div className="mb-8 border border-[#ff6600]/40 bg-[#ff6600]/10 p-5 rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                      <div>
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-[#ff6600] flex items-center gap-2 mb-1">
-                          <Factory size={14} /> CERTIFICAÇÃO INDUSTRIAL & ARQUITETURA MISSÃO CRÍTICA
-                        </div>
-                        <p className="text-white/80 text-xs font-sans leading-relaxed">
-                          Projeto sintetizado com padrões de alta tolerância a falhas, concorrência desacoplada e isolamento de banco.
-                        </p>
-                      </div>
-                      <button 
-                        onClick={() => showToast('Solicitação de homologação enterprise enviada! Nossa equipe entrará em contato.', 'success')}
-                        className="px-4 py-2 bg-[#ff6600] text-black font-bold uppercase text-[10px] tracking-wider rounded hover:bg-[#ff7700] transition-colors shrink-0 shadow-[0_0_15px_rgba(255,102,0,0.3)]"
-                      >
-                        Homologação On-Premise
-                      </button>
+                <div className="w-full h-full flex flex-col bg-[#050608] overflow-hidden">
+                  {/* Sub-header de visualização arquitetural */}
+                  <div className="px-4 py-2.5 border-b border-white/10 bg-[#090b11]/90 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 shrink-0">
+                    <div className="flex items-center space-x-2">
+                      <Network size={16} className="text-[#00ff88]" />
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">
+                        Engenharia Arquitetural
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 font-mono">
+                        {architectureViewMode === 'canvas' ? 'Canvas Studio Ativo' : 'Documentação ASCII'}
+                      </span>
                     </div>
-                  )}
-                  <div className="mb-8 border-b border-white/10 pb-4">
-                    <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Arquitetura de Sistemas</h2>
-                    <pre className="whitespace-pre-wrap">{generatedNode.arquitetura_ascii}</pre>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center p-0.5 rounded-lg bg-white/[0.05] border border-white/10">
+                        <button
+                          onClick={() => setArchitectureViewMode('canvas')}
+                          className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${
+                            architectureViewMode === 'canvas'
+                              ? 'bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/40 shadow-sm'
+                              : 'text-white/40 hover:text-white'
+                          }`}
+                        >
+                          🎨 Canvas Studio (Nós Interativos)
+                        </button>
+                        <button
+                          onClick={() => setArchitectureViewMode('ascii')}
+                          className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${
+                            architectureViewMode === 'ascii'
+                              ? 'bg-white/15 text-white'
+                              : 'text-white/40 hover:text-white'
+                          }`}
+                        >
+                          📄 Diagrama ASCII & Docs
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mb-8 border-b border-white/10 pb-4">
-                    <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Instalação e Deploy (README)</h2>
-                    <pre className="whitespace-pre-wrap text-[#f0f0f0]">{generatedNode.readme_md}</pre>
-                  </div>
-                  <div className="mb-8 border-b border-white/10 pb-4 text-[#888888]">
-                    <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Dependências (package.json)</h2>
-                    <pre className="whitespace-pre-wrap text-[11px]">{generatedNode.package_json}</pre>
-                  </div>
-                  <div className="text-[#888888]">
-                    <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Backend Fonte (server.js)</h2>
-                    <pre className="whitespace-pre-wrap text-[11px]">{generatedNode.server_js}</pre>
+
+                  {/* Conteúdo da Aba */}
+                  <div className="flex-1 overflow-auto">
+                    {architectureViewMode === 'canvas' ? (
+                      <div className="p-3 sm:p-5 w-full h-[780px]">
+                        <CanvasStudio
+                          initialAST={generatedNode.flow_ast || createDefaultFlowAST(problemDescription || 'Automação Parvus', classification?.tipo || 'SOFTWARE')}
+                          activeMode={workspaceMode}
+                          onModeChange={setWorkspaceMode}
+                          onCompileAndSync={handleCanvasCompileAndSync}
+                          projectName={classification?.resumo || 'Projeto Parvus Automate'}
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-full h-full bg-[#111111] text-[#00ff88] font-mono text-xs p-8 overflow-auto leading-relaxed">
+                        {(classification?.tipo === 'ENTERPRISE' || classification?.complexidade === 'ENTERPRISE') && (
+                          <div className="mb-8 border border-[#ff6600]/40 bg-[#ff6600]/10 p-5 rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                            <div>
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-[#ff6600] flex items-center gap-2 mb-1">
+                                <Factory size={14} /> CERTIFICAÇÃO INDUSTRIAL & ARQUITETURA MISSÃO CRÍTICA
+                              </div>
+                              <p className="text-white/80 text-xs font-sans leading-relaxed">
+                                Projeto sintetizado com padrões de alta tolerância a falhas, concorrência desacoplada e isolamento de banco.
+                              </p>
+                            </div>
+                            <button 
+                              onClick={() => showToast('Solicitação de homologação enterprise enviada! Nossa equipe entrará em contato.', 'success')}
+                              className="px-4 py-2 bg-[#ff6600] text-black font-bold uppercase text-[10px] tracking-wider rounded hover:bg-[#ff7700] transition-colors shrink-0 shadow-[0_0_15px_rgba(255,102,0,0.3)]"
+                            >
+                              Homologação On-Premise
+                            </button>
+                          </div>
+                        )}
+                        <div className="mb-8 border-b border-white/10 pb-4">
+                          <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Arquitetura de Sistemas</h2>
+                          <pre className="whitespace-pre-wrap">{generatedNode.arquitetura_ascii}</pre>
+                        </div>
+                        <div className="mb-8 border-b border-white/10 pb-4">
+                          <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Instalação e Deploy (README)</h2>
+                          <pre className="whitespace-pre-wrap text-[#f0f0f0]">{generatedNode.readme_md}</pre>
+                        </div>
+                        <div className="mb-8 border-b border-white/10 pb-4 text-[#888888]">
+                          <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Dependências (package.json)</h2>
+                          <pre className="whitespace-pre-wrap text-[11px]">{generatedNode.package_json}</pre>
+                        </div>
+                        <div className="text-[#888888]">
+                          <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Backend Fonte (server.js)</h2>
+                          <pre className="whitespace-pre-wrap text-[11px]">{generatedNode.server_js}</pre>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
