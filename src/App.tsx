@@ -15,7 +15,7 @@ import {
   Factory, Play, Network, Archive, Clock, ChevronRight, X, RefreshCw,
   Maximize, Minimize, TrendingUp, Users, DollarSign, History,
   Database, Sliders, Bookmark, GitFork, Shield, Sparkles, Send, Box,
-  Copy, Check, FileCode
+  Copy, Check, FileCode, Layers
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
