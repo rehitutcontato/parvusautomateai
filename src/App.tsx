@@ -1969,59 +1969,66 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         </div>
       </div>
       
-      <div className="flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-5 text-xs text-[#888888]">
-        <button onClick={() => setCurrentView('app')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider whitespace-nowrap px-2 py-1 ${currentView === 'app' ? 'text-white font-bold border-b-2 border-[#00ff88]' : ''}`}>
-          GERADOR
+      <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-[#888888] shrink-0">
+        <button 
+          onClick={() => setCurrentView('app')} 
+          className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'app' ? 'text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30 font-bold' : 'hover:bg-white/5'}`}
+          title="Gerador de Automações"
+        >
+          <Code2 size={16} />
+          <span className="hidden xl:inline text-[11px]">GERADOR</span>
         </button>
-        <button onClick={() => setCurrentView('iot')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 px-2 py-1 ${currentView === 'iot' ? 'text-white font-bold border-b-2 border-[#00d4ff]' : ''}`}>
-          <Network size={15} className={currentView === 'iot' ? 'text-[#00d4ff]' : ''} />
-          IOT MONITOR <span className="px-1.5 py-0.2 rounded bg-[#00d4ff]/15 text-[#00d4ff] text-[8px] font-bold">NOVO</span>
+
+        <button 
+          onClick={() => setCurrentView('iot')} 
+          className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'iot' ? 'text-[#00d4ff] bg-[#00d4ff]/10 border border-[#00d4ff]/30 font-bold' : 'hover:bg-white/5'}`}
+          title="IoT Monitor"
+        >
+          <Network size={16} />
+          <span className="hidden xl:inline text-[11px]">IOT</span>
         </button>
+
         {session && (
           <>
-            <button onClick={() => setCurrentView('marketplace')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider flex items-center gap-1 whitespace-nowrap px-2 py-1 ${currentView === 'marketplace' ? 'text-white font-bold border-b-2 border-[#00ff88]' : ''}`}>
-              MARKETPLACE
+            <button 
+              onClick={() => setCurrentView('marketplace')} 
+              className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'marketplace' ? 'text-white bg-white/10 font-bold' : 'hover:bg-white/5'}`}
+              title="Marketplace"
+            >
+              <Globe size={16} />
+              <span className="hidden xl:inline text-[11px]">MARKET</span>
             </button>
-            <button onClick={() => setCurrentView('purchases')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider whitespace-nowrap px-2 py-1 ${currentView === 'purchases' ? 'text-white font-bold border-b-2 border-[#00ff88]' : ''}`}>
-              MINHAS COMPRAS
+            <button 
+              onClick={() => setCurrentView('purchases')} 
+              className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'purchases' ? 'text-white bg-white/10 font-bold' : 'hover:bg-white/5'}`}
+              title="Minhas Compras"
+            >
+              <Box size={16} />
+              <span className="hidden xl:inline text-[11px]">COMPRAS</span>
             </button>
           </>
         )}
-        
-        <div className="text-white hidden lg:flex items-center gap-3 ml-2 border-l border-white/10 pl-4 text-xs">
-          {!generationLimit.loading && (
-            <span className="text-gray-400 flex items-center gap-1.5">
-              Gerações: {generationLimit.plan === 'free' || !session
-                ? <span className={generationLimit.remainingGenerations > 0 ? "text-yellow-400 font-bold" : "text-[#ff3366] font-bold"}>
-                    {generationLimit.usedThisMonth}/1 Teste Grátis {generationLimit.remainingGenerations === 0 && " (Limite)"}
-                  </span>
-                : generationLimit.plan === 'admin' 
-                ? <span className="text-[#00ff88] font-bold">∞/∞ (Admin)</span>
-                : <span className="text-[#00ff88] font-bold">{generationLimit.usedThisMonth}/{generationLimit.limit}</span>
-              }
-            </span>
-          )}
-          {session && (
-            <span className="font-medium text-gray-300 border-l border-white/5 pl-3 truncate max-w-[150px]">{session.user?.user_metadata?.nome || session.user?.email}</span>
-          )}
-        </div>
 
         {isAdmin && (
-          <div className="relative group">
-            <button onClick={() => setCurrentView('admin')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider text-[#00ff88] px-2 py-1 ${currentView === 'admin' ? 'font-bold border-b-2 border-[#00ff88]' : ''}`}>
-              👑 ADMIN
-            </button>
-          </div>
+          <button 
+            onClick={() => setCurrentView('admin')} 
+            className={`cursor-pointer transition-colors p-2 rounded-lg text-[#00ff88] flex items-center gap-1 ${currentView === 'admin' ? 'bg-[#00ff88]/20 border border-[#00ff88]/40 font-bold' : 'hover:bg-[#00ff88]/10'}`}
+            title="Painel Admin"
+          >
+            <Shield size={16} />
+            <span className="hidden xl:inline text-[11px]">ADMIN</span>
+          </button>
         )}
 
-        {/* DUAL MODE SELECTOR */}
+        {/* DUAL MODE SELECTOR COMPACTO */}
         <div className="flex items-center p-0.5 rounded-lg bg-white/[0.04] border border-white/10 shrink-0">
           <button 
             onClick={() => setWorkspaceMode('express')}
-            className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${workspaceMode === 'express' ? 'bg-white/15 text-white shadow-sm' : 'text-[#888888] hover:text-white'}`}
-            title="Modo Express: Geração direta via prompt sem exigir manipulação no grafo"
+            className={`p-1.5 sm:px-2 sm:py-1 text-[10px] font-bold uppercase rounded-md transition-all flex items-center gap-1 ${workspaceMode === 'express' ? 'bg-white/15 text-white shadow-sm' : 'text-[#888888] hover:text-white'}`}
+            title="Modo Express (Geração Direta)"
           >
-            ⚡ Express
+            <Zap size={14} className="text-[#00ff88]" />
+            <span className="hidden md:inline">Express</span>
           </button>
           <button 
             onClick={() => {
@@ -2031,43 +2038,58 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
                 setArchitectureViewMode('canvas');
               }
             }}
-            className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${workspaceMode === 'studio' ? 'bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/40 shadow-sm' : 'text-[#888888] hover:text-white'}`}
-            title="Modo Studio: Edição arquitetural viva no canvas do ReactFlow"
+            className={`p-1.5 sm:px-2 sm:py-1 text-[10px] font-bold uppercase rounded-md transition-all flex items-center gap-1 ${workspaceMode === 'studio' ? 'bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/40 shadow-sm' : 'text-[#888888] hover:text-white'}`}
+            title="Modo Studio (Canvas ReactFlow)"
           >
-            🎨 Studio Canvas
+            <Layers size={14} className="text-[#00d4ff]" />
+            <span className="hidden md:inline">Studio</span>
           </button>
         </div>
 
-        {/* PLANOS & UPGRADE BUTTON */}
+        {/* PLANOS */}
         <button 
           onClick={() => setShowUpgradeModal(true)} 
-          className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-extrabold px-3.5 py-1.5 rounded-lg text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,255,136,0.3)] hover:scale-105 transition-all cursor-pointer"
-          title="Ver todos os planos disponíveis e fazer upgrade"
+          className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-extrabold p-2 sm:px-3 sm:py-1.5 rounded-lg text-xs uppercase flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,255,136,0.3)] hover:scale-105 transition-all cursor-pointer shrink-0"
+          title="Planos e Assinaturas"
         >
-          <Zap size={13} fill="black" />
-          PLANOS
+          <Sparkles size={14} fill="black" />
+          <span className="hidden sm:inline text-[10px]">PLANOS</span>
         </button>
 
-        <div className="relative group">
-          <button onClick={() => setShowLanding(true)} className="hover:text-white cursor-pointer transition-colors uppercase tracking-wider text-gray-400 hover:text-white flex items-center gap-1 text-xs py-1" title="Ver apresentação e landing page">
-            ✨ APRESENTAÇÃO
-          </button>
-        </div>
+        {/* APRESENTAÇÃO */}
+        <button 
+          onClick={() => setShowLanding(true)} 
+          className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors cursor-pointer" 
+          title="Apresentação / Landing"
+        >
+          <Target size={16} />
+        </button>
 
-        <div className="relative group">
-          <button onClick={() => setCurrentView('settings')} className={`hover:text-white cursor-pointer transition-colors uppercase tracking-wider px-2 py-1 ${currentView === 'settings' ? 'text-white font-bold border-b-2 border-[#00ff88]' : ''}`}>
-            CONFIGURAÇÕES
-          </button>
-        </div>
+        {/* CONFIGURAÇÕES */}
+        <button 
+          onClick={() => setCurrentView('settings')} 
+          className={`p-2 rounded-lg transition-colors cursor-pointer ${currentView === 'settings' ? 'text-white bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+          title="Configurações"
+        >
+          <Settings size={16} />
+        </button>
         
         {session && supabase ? (
-          <button onClick={handleLogout} className="hover:text-white cursor-pointer transition-colors uppercase tracking-wider text-[#ff6600] px-2 py-1">
-            SAIR
+          <button 
+            onClick={handleLogout} 
+            className="p-2 rounded-lg text-[#ff6600] hover:bg-[#ff6600]/10 transition-colors cursor-pointer"
+            title="Sair da Conta"
+          >
+            <X size={16} />
           </button>
         ) : (
           supabase && (
-            <button onClick={() => setShowLoginModal(true)} className="hover:text-white cursor-pointer transition-colors uppercase tracking-wider text-[#00ff88] border border-[#00ff88]/30 px-3 py-1 rounded bg-[#00ff88]/5">
-              ENTRAR / CADASTRO
+            <button 
+              onClick={() => setShowLoginModal(true)} 
+              className="px-2.5 py-1 text-[11px] rounded-lg text-[#00ff88] border border-[#00ff88]/30 bg-[#00ff88]/10 hover:bg-[#00ff88]/20 transition-colors uppercase font-bold shrink-0"
+              title="Entrar ou Cadastrar"
+            >
+              ENTRAR
             </button>
           )
         )}
