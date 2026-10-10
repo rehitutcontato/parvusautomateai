@@ -6,8 +6,9 @@ import path from "path";
 import cors from "cors";
 import crypto from "crypto";
 import OpenAI from "openai";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { jsonrepair } from "jsonrepair";
+import { safeJsonParseWithRepair, extractJsonString } from "./src/lib/jsonRepairHelper";
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
@@ -29,26 +30,9 @@ function getCleanApiKey(userKey: string | undefined, envKeyName: string): string
   return apiKey;
 }
 
-// Extrator robusto de JSON que isola o objeto/array mais externo ignorando preâmbulos e notas
+// Extrator robusto de JSON compartilhado
 function extractJsonSubstring(text: string): string {
-  let cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-  const firstBrace = cleaned.indexOf('{');
-  const firstBracket = cleaned.indexOf('[');
-  let startIdx = -1;
-  let endIdx = -1;
-
-  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
-    startIdx = firstBrace;
-    endIdx = cleaned.lastIndexOf('}');
-  } else if (firstBracket !== -1) {
-    startIdx = firstBracket;
-    endIdx = cleaned.lastIndexOf(']');
-  }
-
-  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-    return cleaned.substring(startIdx, endIdx + 1);
-  }
-  return cleaned;
+  return extractJsonString(text);
 }
 
 // Unified robust runner that tries the user preferred key/model, automatically falling back dynamically
@@ -62,15 +46,26 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
 
   const errors: string[] = [];
 
+  // Helper para timeout defensivo por tentativa
+  const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`Timeout de ${ms / 1000}s excedido em ${label}`));
+      }, ms);
+      promise.then(
+        (val) => { clearTimeout(timer); resolve(val); },
+        (err) => { clearTimeout(timer); reject(err); }
+      );
+    });
+  };
+
   // FUNÇÕES DE EXECUÇÃO
   const runGemini = async () => {
     if (!geminiKey) return false;
+    const requestedModel = config?.model;
     const geminiModelsToTry = [
-      config?.model || 'gemini-3.6-flash',
-      'gemini-3.5-flash',
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash'
+      (requestedModel && (requestedModel.includes('gemini-2') || requestedModel.includes('gemini-1.5'))) ? requestedModel : 'gemini-2.5-flash',
+      'gemini-2.0-flash'
     ];
     const uniqueGeminiModels = Array.from(new Set(geminiModelsToTry));
 
@@ -94,14 +89,17 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
           }
         }
 
-        const response = await ai.models.generateContent({
+        const callPromise = ai.models.generateContent({
           model: geminiModel,
           contents: prompt,
           config: genConfig
         });
-        if (response.text) return response.text;
+
+        // Timeout gradual de 35s por modelo Gemini
+        const response: any = await withTimeout(callPromise, 35000, `Gemini (${geminiModel})`);
+        if (response?.text) return response.text;
       } catch (err: any) {
-        console.warn(`[REQ ${reqId}] Falha no Gemini (${geminiModel}): ${err.message}.`);
+        console.warn(`[REQ ${reqId}] Falha/Timeout no Gemini (${geminiModel}): ${err.message}.`);
         errors.push(`Gemini (${geminiModel}): ${err.message}`);
       }
     }
@@ -113,22 +111,23 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
       errors.push("Chave NVIDIA inválida ou ausente.");
       return false;
     }
-    // Catálogo atualizado e oficial de modelos NVIDIA NIM
+    // Catálogo oficial e de alto desempenho NVIDIA NIM
     const nvidiaModelsToTry = [
-      "z-ai/glm-5.1",
-      "z-ai/glm-5.2",
-      "z-ai/glm-5.3",
-      "nvidia/nemotron-3-super-120b-a12b",
-      "nvidia/nemotron-3-ultra-550b-a55b",
-      "deepseek-ai/deepseek-r1",
+      "meta/llama-3.1-70b-instruct",
+      "meta/llama-3.3-70b-instruct",
+      "nvidia/nemotron-4-340b-instruct",
       "deepseek-ai/deepseek-v3",
-      "meta/llama-3.3-70b-instruct"
+      "z-ai/glm-5.1"
     ];
     
     const isJson = config?.responseMimeType === 'application/json' || Boolean(config?.responseSchema);
 
     for (const nvidiaModel of nvidiaModelsToTry) {
-      const openai = new OpenAI({ apiKey: nvidiaKey, baseURL: "https://integrate.api.nvidia.com/v1" });
+      const openai = new OpenAI({ 
+        apiKey: nvidiaKey, 
+        baseURL: "https://integrate.api.nvidia.com/v1",
+        timeout: 40000 
+      });
       
       let messages: any[] = [{ role: "user", content: prompt }];
       if (isJson) {
@@ -143,8 +142,6 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
         ];
       }
 
-      // Alguns modelos da NVIDIA não aceitam `response_format: { type: "json_object" }` e lançam erro 400.
-      // Tentamos com response_format; se der erro 400/incompatibilidade, tentamos sem response_format.
       const attempts = isJson ? [true, false] : [false];
 
       for (const withResponseFormat of attempts) {
@@ -162,18 +159,18 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
             openAiConfig.response_format = { type: "json_object" };
           }
     
-          const response = await openai.chat.completions.create(openAiConfig);
+          const callPromise = openai.chat.completions.create(openAiConfig);
+          const response = await withTimeout(callPromise, 40000, `NVIDIA (${nvidiaModel})`);
           const content = response.choices[0].message?.content;
           if (content) return content;
         } catch (err: any) {
           const errMsg = err.message || String(err);
-          console.warn(`[REQ ${reqId}] Falha no NVIDIA (${nvidiaModel}, response_format=${withResponseFormat}): ${errMsg}`);
+          console.warn(`[REQ ${reqId}] Falha/Timeout no NVIDIA (${nvidiaModel}, response_format=${withResponseFormat}): ${errMsg}`);
           if (withResponseFormat && (errMsg.includes('response_format') || errMsg.includes('400') || errMsg.includes('json_object') || errMsg.includes('unrecognized') || errMsg.includes('not supported'))) {
-            // Continua para a tentativa sem response_format
             continue;
           }
           errors.push(`NVIDIA (${nvidiaModel}): ${errMsg}`);
-          break; // Passa para o próximo modelo
+          break;
         }
       }
     }
@@ -182,13 +179,14 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
 
   // ORDEM DE EXECUÇÃO:
   // Se o usuário enviou chave NVIDIA, ou se o ambiente possui NVIDIA_API_KEY (e não for explicitamente AI_PROVIDER=gemini),
-  // priorizamos NVIDIA como o motor de IA principal.
+  // priorizamos NVIDIA como o motor de IA principal. Caso contrário, Gemini é o primário com fallback rápido na NVIDIA.
   const preferNvidia = isUserNvidiaKey || (Boolean(nvidiaKey) && (!geminiKey || process.env.AI_PROVIDER === 'nvidia' || !isUserGeminiKey));
 
   if (preferNvidia) {
     const res = await runNvidia();
     if (res !== false) return res;
     // Fallback: Gemini
+    console.log(`[REQ ${reqId}] Acionando contingência imediata com Google Gemini...`);
     const fallbackRes = await runGemini();
     if (fallbackRes !== false) return fallbackRes;
   } else {
@@ -196,6 +194,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
     const res = await runGemini();
     if (res !== false) return res;
     // Fallback: Nvidia
+    console.log(`[REQ ${reqId}] Acionando contingência imediata com NVIDIA NIM...`);
     const fallbackRes = await runNvidia();
     if (fallbackRes !== false) return fallbackRes;
   }
@@ -227,18 +226,12 @@ app.post("/api/ai/generate-iot", async (req, res) => {
       
       console.log(`[REQ ${reqId}] Sucesso na geração IoT usando broker unificado. Tamanho: ${cleanedText.length}`);
       
-      let parsedJson;
+      let parsedJson: any;
       try {
-        parsedJson = JSON.parse(cleanedText);
-      } catch (parseErr) {
-        console.warn(`[REQ ${reqId}] Erro ao realizar parse do JSON. Tentando recuperar JSON truncado...`);
-        try {
-          const repairedJson = jsonrepair(cleanedText);
-          parsedJson = JSON.parse(repairedJson);
-          console.log(`[REQ ${reqId}] JSON truncado recuperado com sucesso via jsonrepair!`);
-        } catch (repairErr: any) {
-          throw new Error(`Falha ao converter e reparar resposta JSON da IA: ${parseErr} / Repair Error: ${repairErr.message}`);
-        }
+        parsedJson = safeJsonParseWithRepair(cleanedText);
+        console.log(`[REQ ${reqId}] JSON validado/reparado com sucesso!`);
+      } catch (parseErr: any) {
+        throw new Error(`Falha ao converter e reparar resposta JSON da IA: ${parseErr.message}`);
       }
       
       res.write(JSON.stringify(parsedJson));

@@ -7,6 +7,8 @@ import { generateWokwiDiagram } from '../../lib/wokwiHelper';
 import { WokwiSimulator } from './WokwiSimulator';
 import { WebSerialTerminal } from './WebSerialTerminal';
 import { useAutoSaveDraft } from '../../lib/hooks/useAutoSaveDraft';
+import { safeJsonParseWithRepair } from '../../lib/jsonRepairHelper';
+import { ErrorRecoveryModal } from '../modals/ErrorRecoveryModal';
 import { Lock, AlertTriangle, ShieldAlert, CheckSquare, Search, Copy, Download, Code2, Play, Square, Save, Cpu, Layers, ExternalLink, X, Radio, ArrowLeft, Loader2, Info, Terminal, Trash2, Usb, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react';
 
 const PLACAS = [
@@ -121,6 +123,7 @@ export function IotMonitor({
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [recoveryError, setRecoveryError] = useState<{ message: string; onRetry: () => void } | null>(null);
 
   // Edit States
   const [editPrompt, setEditPrompt] = useState('');
@@ -548,11 +551,12 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
         throw new Error("Falha na conexão (Network Error/CORS). O backend demorou muito e o servidor reiniciou ou está indisponível.");
       }
       
-      let data;
+      let data: any;
       try {
-        data = await req.json();
-      } catch (jsonErr) {
-        throw new Error(`Erro de comunicação com o servidor. A API retornou uma resposta inválida (não JSON). Status HTML: ${req.status}.`);
+        const rawText = await req.text();
+        data = safeJsonParseWithRepair(rawText);
+      } catch (jsonErr: any) {
+        throw new Error(`Erro de comunicação com o servidor. A API retornou uma resposta inválida: ${jsonErr.message}`);
       }
       
       if (!data || data.error) {
@@ -591,8 +595,13 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
 
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || 'Falha na comunicação com a API NVIDIA.');
-      onGenerationError?.(err.message || 'Falha na geração do projeto IoT.');
+      const cleanMsg = err.message || 'Falha na comunicação com o broker de IA.';
+      setErrorMsg(cleanMsg);
+      setRecoveryError({
+        message: cleanMsg,
+        onRetry: () => generateProject()
+      });
+      onGenerationError?.(cleanMsg);
     } finally {
       setIsGenerating(false);
     }
@@ -657,11 +666,12 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
         throw new Error("Falha na conexão (Network Error/CORS). O backend demorou muito e o servidor reiniciou ou está indisponível.");
       }
       
-      let data;
+      let data: any;
       try {
-        data = await req.json();
-      } catch (jsonErr) {
-        throw new Error(`Erro de comunicação com o servidor. A API retornou uma resposta inválida (não JSON). Status HTML: ${req.status}.`);
+        const rawText = await req.text();
+        data = safeJsonParseWithRepair(rawText);
+      } catch (jsonErr: any) {
+        throw new Error(`Erro de comunicação com o servidor. A API retornou uma resposta inválida: ${jsonErr.message}`);
       }
       
       if (!data || data.error) {
@@ -701,8 +711,13 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
 
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || 'Falha na comunicação com a API NVIDIA.');
-      onGenerationError?.(err.message || 'Falha na revisão do projeto.');
+      const cleanMsg = err.message || 'Falha na comunicação com o broker de IA.';
+      setErrorMsg(cleanMsg);
+      setRecoveryError({
+        message: cleanMsg,
+        onRetry: () => editProject()
+      });
+      onGenerationError?.(cleanMsg);
     } finally {
       setIsGenerating(false);
     }
@@ -1895,6 +1910,20 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #333; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
       `}} />
+
+      {recoveryError && (
+        <ErrorRecoveryModal
+          isOpen={true}
+          errorMessage={recoveryError.message}
+          title="Recuperação de Síntese IoT"
+          onRetry={() => {
+            const retryFn = recoveryError.onRetry;
+            setRecoveryError(null);
+            retryFn();
+          }}
+          onClose={() => setRecoveryError(null)}
+        />
+      )}
     </div>
   );
 }

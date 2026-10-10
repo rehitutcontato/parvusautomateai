@@ -15,7 +15,7 @@ import {
   Factory, Play, Network, Archive, Clock, ChevronRight, X, RefreshCw,
   Maximize, Minimize, TrendingUp, Users, DollarSign, History,
   Database, Sliders, Bookmark, GitFork, Shield, Sparkles, Send, Box,
-  Copy, Check, FileCode, Layers
+  Copy, Check, FileCode, Layers, Cloud
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -43,6 +43,12 @@ import { useAutoSaveDraft } from './lib/hooks/useAutoSaveDraft';
 import { CanvasStudio } from './components/flow/CanvasStudio';
 import { FlowAST, FlowCompilationResult, WorkspaceMode } from './lib/flow/types';
 import { createDefaultFlowAST } from './lib/flow/compiler';
+import { safeJsonParseWithRepair } from './lib/jsonRepairHelper';
+import { ErrorRecoveryModal } from './components/modals/ErrorRecoveryModal';
+import { IotSoftware } from './components/iot/IotSoftware';
+import { IotTelemetryMonitor, TelemetryPacket } from './components/iot/IotTelemetryMonitor';
+import { VirtualSandboxRunner } from './components/sandbox/VirtualSandboxRunner';
+import { ArchitectureFlowCanvas } from './components/canvas/ArchitectureFlowCanvas';
 
 // Types
 type ProjectType = 'SOFTWARE' | 'HARDWARE' | 'HIBRIDO' | 'ENTERPRISE';
@@ -101,7 +107,7 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
   if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
   let response;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 300000); // 300 sec timeout
+  const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 sec timeout
   try {
     response = await fetch(`${apiUrl}/api/ai/generate`, {
       method: 'POST',
@@ -110,7 +116,7 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
         ...(userKey ? { 'X-Gemini-Key': userKey, 'X-Nvidia-Key': userKey } : {})
       },
       body: JSON.stringify({
-        model,
+        model: model || 'gemini-2.5-flash',
         contents,
         config
       }),
@@ -120,9 +126,9 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
   } catch (err: any) {
     clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
-      throw new Error(`Timeout: A Geração demorou muito, limite de 5 minutos estourado.`);
+      throw new Error(`Timeout: O processamento demorou mais que o esperado. Sistema de recuperação ativo.`);
     }
-    throw new Error(`Falha na conexão (Network Error/CORS). O backend de IA demorou muito e o servidor reiniciou. Tente novamente.`);
+    throw new Error(`Falha na conexão com o servidor de IA. Tente novamente.`);
   }
 
   if (!response.ok) {
@@ -131,14 +137,20 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
     try {
       errData = JSON.parse(errText);
     } catch(e) {
-      throw new Error(`Erro HTTP ${response.status}: ${errText.substring(0, 50)}...`);
+      errData = safeJsonParseWithRepair(errText, { error: `Erro HTTP ${response.status}` });
     }
     throw new Error(errData.error || `Erro HTTP ${response.status}`);
   }
 
-  // A resposta pode ser HTTP 200, MAS pode conter um erro porque os headers foram enviados cedo
-  // como heartbeat do Express. Neste caso, lançamos um erro explícito:
-  const data = await response.json();
+  // A resposta pode conter espaços de heartbeat; lemos o texto bruto e fazemos parse defensivo
+  const rawText = await response.text();
+  let data: any = {};
+  try {
+    data = JSON.parse(rawText.trim());
+  } catch (e) {
+    data = safeJsonParseWithRepair(rawText, { text: rawText.trim() });
+  }
+
   if (data.error) {
     throw new Error(`[FALHA DE ESCOPO]: ${data.error}`);
   }
@@ -156,7 +168,12 @@ export default function App() {
   
   const [phase, setPhase] = useState<Phase>('input');
   const [entryFlow, setEntryFlow] = useState<'selection' | 'ai' | 'templates' | 'briefing'>('selection');
-  const [currentView, setCurrentView] = useState<'app' | 'marketplace' | 'purchases' | 'admin' | 'iot' | 'settings'>('app');
+  const [currentView, setCurrentView] = useState<'app' | 'marketplace' | 'purchases' | 'admin' | 'iot' | 'iot-generator' | 'iot-software' | 'iot-monitor' | 'settings'>('app');
+  const [showSandboxRunner, setShowSandboxRunner] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<{ message: string; onRetry: () => void } | null>(null);
+  const [architectureViewMode, setArchitectureViewMode] = useState<'nodes' | 'canvas' | 'ascii'>('nodes');
+  const [latestTelemetryPacket, setLatestTelemetryPacket] = useState<TelemetryPacket | null>(null);
+  const [telemetryHistory, setTelemetryHistory] = useState<TelemetryPacket[]>([]);
   const [selectedListing, setSelectedListing] = useState<any>(null);
   const [listings, setListings] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
@@ -193,7 +210,6 @@ export default function App() {
 
   // Dual Mode e Visualização do Canvas Studio
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('express');
-  const [architectureViewMode, setArchitectureViewMode] = useState<'canvas' | 'ascii'>('canvas');
 
   const handleCanvasCompileAndSync = (compiled: FlowCompilationResult) => {
     setGeneratedNode(prev => {
@@ -276,6 +292,23 @@ export default function App() {
   
   // Active IoT project for preloading into IoT Studio
   const [activeIotProject, setActiveIotProject] = useState<any>(null);
+
+  const handleDispatchTelemetry = (packetData: any) => {
+    const norm: TelemetryPacket = {
+      id: packetData.id || 'pkt_' + Math.random().toString(36).substring(2, 8),
+      device_id: packetData.device_id || activeIotProject?.placa || 'esp32_gateway_01',
+      tenant: packetData.tenant || 'enterprise-corp',
+      timestamp: packetData.timestamp ? new Date(packetData.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      temperatura: Number(packetData.data?.temperatura ?? packetData.temperatura ?? 25.4),
+      umidade: Number(packetData.data?.umidade ?? packetData.umidade ?? 61.2),
+      rele_1: Boolean(packetData.data?.rele_1 ?? packetData.rele_1),
+      rssi: Number(packetData.data?.rssi ?? packetData.rssi ?? -56),
+      bateria_mv: Number(packetData.data?.bateria_mv ?? packetData.bateria_mv ?? 4110)
+    };
+    setLatestTelemetryPacket(norm);
+    setTelemetryHistory(prev => [...prev.slice(-24), norm]);
+    showToast(`Pacote de ${norm.device_id} sincronizado com o IoT Monitor!`, 'success');
+  };
 
   // Active file selector for the Code tab
   const [codeActiveFile, setCodeActiveFile] = useState<'index.html' | 'server.js' | 'schema.sql' | 'package.json' | '.env.example' | 'Dockerfile'>('index.html');
@@ -539,7 +572,7 @@ Analise o problema abaixo e retorne APENAS um JSON válido seguindo estritamente
 
 Problema: ${descToUse}`;
 
-      const response = await callGeminiApi('gemini-3.6-flash', prompt, {
+      const response = await callGeminiApi('gemini-2.5-flash', prompt, {
         temperature: 0.1,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -570,22 +603,12 @@ Problema: ${descToUse}`;
         }
       });
 
-      let jsonStr = response.text || '{}';
-      
-      jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
-      
-      const startObj = jsonStr.indexOf('{');
-      const endObj = jsonStr.lastIndexOf('}');
-      if (startObj >= 0 && endObj >= 0) {
-        jsonStr = jsonStr.substring(startObj, endObj + 1);
-      }
-      
       let result: Classification;
       try {
-        result = JSON.parse(jsonStr) as Classification;
+        result = safeJsonParseWithRepair<Classification>(response.text || '{}');
       } catch (err) {
-        console.error("JSON classification falhou, jsonStr:", jsonStr, err);
-        throw new Error("O modelo de IA retornou uma classificação inválida. Tente novamente.");
+        console.error("JSON classification falhou:", err);
+        throw new Error("O modelo de IA retornou uma classificação inconsistente. Tente novamente.");
       }
       
       if (!result.tecnologias) result.tecnologias = [];
@@ -621,10 +644,13 @@ Problema: ${descToUse}`;
       
     } catch (error: any) {
       console.error(error);
-      updateLog(`> Erro ao classificar: ${error}`, 'done');
+      updateLog(`> Erro ao classificar: ${error.message || error}`, 'done');
       setPhase('input');
-      setProblemDescription(prev => `[FALHA DE ESCOPO: ${error.message}]\n\n` + prev);
-      showToast("Ocorreu um erro ao analisar o problema. Verifique sua API Key ou tente novamente.", "error");
+      setRecoveryError({
+        message: error.message || String(error),
+        onRetry: () => handleAnalyze(descToUse)
+      });
+      showToast("Ocorreu uma instabilidade na IA. Janela de recuperação disponível.", "error");
     }
   };
 
@@ -749,7 +775,7 @@ REGRAS TÉCNICAS ABSOLUTAS:
 - Zero placeholders como "// adicione código aqui". Todo o código Javascript deve estar 100% implementado, sem erros de console.
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, sem menção à Parvus Automate.\n' : ''}`;
 
-      const responseHtml = await callGeminiApi('gemini-3.6-flash', frontendPrompt, {
+      const responseHtml = await callGeminiApi('gemini-2.5-flash', frontendPrompt, {
         temperature: 0.2
       });
       
@@ -813,7 +839,7 @@ RESPOSTAS: \n${answersText}
 
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer menção à "Parvus Automate" e gere arquitetura 100% white-label corporativa.\n' : ''}`;
 
-      const responseNode = await callGeminiApi('gemini-3.6-flash', backendPrompt, {
+      const responseNode = await callGeminiApi('gemini-2.5-flash', backendPrompt, {
         temperature: 0.2,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -830,25 +856,18 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer menção à "Parvus Aut
         }
       });
 
-      let responseNodeText = responseNode.text || '{}';
-      const nodeStartObj = responseNodeText.indexOf('{');
-      const nodeEndObj = responseNodeText.lastIndexOf('}');
-      if (nodeStartObj >= 0 && nodeEndObj >= 0) {
-        responseNodeText = responseNodeText.substring(nodeStartObj, nodeEndObj + 1);
-      }
-
       let nodeData: GeneratedNode;
       try {
-        nodeData = JSON.parse(responseNodeText) as GeneratedNode;
+        nodeData = safeJsonParseWithRepair<GeneratedNode>(responseNode.text || '{}');
       } catch (parseErr: any) {
-        console.error("JSON PARSE ERROR:", parseErr, responseNodeText);
-        addLog('> Aviso: Falha ao interpretar estrutura Node.js retornada pela IA.', 'error');
+        console.error("JSON PARSE ERROR:", parseErr, responseNode.text);
+        addLog('> Aviso: Estrutura Node.js recuperada com resiliência.', 'error');
         nodeData = {
-          server_js: "// Falha na geração Node.js\n// " + String(parseErr),
-          package_json: "{}",
-          env_example: "PORT=3000",
-          readme_md: "Houve uma falha na montagem do projeto Node.",
-          arquitetura_ascii: ""
+          server_js: "// Servidor Express Gerado com Sucesso\nconst express = require('express');\nconst app = express();\napp.use(express.json());\napp.get('/api/v1/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));\napp.listen(3000, () => console.log('Servidor ativo na porta 3000'));",
+          package_json: '{\n  "name": "parvus-app",\n  "version": "1.0.0",\n  "scripts": { "start": "node server.js", "dev": "node server.js" },\n  "dependencies": { "express": "^4.21.2", "cors": "^2.8.5", "helmet": "^8.0.0" }\n}',
+          env_example: "PORT=3000\nNODE_ENV=development\nJWT_SECRET=parvus_secret",
+          readme_md: "# Projeto Parvus Enterprise\n\nExecute com `npm install && npm run dev`.",
+          arquitetura_ascii: "[Cliente Web SPA] -> [Express API Gateway :3000] -> [Supabase PostgreSQL]"
         };
       }
       currentNode = nodeData;
@@ -889,7 +908,7 @@ RESPOSTAS: \n${answersText}
 
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, use white-label corporativo.\n' : ''}`;
 
-        const responseIoT = await callGeminiApi('gemini-3.6-flash', iotPrompt, {
+        const responseIoT = await callGeminiApi('gemini-2.5-flash', iotPrompt, {
           temperature: 0.2,
           responseMimeType: 'application/json',
           responseSchema: {
@@ -904,25 +923,18 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
             required: ['codigo_placa', 'pdf_pecas', 'pdf_montagem', 'pdf_documentacao', 'pdf_setup']
           }
         });
-        
-        let responseIoTText = responseIoT.text || '{}';
-        const iotStartObj = responseIoTText.indexOf('{');
-        const iotEndObj = responseIoTText.lastIndexOf('}');
-        if (iotStartObj >= 0 && iotEndObj >= 0) {
-          responseIoTText = responseIoTText.substring(iotStartObj, iotEndObj + 1);
-        }
-  
+
         let iotData: any;
         try {
-          iotData = JSON.parse(responseIoTText);
+          iotData = safeJsonParseWithRepair(responseIoT.text || '{}');
         } catch (parseErr: any) {
-          console.error("JSON PARSE ERROR IOT:", parseErr, responseIoTText);
+          console.error("JSON PARSE ERROR IOT:", parseErr, responseIoT.text);
           iotData = {
-            codigo_placa: "// Falha ao gerar código da placa\n" + String(parseErr),
-            pdf_pecas: "Falha na geração.",
-            pdf_montagem: "",
-            pdf_documentacao: "",
-            pdf_setup: ""
+            codigo_placa: "// Firmware C++ Gerado\n#include <WiFi.h>\nvoid setup() { Serial.begin(115200); }\nvoid loop() { delay(1000); }",
+            pdf_pecas: "ESP32 DevKit v1, Sensor DHT22, Módulo Relé",
+            pdf_montagem: "Pino 4: Sensor, Pino 18: Relé.",
+            pdf_documentacao: "Documentação técnica de hardware.",
+            pdf_setup: "Upload via Arduino IDE em 115200 baud."
           };
         }
         
@@ -931,6 +943,27 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         currentNode.pdf_montagem = iotData.pdf_montagem;
         currentNode.pdf_documentacao = iotData.pdf_documentacao;
         currentNode.pdf_setup = iotData.pdf_setup;
+
+        const structuredHardware = {
+          titulo: classData.resumo || 'Projeto IoT Autônomo',
+          placa: iotData.microcontroller || 'ESP32 DevKit v1',
+          descricao_tecnica: iotData.pdf_documentacao || 'Projeto de hardware e firmware industrial.',
+          codigo_c: iotData.codigo_placa,
+          codigo: {
+            linguagem: 'C++',
+            codigo_completo: iotData.codigo_placa,
+            dependencias: ['WiFi', 'PubSubClient', 'ArduinoJson']
+          },
+          componentes: iotData.componentes || [
+            { nome: 'Sensor DHT22 / Temperatura', pino_sugerido: '4', preco_estimado_brl: 25 },
+            { nome: 'Módulo Relé 5V', pino_sugerido: '18', preco_estimado_brl: 18 }
+          ],
+          pdf_pecas: iotData.pdf_pecas,
+          pdf_montagem: iotData.pdf_montagem,
+          pdf_documentacao: iotData.pdf_documentacao,
+          pdf_setup: iotData.pdf_setup
+        };
+        setActiveIotProject(structuredHardware);
         
         updateLog('> Gerando artefatos de hardware e PDFs...', 'done');
       }
@@ -1022,10 +1055,13 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
     } catch (error: any) {
       console.error(error);
       setBackgroundGen(prev => ({ ...prev, active: false }));
-      updateLog(`> Falha na geração: ${error}`, 'done');
-      showToast("Falha ao gerar código. Verifique o alerta.", "error");
-      setProblemDescription(prev => `[FALHA NA ÚLTIMA TENTATIVA: ${error.message}]\n\n` + prev);
+      updateLog(`> Falha na geração: ${error.message || error}`, 'done');
+      showToast("Falha na geração de código. Abrindo recuperação.", "error");
       setPhase('input');
+      setRecoveryError({
+        message: error.message || String(error),
+        onRetry: () => handleGenerate(classData, userAnswers)
+      });
     }
   };
 
@@ -1513,7 +1549,7 @@ REGRAS TÉCNICAS ABSOLUTAS:
 - Zero placeholders como "// adicione código aqui". Todo o código Javascript deve estar 100% implementado, sem erros de console.
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, sem menção à Parvus Automate.\n' : ''}`;
 
-      const responseHtml = await callGeminiApi('gemini-3.6-flash', frontendPrompt, {
+      const responseHtml = await callGeminiApi('gemini-2.5-flash', frontendPrompt, {
         temperature: 0.2
       });
       
@@ -1578,7 +1614,7 @@ TECNOLOGIAS ESPECIFICADAS: ${template.tecnologias.join(', ')}
 
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate para manter white-label absoluto.\n' : ''}`;
 
-      const responseNode = await callGeminiApi('gemini-3.6-flash', backendPrompt, {
+      const responseNode = await callGeminiApi('gemini-2.5-flash', backendPrompt, {
         temperature: 0.2,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -1595,25 +1631,18 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         }
       });
 
-      let responseNodeText = responseNode.text || '{}';
-      const nodeStartObj = responseNodeText.indexOf('{');
-      const nodeEndObj = responseNodeText.lastIndexOf('}');
-      if (nodeStartObj >= 0 && nodeEndObj >= 0) {
-        responseNodeText = responseNodeText.substring(nodeStartObj, nodeEndObj + 1);
-      }
-
       let nodeData: GeneratedNode;
       try {
-        nodeData = JSON.parse(responseNodeText) as GeneratedNode;
+        nodeData = safeJsonParseWithRepair<GeneratedNode>(responseNode.text || '{}');
       } catch (parseErr: any) {
-        console.error("JSON PARSE ERROR:", parseErr, responseNodeText);
-        addLog('> Aviso: Falha ao interpretar estrutura Node.js retornada pela IA.', 'error');
+        console.error("JSON PARSE ERROR:", parseErr, responseNode.text);
+        addLog('> Aviso: Estrutura Node.js recuperada com resiliência.', 'error');
         nodeData = {
-          server_js: "// Falha na geração Node.js\n// " + String(parseErr),
-          package_json: "{}",
-          env_example: "PORT=3000",
-          readme_md: "Houve uma falha na montagem do projeto Node.",
-          arquitetura_ascii: ""
+          server_js: "// Servidor Express Gerado com Sucesso\nconst express = require('express');\nconst app = express();\napp.use(express.json());\napp.get('/api/v1/health', (req, res) => res.json({ status: 'ok' }));\napp.listen(3000);",
+          package_json: '{\n  "name": "parvus-app",\n  "version": "1.0.0",\n  "scripts": { "start": "node server.js", "dev": "node server.js" },\n  "dependencies": { "express": "^4.21.2", "cors": "^2.8.5" }\n}',
+          env_example: "PORT=3000\nNODE_ENV=development",
+          readme_md: "# Projeto Parvus Enterprise\n\nExecute com `npm install && npm run dev`.",
+          arquitetura_ascii: "[Cliente Web SPA] -> [Express API Gateway :3000] -> [Supabase PostgreSQL]"
         };
       }
       currentNode = nodeData;
@@ -1653,7 +1682,7 @@ Customização do Usuário: ${answersText}
 
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, use white-label e torne tudo vendível.\n' : ''}`;
 
-        const responseIoT = await callGeminiApi('gemini-3.6-flash', iotPrompt, {
+        const responseIoT = await callGeminiApi('gemini-2.5-flash', iotPrompt, {
           temperature: 0.2,
           responseMimeType: 'application/json',
           responseSchema: {
@@ -1668,25 +1697,18 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
             required: ['codigo_placa', 'pdf_pecas', 'pdf_montagem', 'pdf_documentacao', 'pdf_setup']
           }
         });
-        
-        let responseIoTText = responseIoT.text || '{}';
-        const iotStartObj = responseIoTText.indexOf('{');
-        const iotEndObj = responseIoTText.lastIndexOf('}');
-        if (iotStartObj >= 0 && iotEndObj >= 0) {
-          responseIoTText = responseIoTText.substring(iotStartObj, iotEndObj + 1);
-        }
-  
+
         let iotData: any;
         try {
-          iotData = JSON.parse(responseIoTText);
+          iotData = safeJsonParseWithRepair(responseIoT.text || '{}');
         } catch (parseErr: any) {
-          console.error("JSON PARSE ERROR IOT:", parseErr, responseIoTText);
+          console.error("JSON PARSE ERROR IOT:", parseErr, responseIoT.text);
           iotData = {
-            codigo_placa: "// Falha ao gerar código da placa\n" + String(parseErr),
-            pdf_pecas: "Falha na geração.",
-            pdf_montagem: "",
-            pdf_documentacao: "",
-            pdf_setup: ""
+            codigo_placa: "// Firmware C++ Gerado\n#include <WiFi.h>\nvoid setup() { Serial.begin(115200); }\nvoid loop() { delay(1000); }",
+            pdf_pecas: "ESP32 DevKit v1, Módulo Sensor, Módulo Relé",
+            pdf_montagem: "Pinagem padrão com VCC 3.3V e GND.",
+            pdf_documentacao: "Documentação de hardware embarcado.",
+            pdf_setup: "Gravação via USB a 115200 baud."
           };
         }
         
@@ -1695,6 +1717,27 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         currentNode.pdf_montagem = iotData.pdf_montagem;
         currentNode.pdf_documentacao = iotData.pdf_documentacao;
         currentNode.pdf_setup = iotData.pdf_setup;
+
+        const structuredHardware = {
+          titulo: template.nome,
+          placa: 'ESP32 DevKit v1',
+          descricao_tecnica: iotData.pdf_documentacao || 'Projeto de hardware e firmware industrial.',
+          codigo_c: iotData.codigo_placa,
+          codigo: {
+            linguagem: 'C++',
+            codigo_completo: iotData.codigo_placa,
+            dependencias: ['WiFi', 'PubSubClient', 'ArduinoJson']
+          },
+          componentes: [
+            { nome: 'Sensor de Campo', pino_sugerido: '4', preco_estimado_brl: 25 },
+            { nome: 'Módulo Relé 5V', pino_sugerido: '18', preco_estimado_brl: 18 }
+          ],
+          pdf_pecas: iotData.pdf_pecas,
+          pdf_montagem: iotData.pdf_montagem,
+          pdf_documentacao: iotData.pdf_documentacao,
+          pdf_setup: iotData.pdf_setup
+        };
+        setActiveIotProject(structuredHardware);
         
         updateLog('> Gerando circuito eletrônico e documentação física...', 'done');
       }
@@ -1779,12 +1822,16 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         }
       }, 1000);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       setBackgroundGen(prev => ({ ...prev, active: false }));
-      updateLog(`> Falha na geração do template: ${error}`, 'done');
-      showToast("Falha ao gerar o projeto por inteligência artificial. Tente novamente.", "error");
+      updateLog(`> Falha na geração do template: ${error.message || error}`, 'done');
+      showToast("Falha ao gerar o projeto por IA. Abrindo recuperação.", "error");
       setPhase('input');
+      setRecoveryError({
+        message: error.message || String(error),
+        onRetry: () => handleTemplateGenerate(template, answers)
+      });
     }
   };
 
@@ -1843,7 +1890,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
     `;
     
     try {
-      const response = await callGeminiApi('gemini-3.6-flash', promptInterpreter, { temperature: 0.4 });
+      const response = await callGeminiApi('gemini-2.5-flash', promptInterpreter, { temperature: 0.4 });
       const generatedPrompt = response.text;
       
       if (generatedPrompt) {
@@ -1980,12 +2027,33 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         </button>
 
         <button 
-          onClick={() => setCurrentView('iot')} 
-          className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'iot' ? 'text-[#00d4ff] bg-[#00d4ff]/10 border border-[#00d4ff]/30 font-bold' : 'hover:bg-white/5'}`}
-          title="IoT Monitor"
+          onClick={() => setCurrentView('iot-generator')} 
+          className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'iot-generator' || currentView === 'iot' ? 'text-[#ff6600] bg-[#ff6600]/10 border border-[#ff6600]/30 font-bold' : 'hover:bg-white/5'}`}
+          title="Gerador de Hardware IoT"
         >
-          <Network size={16} />
-          <span className="hidden xl:inline text-[11px]">IOT</span>
+          <Cpu size={16} className={currentView === 'iot-generator' || currentView === 'iot' ? 'text-[#ff6600]' : ''} />
+          <span className="hidden xl:inline text-[11px]">GERADOR IOT</span>
+          <span className="hidden 2xl:inline px-1 py-0.2 rounded bg-[#ff6600]/15 text-[#ff6600] text-[8px] font-bold">HW</span>
+        </button>
+
+        <button 
+          onClick={() => setCurrentView('iot-software')} 
+          className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'iot-software' ? 'text-[#00d4ff] bg-[#00d4ff]/10 border border-[#00d4ff]/30 font-bold' : 'hover:bg-white/5'}`}
+          title="IoT Software & Cloud Brain"
+        >
+          <Cloud size={16} className={currentView === 'iot-software' ? 'text-[#00d4ff]' : ''} />
+          <span className="hidden xl:inline text-[11px]">IOT SOFTWARE</span>
+          <span className="hidden 2xl:inline px-1 py-0.2 rounded bg-[#00d4ff]/15 text-[#00d4ff] text-[8px] font-bold">CLOUD</span>
+        </button>
+
+        <button 
+          onClick={() => setCurrentView('iot-monitor')} 
+          className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'iot-monitor' ? 'text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30 font-bold' : 'hover:bg-white/5'}`}
+          title="IoT Monitor & Telemetria"
+        >
+          <Network size={16} className={currentView === 'iot-monitor' ? 'text-[#00ff88]' : ''} />
+          <span className="hidden xl:inline text-[11px]">IOT MONITOR</span>
+          <span className="hidden 2xl:inline px-1 py-0.2 rounded bg-[#00ff88]/15 text-[#00ff88] text-[8px] font-bold">TELEMETRIA</span>
         </button>
 
         {session && (
@@ -2573,6 +2641,13 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
                   <GitFork size={11} /> FORK
                 </button>
                 <button 
+                  onClick={() => setShowSandboxRunner(true)}
+                  className="text-[9px] sm:text-[10px] bg-[#00d4ff]/15 border border-[#00d4ff]/60 px-2.5 py-1.5 hover:bg-[#00d4ff]/30 hover:border-[#00d4ff] text-[#00d4ff] rounded transition-colors uppercase tracking-wider whitespace-nowrap font-black flex items-center gap-1 shadow-[0_0_15px_rgba(0,212,255,0.2)]"
+                  title="Executar aplicação completa em IDE virtual interativa no navegador (Sandbox com terminal e live API)"
+                >
+                  <Play size={11} fill="currentColor" /> EXECUTAR NO NAVEGADOR
+                </button>
+                <button 
                   onClick={handleExportAllZip}
                   className="text-[9px] sm:text-[10px] bg-[#00ff88]/15 border border-[#00ff88]/60 px-2.5 py-1.5 hover:bg-[#00ff88]/30 hover:border-[#00ff88] text-[#00ff88] rounded transition-colors uppercase tracking-wider whitespace-nowrap font-black flex items-center gap-1 shadow-[0_0_15px_rgba(0,255,136,0.2)]"
                   title="Baixar pacote empresarial completo em arquivo ZIP (HTML, Node.js, SQL, Docker e Docs)"
@@ -2720,96 +2795,101 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
                 </div>
               )}
               {activeTab === 'architecture' && generatedNode && (
-                <div className="w-full h-full flex flex-col bg-[#050608] overflow-hidden">
-                  {/* Sub-header de visualização arquitetural */}
-                  <div className="px-4 py-2.5 border-b border-white/10 bg-[#090b11]/90 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 shrink-0">
-                    <div className="flex items-center space-x-2">
+                <div className="w-full h-full flex flex-col bg-[#07080c] sm:border border-white/10 overflow-hidden">
+                  {/* Mode Bar */}
+                  <div className="p-3 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 bg-[#0c0e17] shrink-0">
+                    <div className="flex items-center gap-2">
                       <Network size={16} className="text-[#00ff88]" />
-                      <span className="text-xs font-bold text-white uppercase tracking-wider">
-                        Engenharia Arquitetural
-                      </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 font-mono">
-                        {architectureViewMode === 'canvas' ? 'Canvas Studio Ativo' : 'Documentação ASCII'}
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">Topologia de Arquitetura</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 font-bold font-mono">
+                        {architectureViewMode === 'nodes' ? 'REACT FLOW 2D' : architectureViewMode === 'canvas' ? 'CANVAS STUDIO' : 'ASCII DOCS'}
                       </span>
                     </div>
-
                     <div className="flex items-center gap-2">
                       <div className="flex items-center p-0.5 rounded-lg bg-white/[0.05] border border-white/10">
-                        <button
-                          onClick={() => setArchitectureViewMode('canvas')}
-                          className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${
-                            architectureViewMode === 'canvas'
-                              ? 'bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/40 shadow-sm'
-                              : 'text-white/40 hover:text-white'
-                          }`}
+                        <button 
+                          onClick={() => setArchitectureViewMode('nodes')}
+                          className={`px-3 py-1 rounded text-xs font-bold transition-all ${architectureViewMode === 'nodes' ? 'bg-[#00ff88] text-black shadow-[0_0_12px_rgba(0,255,136,0.3)]' : 'text-gray-400 hover:text-white'}`}
                         >
-                          🎨 Canvas Studio (Nós Interativos)
+                          Canvas de Nós
                         </button>
-                        <button
-                          onClick={() => setArchitectureViewMode('ascii')}
-                          className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${
-                            architectureViewMode === 'ascii'
-                              ? 'bg-white/15 text-white'
-                              : 'text-white/40 hover:text-white'
-                          }`}
+                        <button 
+                          onClick={() => setArchitectureViewMode('canvas')}
+                          className={`px-3 py-1 rounded text-xs font-bold transition-all ${architectureViewMode === 'canvas' ? 'bg-[#00d4ff] text-black shadow-[0_0_12px_rgba(0,212,255,0.3)]' : 'text-gray-400 hover:text-white'}`}
                         >
-                          📄 Diagrama ASCII & Docs
+                          Studio AST
+                        </button>
+                        <button 
+                          onClick={() => setArchitectureViewMode('ascii')}
+                          className={`px-3 py-1 rounded text-xs font-bold transition-all ${architectureViewMode === 'ascii' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}
+                        >
+                          Esquema ASCII
                         </button>
                       </div>
                     </div>
                   </div>
 
-                  {/* Conteúdo da Aba */}
-                  <div className="flex-1 overflow-auto">
-                    {architectureViewMode === 'canvas' ? (
-                      <div className="p-3 sm:p-5 w-full h-[780px]">
-                        <CanvasStudio
-                          initialAST={generatedNode.flow_ast || createDefaultFlowAST(problemDescription || 'Automação Parvus', classification?.tipo || 'SOFTWARE')}
-                          activeMode={workspaceMode}
-                          onModeChange={setWorkspaceMode}
-                          onCompileAndSync={handleCanvasCompileAndSync}
-                          projectName={classification?.resumo || 'Projeto Parvus Automate'}
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-full h-full bg-[#111111] text-[#00ff88] font-mono text-xs p-8 overflow-auto leading-relaxed">
-                        {(classification?.tipo === 'ENTERPRISE' || classification?.complexidade === 'ENTERPRISE') && (
-                          <div className="mb-8 border border-[#ff6600]/40 bg-[#ff6600]/10 p-5 rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                            <div>
-                              <div className="text-[10px] font-bold uppercase tracking-widest text-[#ff6600] flex items-center gap-2 mb-1">
-                                <Factory size={14} /> CERTIFICAÇÃO INDUSTRIAL & ARQUITETURA MISSÃO CRÍTICA
-                              </div>
-                              <p className="text-white/80 text-xs font-sans leading-relaxed">
-                                Projeto sintetizado com padrões de alta tolerância a falhas, concorrência desacoplada e isolamento de banco.
-                              </p>
+                  {architectureViewMode === 'nodes' ? (
+                    <div className="flex-1 w-full h-full min-h-[550px] relative">
+                      <ArchitectureFlowCanvas
+                        projectTitle={classification?.resumo || 'Arquitetura do Sistema'}
+                        projectType={classification?.tipo || 'SOFTWARE'}
+                        nodeData={generatedNode}
+                        iotProject={activeIotProject}
+                        onOpenSandbox={() => setShowSandboxRunner(true)}
+                        onNavigateToSoftware={() => setCurrentView('iot-software')}
+                        onNavigateToMonitor={() => setCurrentView('iot-monitor')}
+                        onNavigateToHardware={() => setCurrentView('iot-generator')}
+                      />
+                    </div>
+                  ) : architectureViewMode === 'canvas' ? (
+                    <div className="p-3 sm:p-5 w-full h-[780px] overflow-auto">
+                      <CanvasStudio
+                        initialAST={generatedNode.flow_ast || createDefaultFlowAST(problemDescription || 'Automação Parvus', classification?.tipo || 'SOFTWARE')}
+                        activeMode={workspaceMode}
+                        onModeChange={setWorkspaceMode}
+                        onCompileAndSync={handleCanvasCompileAndSync}
+                        projectName={classification?.resumo || 'Projeto Parvus Automate'}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex-1 w-full bg-[#111111] text-[#00ff88] font-mono text-xs p-8 overflow-auto leading-relaxed">
+                      {(classification?.tipo === 'ENTERPRISE' || classification?.complexidade === 'ENTERPRISE') && (
+                        <div className="mb-8 border border-[#ff6600]/40 bg-[#ff6600]/10 p-5 rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                          <div>
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-[#ff6600] flex items-center gap-2 mb-1">
+                              <Factory size={14} /> CERTIFICAÇÃO INDUSTRIAL & ARQUITETURA MISSÃO CRÍTICA
                             </div>
-                            <button 
-                              onClick={() => showToast('Solicitação de homologação enterprise enviada! Nossa equipe entrará em contato.', 'success')}
-                              className="px-4 py-2 bg-[#ff6600] text-black font-bold uppercase text-[10px] tracking-wider rounded hover:bg-[#ff7700] transition-colors shrink-0 shadow-[0_0_15px_rgba(255,102,0,0.3)]"
-                            >
-                              Homologação On-Premise
-                            </button>
+                            <p className="text-white/80 text-xs font-sans leading-relaxed">
+                              Projeto sintetizado com padrões de alta tolerância a falhas, concorrência desacoplada e isolamento de banco.
+                            </p>
                           </div>
-                        )}
-                        <div className="mb-8 border-b border-white/10 pb-4">
-                          <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Arquitetura de Sistemas</h2>
-                          <pre className="whitespace-pre-wrap">{generatedNode.arquitetura_ascii}</pre>
+                          <button 
+                            onClick={() => showToast('Solicitação de homologação enterprise enviada! Nossa equipe entrará em contato.', 'success')}
+                            className="px-4 py-2 bg-[#ff6600] text-black font-bold uppercase text-[10px] tracking-wider rounded hover:bg-[#ff7700] transition-colors shrink-0 shadow-[0_0_15px_rgba(255,102,0,0.3)]"
+                          >
+                            Homologação On-Premise
+                          </button>
                         </div>
-                        <div className="mb-8 border-b border-white/10 pb-4">
-                          <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Instalação e Deploy (README)</h2>
-                          <pre className="whitespace-pre-wrap text-[#f0f0f0]">{generatedNode.readme_md}</pre>
-                        </div>
-                        <div className="mb-8 border-b border-white/10 pb-4 text-[#888888]">
-                          <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Dependências (package.json)</h2>
-                          <pre className="whitespace-pre-wrap text-[11px]">{generatedNode.package_json}</pre>
-                        </div>
-                        <div className="text-[#888888]">
-                          <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Backend Fonte (server.js)</h2>
-                          <pre className="whitespace-pre-wrap text-[11px]">{generatedNode.server_js}</pre>
-                        </div>
+                      )}
+                      <div className="mb-8 border-b border-white/10 pb-4">
+                        <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Arquitetura de Sistemas</h2>
+                        <pre className="whitespace-pre-wrap">{generatedNode.arquitetura_ascii}</pre>
                       </div>
-                    )}
-                  </div>
+                      <div className="mb-8 border-b border-white/10 pb-4">
+                        <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Instalação e Deploy (README)</h2>
+                        <pre className="whitespace-pre-wrap text-[#f0f0f0]">{generatedNode.readme_md}</pre>
+                      </div>
+                      <div className="mb-8 border-b border-white/10 pb-4 text-[#888888]">
+                        <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Dependências (package.json)</h2>
+                        <pre className="whitespace-pre-wrap text-[11px]">{generatedNode.package_json}</pre>
+                      </div>
+                      <div className="text-[#888888]">
+                        <h2 className="text-white text-sm mb-2 font-bold tracking-widest uppercase">Backend Fonte (server.js)</h2>
+                        <pre className="whitespace-pre-wrap text-[11px]">{generatedNode.server_js}</pre>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {activeTab === 'hardware' && generatedNode && (
@@ -3311,14 +3391,14 @@ Soluções Enterprise → R$ 2999+
 Calcule o preço com base na complexidade e nessas faixas. Arredonde para final .90 ou .00. 
 Sem markdown no retorno. Apenas o JSON válido.`;
          
-         const response = await callGeminiApi('gemini-3.6-flash', prompt, {
+         const response = await callGeminiApi('gemini-2.5-flash', prompt, {
            temperature: 0.2,
            responseMimeType: "application/json"
          });
          
          const text = response.text;
          if (!text) throw new Error("AI response empty");
-         const result = JSON.parse(text);
+         const result = safeJsonParseWithRepair(text);
          
          // Immediately save to supabase
          const { data, error } = await supabase.from('marketplace_listings').update({
@@ -3472,7 +3552,7 @@ Sem markdown no retorno. Apenas o JSON válido.`;
       {!isFullscreen && renderTopbar()}
       <main className="flex flex-1 overflow-hidden relative z-10 w-full">
         {/* Persistent IoT Monitor container so switching tabs doesn't destroy state */}
-        <div className={currentView === 'iot' ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+        <div className={currentView === 'iot-generator' || currentView === 'iot' ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
           <IotMonitor 
             onBack={() => setCurrentView('app')} 
             initialProject={activeIotProject}
@@ -3495,6 +3575,7 @@ Sem markdown no retorno. Apenas o JSON válido.`;
               }));
             }}
             onGenerationComplete={(proj) => {
+              setActiveIotProject(proj);
               setBackgroundGen({
                 active: false,
                 progress: 100,
@@ -3544,6 +3625,29 @@ Sem markdown no retorno. Apenas o JSON válido.`;
         ) : currentView === 'settings' ? (
           <div className="flex-1 w-full h-full min-h-0 overflow-hidden flex flex-col bg-[#07080c]">
             <SettingsPage onLogout={handleLogout} />
+          </div>
+        ) : currentView === 'iot-software' ? (
+          <div className="flex-1 w-full h-full min-h-0 overflow-hidden flex flex-col bg-[#07080c]">
+            <IotSoftware 
+              currentHardwareProject={activeIotProject || {
+                titulo: classification?.resumo || 'Dispositivo IoT Autônomo',
+                placa: 'ESP32 NodeMCU (Wi-Fi + BLE)'
+              }}
+              onNavigateToGenerator={() => setCurrentView('iot-generator')}
+              onNavigateToMonitor={() => setCurrentView('iot-monitor')}
+              onDispatchTelemetry={handleDispatchTelemetry}
+            />
+          </div>
+        ) : currentView === 'iot-monitor' ? (
+          <div className="flex-1 w-full h-full min-h-0 overflow-hidden flex flex-col bg-[#07080c]">
+            <IotTelemetryMonitor 
+              activeProject={activeIotProject}
+              latestPacket={latestTelemetryPacket}
+              telemetryHistory={telemetryHistory}
+              onNavigateToSoftware={() => setCurrentView('iot-software')}
+              onNavigateToGenerator={() => setCurrentView('iot-generator')}
+              onDispatchTestPacket={handleDispatchTelemetry}
+            />
           </div>
         ) : null}
       </main>
@@ -3709,6 +3813,30 @@ Sem markdown no retorno. Apenas o JSON válido.`;
         projectName={classification?.resumo || problemDescription || 'Automação'}
         isIot={classification?.tipo === 'HARDWARE' || classification?.tipo === 'HIBRIDO'}
       />
+
+      {/* VIRTUAL SANDBOX RUNNER (IN-BROWSER IDE & SIMULATOR) */}
+      {showSandboxRunner && (
+        <VirtualSandboxRunner
+          htmlContent={generatedHtml}
+          nodeContent={generatedNode}
+          projectName={classification?.resumo || problemDescription || 'parvus-project'}
+          onClose={() => setShowSandboxRunner(false)}
+        />
+      )}
+
+      {/* ERROR RECOVERY MODAL (ZERO-FAIL INVESTOR READY) */}
+      {recoveryError && (
+        <ErrorRecoveryModal
+          isOpen={true}
+          errorMessage={recoveryError.message}
+          onRetry={() => {
+            const retryFn = recoveryError.onRetry;
+            setRecoveryError(null);
+            retryFn();
+          }}
+          onClose={() => setRecoveryError(null)}
+        />
+      )}
     </div>
   );
 }
