@@ -25,7 +25,7 @@ export function ErrorRecoveryModal({
         .replace(/the string did not match the expected pattern/gi, 'O payload retornado pela IA requereu ajuste de padronização estrutural.')
         .replace(/SyntaxError/gi, 'Ajuste de Formatação de Resposta')
         .replace(/DOMException/gi, 'Interrupção de Runtime no Navegador')
-        .replace(/Falha crítica em todos os provedores\/modelos de contingência.*/gi, 'Oscilação temporária na orquestração dos modelos de IA. O sistema ativou a contingência defensiva com Gemini 3.8 Flash e NVIDIA NIM.')
+        .replace(/Falha crítica em todos os provedores\/modelos de contingência.*/gi, 'Oscilação temporária na orquestração dos modelos de IA. O sistema ativou a contingência defensiva com NVIDIA NIM e Google Gemini.')
     : 'Ocorreu uma instabilidade temporária na orquestração dos modelos de IA.';
 
   return (
@@ -64,7 +64,7 @@ export function ErrorRecoveryModal({
         <div className="space-y-2 mb-6 text-xs text-gray-400">
           <div className="flex items-center gap-2 text-gray-300">
             <Sparkles size={14} className="text-[#00ff88]" />
-            <span>Fallback dinâmico disponível: Gemini 3.8 / 3.6 Flash / NVIDIA NIM (Nemotron & Llama 3.3).</span>
+            <span>Fallback dinâmico disponível: NVIDIA NIM (Llama 3.3 & Nemotron) com contingência Google Gemini (3.8 Flash).</span>
           </div>
           <div className="flex items-center gap-2 text-gray-300">
             <Cpu size={14} className="text-[#00d4ff]" />

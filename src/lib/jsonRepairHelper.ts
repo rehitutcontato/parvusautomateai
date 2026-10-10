@@ -12,6 +12,10 @@ export function extractJsonString(rawText: string): string {
 
   let cleaned = rawText.trim();
 
+  // 0. Remover blocos de raciocínio de modelos como DeepSeek R1 (<think>...</think>)
+  cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  cleaned = cleaned.replace(/<think>[\s\S]*$/gi, '').trim();
+
   // 1. Remover blocos markdown de código
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json|javascript|js)?\s*/i, '');

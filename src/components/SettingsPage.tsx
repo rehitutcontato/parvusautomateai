@@ -72,7 +72,10 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
         .single();
 
       if (data) {
-        setProfile(data);
+        setProfile({
+          ...data,
+          gemini_key_propria: data.gemini_key_propria || localStorage.getItem('nvidia_api_key') || localStorage.getItem('NVIDIA_API_KEY') || localStorage.getItem('parvus_key') || ''
+        });
       }
     } catch (err) {
       console.error(err);
@@ -114,8 +117,12 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
 
       if (profile.gemini_key_propria) {
         localStorage.setItem('parvus_key', profile.gemini_key_propria);
+        localStorage.setItem('nvidia_api_key', profile.gemini_key_propria);
+        localStorage.setItem('NVIDIA_API_KEY', profile.gemini_key_propria);
       } else {
         localStorage.removeItem('parvus_key');
+        localStorage.removeItem('nvidia_api_key');
+        localStorage.removeItem('NVIDIA_API_KEY');
       }
 
       setTimeout(() => setSuccess(''), 4000);

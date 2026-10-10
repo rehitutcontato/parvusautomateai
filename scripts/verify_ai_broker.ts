@@ -6,10 +6,13 @@ import {
   isDeprecatedGeminiModel,
   shouldFastAbortNvidia,
   resolveAiProviderPriority,
+  resolveServerApiKeys,
   normalizeSchemaForGemini,
   normalizeSchemaForOpenAi,
   ACTIVE_NVIDIA_MODELS,
-  ACTIVE_GEMINI_MODELS
+  ACTIVE_GEMINI_MODELS,
+  DEFAULT_PRIMARY_PROVIDER,
+  DEFAULT_NVIDIA_MODEL
 } from '../src/lib/aiBrokerHelper';
 
 console.log('=== TEST SUITE: AI BROKER & MULTI-PROVIDER CONTINGENCY ===\n');
@@ -57,6 +60,11 @@ assert.strictEqual(customGemini[0], 'gemini-3.6-flash', 'Explicitly requested 3.
 assert.ok(customGemini.includes('gemini-3.8-flash'), '3.8 Flash must remain in fallback chain');
 console.log('[PASS] Custom gemini-3.6-flash chain:', customGemini);
 
+// Test non-Gemini slug requested (meta/llama-3.3-70b-instruct) promotes to gemini-3.8-flash
+const nvidiaRequestedOnGemini = normalizeGeminiModelChain('meta/llama-3.3-70b-instruct');
+assert.strictEqual(nvidiaRequestedOnGemini[0], 'gemini-3.8-flash', 'NVIDIA model requested on Gemini chain must promote to gemini-3.8-flash');
+console.log('[PASS] Non-Gemini slug handled safely in Gemini fallback chain:', nvidiaRequestedOnGemini);
+
 // --- 2. TEST NVIDIA RETIRED MODEL MAPPING & ACTIVE CATALOG ---
 console.log('\n--- 2. Testing NVIDIA Models Catalog & Retired Slugs Mapping ---');
 
@@ -100,7 +108,7 @@ console.log('[PASS] Fast abort triggers correctly on permission/auth errors.');
 // --- 4. TEST PROVIDER PRIORITY RESOLUTION ---
 console.log('\n--- 4. Testing Provider Priority Resolution ---');
 
-// Standard case: Gemini key and NVIDIA key present -> Gemini preferred by default
+// Standard case: Both Gemini key and NVIDIA key present -> NVIDIA NIM is PRIMARY by default
 assert.strictEqual(
   resolveAiProviderPriority({
     isUserNvidiaKey: false,
@@ -108,8 +116,8 @@ assert.strictEqual(
     geminiKey: 'AIzaSy123',
     nvidiaKey: 'nvapi-456'
   }),
-  'gemini',
-  'Gemini must be prioritized by default when both keys are present'
+  'nvidia',
+  'NVIDIA NIM must be prioritized by default when both keys are present'
 );
 
 // User provided explicit NVIDIA key -> NVIDIA preferred
@@ -149,7 +157,32 @@ assert.strictEqual(
   'Only NVIDIA key present must prioritize NVIDIA'
 );
 
-console.log('[PASS] Provider priority resolved correctly.');
+// Contingency case: Only Gemini key present (NVIDIA key absent) -> Gemini preferred as contingency
+assert.strictEqual(
+  resolveAiProviderPriority({
+    isUserNvidiaKey: false,
+    isUserGeminiKey: false,
+    geminiKey: 'AIzaSy123',
+    nvidiaKey: undefined
+  }),
+  'gemini',
+  'Only Gemini key present must fallback to Gemini'
+);
+
+// Explicit env override: AI_PROVIDER=gemini -> Gemini preferred
+assert.strictEqual(
+  resolveAiProviderPriority({
+    isUserNvidiaKey: false,
+    isUserGeminiKey: false,
+    geminiKey: 'AIzaSy123',
+    nvidiaKey: 'nvapi-456',
+    envProvider: 'gemini'
+  }),
+  'gemini',
+  'AI_PROVIDER=gemini must prioritize Gemini'
+);
+
+console.log('[PASS] Provider priority resolved correctly with NVIDIA NIM as primary.');
 
 // --- 5. TEST SCHEMA NORMALIZATION ---
 console.log('\n--- 5. Testing Schema Normalization ---');
@@ -174,6 +207,30 @@ assert.strictEqual(openAiSchema.properties.server_js.type, 'string', 'OpenAI str
 assert.strictEqual(openAiSchema.properties.port.type, 'integer', 'OpenAI integer type must be lowercase integer');
 
 console.log('[PASS] Schema normalization works bi-directionally.');
+
+// --- 6. TEST RESOLVE SERVER API KEYS & DEFAULTS ---
+console.log('\n--- 6. Testing resolveServerApiKeys & System Defaults ---');
+
+assert.strictEqual(DEFAULT_PRIMARY_PROVIDER, 'nvidia', 'Default primary provider must be nvidia');
+assert.strictEqual(DEFAULT_NVIDIA_MODEL, 'meta/llama-3.3-70b-instruct', 'Default NVIDIA model must be meta/llama-3.3-70b-instruct');
+
+// Test extraction from headers (x-nvidia-key)
+const headersWithNvidia = resolveServerApiKeys({ 'x-nvidia-key': 'nvapi-test-123' }, {}, {});
+assert.strictEqual(headersWithNvidia.nvidiaKey, 'nvapi-test-123', 'Must extract x-nvidia-key correctly');
+assert.strictEqual(headersWithNvidia.isUserNvidiaKey, true, 'isUserNvidiaKey must be true');
+
+// Test extraction from authorization Bearer header
+const headersWithBearer = resolveServerApiKeys({ 'authorization': 'Bearer nvapi-bearer-789' }, {}, {});
+assert.strictEqual(headersWithBearer.nvidiaKey, 'nvapi-bearer-789', 'Must extract Bearer nvapi key');
+assert.strictEqual(headersWithBearer.isUserNvidiaKey, true, 'isUserNvidiaKey must be true');
+
+// Test extraction from process.env fallback
+const envKeys = resolveServerApiKeys({}, {}, { NVIDIA_API_KEY: 'nvapi-from-env', GEMINI_API_KEY: 'AIzaSy-env' });
+assert.strictEqual(envKeys.nvidiaKey, 'nvapi-from-env', 'Must extract NVIDIA_API_KEY from env');
+assert.strictEqual(envKeys.geminiKey, 'AIzaSy-env', 'Must extract GEMINI_API_KEY from env');
+assert.strictEqual(envKeys.isUserNvidiaKey, false, 'isUserNvidiaKey must be false for env');
+
+console.log('[PASS] Credential resolution and defaults verified.');
 
 console.log('\n======================================================');
 console.log('ALL AI BROKER TESTS PASSED SUCCESSFULLY! (100% OK)');

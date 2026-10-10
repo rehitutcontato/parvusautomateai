@@ -15,8 +15,11 @@ import {
   normalizeNvidiaModelChain,
   shouldFastAbortNvidia,
   resolveAiProviderPriority,
+  resolveServerApiKeys,
   normalizeSchemaForGemini,
-  normalizeSchemaForOpenAi
+  normalizeSchemaForOpenAi,
+  DEFAULT_NVIDIA_MODEL,
+  DEFAULT_GEMINI_MODEL
 } from "./src/lib/aiBrokerHelper";
 
 const app = express();
@@ -25,7 +28,16 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 app.use(cors({
   origin: '*', // Permite todas as origens
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-gemini-key', 'x-nvidia-key']
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-gemini-key',
+    'x-nvidia-key',
+    'nvidia-api-key',
+    'gemini-api-key',
+    'x-nvidia-api-key',
+    'x-gemini-api-key'
+  ]
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -45,13 +57,61 @@ function extractJsonSubstring(text: string): string {
 }
 
 // Unified robust runner that tries the user preferred key/model, automatically falling back dynamically
-async function executeGenerativeTask(prompt: string, config: any, userKey?: string, reqId?: string): Promise<string> {
-  const isUserGeminiKey = userKey && (userKey.startsWith("AIzaSy") || userKey.startsWith("aizasy") || userKey.includes("AIzaSy"));
-  const isUserNvidiaKey = userKey && !isUserGeminiKey;
-  
-  // Extrai as chaves de forma inteligente
-  const geminiKey = isUserGeminiKey ? userKey : (process.env.GEMINI_API_KEY || getCleanApiKey(undefined, 'GEMINI_API_KEY'));
-  const nvidiaKey = isUserNvidiaKey ? userKey : (process.env.NVIDIA_API_KEY || getCleanApiKey(undefined, 'NVIDIA_API_KEY'));
+async function executeGenerativeTask(
+  prompt: string,
+  config: any,
+  keyContext?: string | {
+    nvidiaKey?: string;
+    geminiKey?: string;
+    isUserNvidiaKey?: boolean;
+    isUserGeminiKey?: boolean;
+  },
+  reqId?: string
+): Promise<string> {
+  let nvidiaKey: string | undefined;
+  let geminiKey: string | undefined;
+  let isUserNvidiaKey = false;
+  let isUserGeminiKey = false;
+
+  if (typeof keyContext === 'string') {
+    const isGemini = keyContext.startsWith("AIzaSy") || keyContext.startsWith("aizasy") || keyContext.includes("AIzaSy");
+    if (isGemini) {
+      geminiKey = keyContext;
+      isUserGeminiKey = true;
+    } else {
+      nvidiaKey = keyContext;
+      isUserNvidiaKey = true;
+    }
+  } else if (keyContext && typeof keyContext === 'object') {
+    nvidiaKey = keyContext.nvidiaKey;
+    geminiKey = keyContext.geminiKey;
+    isUserNvidiaKey = Boolean(keyContext.isUserNvidiaKey);
+    isUserGeminiKey = Boolean(keyContext.isUserGeminiKey);
+  }
+
+  // Fallbacks automáticos nas variáveis de ambiente (.env) caso não informadas
+  if (!nvidiaKey) {
+    nvidiaKey = (
+      process.env.NVIDIA_API_KEY ||
+      process.env.NVIDIA_KEY ||
+      process.env.NV_API_KEY ||
+      process.env.NVIDIA_NIM_API_KEY ||
+      getCleanApiKey(undefined, 'NVIDIA_API_KEY')
+    );
+  }
+  if (!geminiKey) {
+    geminiKey = (
+      process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_API_KEY ||
+      getCleanApiKey(undefined, 'GEMINI_API_KEY')
+    );
+  }
+
+  if (nvidiaKey) nvidiaKey = nvidiaKey.toString().trim().replace(/['"]/g, '').replace(/^Bearer\s+/i, '');
+  if (geminiKey) geminiKey = geminiKey.toString().trim().replace(/['"]/g, '').replace(/^Bearer\s+/i, '');
+
+  if (nvidiaKey === 'SUA_CHAVE_AQUI' || nvidiaKey === 'YOUR_API_KEY_HERE') nvidiaKey = undefined;
+  if (geminiKey === 'SUA_CHAVE_AQUI' || geminiKey === 'YOUR_API_KEY_HERE') geminiKey = undefined;
 
   const errors: string[] = [];
 
@@ -87,7 +147,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
         
         const genConfig: any = {
           temperature: config?.temperature !== undefined ? config.temperature : 0.2,
-          maxOutputTokens: config?.maxOutputTokens || config?.max_tokens || 16384,
+          maxOutputTokens: config?.maxOutputTokens || config?.max_tokens || 8192,
         };
         
         if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
@@ -152,7 +212,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
       
       let messages: any[] = [{ role: "user", content: prompt }];
       if (isJson) {
-        let systemPrompt = "You must output strictly JSON format only. Do not output any markdown code blocks, explanation or introductory text.";
+        let systemPrompt = "You are an expert AI software and IoT systems engineer. You must output strictly raw, valid JSON only. Do not wrap with markdown backticks (no ```json or ```). Do not include any explanations, greetings, or conversational preambles outside the JSON.";
         if (config?.responseSchema) {
           const openAiSchema = normalizeSchemaForOpenAi(config.responseSchema);
           systemPrompt += ` The JSON must strictly conform to this schema: ${JSON.stringify(openAiSchema)}`;
@@ -163,17 +223,21 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
         ];
       }
 
+      // Clamping defensivo de tokens: endpoints NVIDIA NIM suportam até 4096 tokens de saída com garantia
+      const requestedTokens = config?.max_tokens || config?.maxOutputTokens || 4096;
+      const safeMaxTokens = Math.min(requestedTokens, 4096);
+
       const attempts = isJson ? [true, false] : [false];
 
       for (const withResponseFormat of attempts) {
         try {
-          console.log(`[REQ ${reqId}] Tentativa com NVIDIA (${nvidiaModel}) [response_format=${withResponseFormat}]...`);
+          console.log(`[REQ ${reqId}] Tentativa com NVIDIA NIM (${nvidiaModel}) [response_format=${withResponseFormat}, max_tokens=${safeMaxTokens}]...`);
           const openAiConfig: any = {
             model: nvidiaModel,
             messages,
             temperature: config?.temperature !== undefined ? config.temperature : 0.2,
             top_p: 1,
-            max_tokens: config?.max_tokens || config?.maxOutputTokens || 16384,
+            max_tokens: safeMaxTokens,
           };
           
           if (withResponseFormat) {
@@ -187,10 +251,36 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
         } catch (err: any) {
           const errMsg = err.message || String(err);
           console.warn(`[REQ ${reqId}] Falha/Timeout no NVIDIA (${nvidiaModel}, response_format=${withResponseFormat}): ${errMsg}`);
-          if (withResponseFormat && (errMsg.includes('response_format') || errMsg.includes('400') || errMsg.includes('json_object') || errMsg.includes('unrecognized') || errMsg.includes('not supported'))) {
+          if (withResponseFormat && (
+            errMsg.includes('response_format') ||
+            errMsg.includes('400') ||
+            errMsg.includes('422') ||
+            errMsg.includes('json_object') ||
+            errMsg.includes('unrecognized') ||
+            errMsg.includes('not supported') ||
+            errMsg.includes('schema')
+          )) {
             continue;
           }
           errors.push(`NVIDIA (${nvidiaModel}): ${errMsg}`);
+
+          // Se for erro de contagem de tokens, retenta com limite reduzido para 2048
+          if (errMsg.includes('max_tokens') || errMsg.includes('maximum context') || errMsg.includes('too large')) {
+            try {
+              console.warn(`[REQ ${reqId}] Retentando NVIDIA (${nvidiaModel}) com 2048 tokens...`);
+              const retryPromise = openai.chat.completions.create({
+                model: nvidiaModel,
+                messages,
+                temperature: config?.temperature !== undefined ? config.temperature : 0.2,
+                max_tokens: 2048
+              });
+              const retryRes = await withTimeout(retryPromise, 60000, `NVIDIA (${nvidiaModel}-2048)`);
+              const retryContent = retryRes.choices?.[0]?.message?.content;
+              if (retryContent) return retryContent;
+            } catch {
+              // continua para o próximo modelo da cadeia
+            }
+          }
 
           // Interrupção rápida defensiva: se o erro for de autorização ou escopo da conta (410, 401, 403),
           // nenhum outro modelo NVIDIA funcionará com essa mesma chave.
@@ -207,8 +297,8 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
   };
 
   // ORDEM DE EXECUÇÃO:
-  // Se o usuário enviou chave NVIDIA, ou AI_PROVIDER='nvidia', prioriza NVIDIA.
-  // Caso contrário (padrão com geminiKey ou chave Gemini do usuário), prioriza Gemini com contingência automática na NVIDIA.
+  // NVIDIA NIM é o provedor PRIMÁRIO por padrão em todas as requisições.
+  // Google Gemini atua como contingência secundária caso NVIDIA oscile ou não tenha créditos.
   const preferNvidia = resolveAiProviderPriority({
     isUserNvidiaKey: Boolean(isUserNvidiaKey),
     isUserGeminiKey: Boolean(isUserGeminiKey),
@@ -218,17 +308,19 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
   }) === 'nvidia';
 
   if (preferNvidia) {
+    console.log(`[REQ ${reqId}] Provedor PRIMÁRIO ativo: NVIDIA NIM.`);
     const res = await runNvidia();
     if (res !== false) return res;
-    // Fallback: Gemini
+    // Fallback Secundário: Google Gemini
     console.log(`[REQ ${reqId}] Acionando contingência imediata com Google Gemini...`);
     const fallbackRes = await runGemini();
     if (fallbackRes !== false) return fallbackRes;
   } else {
-    // Gemini Priority
+    // Gemini Priority (quando explicitamente solicitado via AI_PROVIDER=gemini)
+    console.log(`[REQ ${reqId}] Provedor PRIMÁRIO ativo: Google Gemini.`);
     const res = await runGemini();
     if (res !== false) return res;
-    // Fallback: Nvidia
+    // Fallback Secundário: NVIDIA NIM
     console.log(`[REQ ${reqId}] Acionando contingência imediata com NVIDIA NIM...`);
     const fallbackRes = await runNvidia();
     if (fallbackRes !== false) return fallbackRes;
@@ -248,13 +340,14 @@ app.post("/api/ai/generate-iot", async (req, res) => {
   
   try {
     const { prompt, placa } = req.body;
-    const userKey = (req.headers['x-gemini-key'] || req.headers['x-nvidia-key']) as string;
+    const keyContext = resolveServerApiKeys(req.headers, req.body);
     
-    // Deixamos o motor responder dinamicamente com limite ampliado de tokens
+    // Limites seguros para NVIDIA NIM (primário) e fallback dinâmico Google Gemini
     const config = {
       responseMimeType: 'application/json',
-      maxOutputTokens: 16384,
-      max_tokens: 16384
+      maxOutputTokens: 8192,
+      max_tokens: 4096,
+      model: req.body?.model || DEFAULT_NVIDIA_MODEL
     };
 
     res.setHeader('Content-Type', 'application/json');
@@ -262,7 +355,7 @@ app.post("/api/ai/generate-iot", async (req, res) => {
     const heartbeat = setInterval(() => { res.write(' '); }, 15000);
 
     try {
-      const aiText = await executeGenerativeTask(prompt, config, userKey, reqId);
+      const aiText = await executeGenerativeTask(prompt, config, keyContext, reqId);
       clearInterval(heartbeat);
       let cleanedText = extractJsonSubstring(aiText);
       
@@ -417,7 +510,7 @@ app.post("/api/ai/simulate-iot", async (req, res) => {
   
   try {
     const { codigo, linguagem, placa } = req.body;
-    const userKey = (req.headers['x-gemini-key'] || req.headers['x-nvidia-key']) as string;
+    const keyContext = resolveServerApiKeys(req.headers, req.body);
     
     const prompt = `Você é um emulador de hardware industrial e console serial de alta precisão para a plataforma: ${placa}.
 Execute o seguinte código de ${linguagem} e simule o output do Serial Monitor / console de depuração por exatamente 10 ciclos de execução em tempo real.
@@ -450,7 +543,12 @@ Retorne EXCLUSIVAMENTE o texto puro do Serial Monitor linha por linha. Não incl
     const heartbeat = setInterval(() => { res.write(' '); }, 15000);
 
     try {
-      const aiText = await executeGenerativeTask(prompt, { temperature: 0.4 }, userKey, reqId);
+      const aiText = await executeGenerativeTask(
+        prompt,
+        { temperature: 0.4, model: req.body?.model || DEFAULT_NVIDIA_MODEL },
+        keyContext,
+        reqId
+      );
       clearInterval(heartbeat);
       console.log(`[REQ ${reqId}] Sucesso na simulação IoT usando broker unificado. Tamanho do payload: ${aiText.length} chars.`);
       res.write(JSON.stringify({ output: aiText }));
@@ -482,7 +580,7 @@ app.post("/api/ai/generate", async (req, res) => {
       return res.status(400).json({ success: false, error: 'O prompt ou conteúdo é obrigatório.' });
     }
 
-    const userKey = (req.headers['x-gemini-key'] || req.headers['x-nvidia-key']) as string;
+    const keyContext = resolveServerApiKeys(req.headers, req.body);
     
     // Configura o heartbeat anti-timeout para plataformas Serverless/Render:
     res.setHeader('Content-Type', 'application/json');
@@ -493,8 +591,11 @@ app.post("/api/ai/generate", async (req, res) => {
     }, 15000);
 
     try {
-      const effectiveConfig = { ...config, model: model || config?.model };
-      const aiText = await executeGenerativeTask(contents, effectiveConfig, userKey, reqId);
+      const effectiveConfig = {
+        ...config,
+        model: model || config?.model || DEFAULT_NVIDIA_MODEL
+      };
+      const aiText = await executeGenerativeTask(contents, effectiveConfig, keyContext, reqId);
       clearInterval(heartbeat);
       console.log(`[REQ ${reqId}] Sucesso na geração geral usando broker de IA. Tamanho: ${aiText.length} chars.`);
       res.write(JSON.stringify({ text: aiText }));

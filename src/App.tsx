@@ -101,9 +101,25 @@ interface HistoryItem {
 type Phase = 'input' | 'classifying' | 'questions' | 'inviavel' | 'generating' | 'done';
 type Tab = 'preview' | 'code' | 'architecture' | 'hardware';
 
-// Helper to bridge AI calls to server-side proxy
+// Helper to bridge AI calls to server-side proxy (NVIDIA NIM Primary, Gemini Fallback)
 const callGeminiApi = async (model: string, contents: string, config?: any) => {
-  const userKey = localStorage.getItem('parvus_key') || '';
+  const nvidiaKey =
+    localStorage.getItem('nvidia_api_key') ||
+    localStorage.getItem('NVIDIA_API_KEY') ||
+    localStorage.getItem('parvus_nvidia_key') ||
+    '';
+  const legacyKey = localStorage.getItem('parvus_key') || '';
+  const geminiKey = localStorage.getItem('gemini_api_key') || '';
+
+  let resolvedNvidiaKey = nvidiaKey;
+  let resolvedGeminiKey = geminiKey;
+  if (legacyKey) {
+    if (legacyKey.startsWith('nvapi-') || !legacyKey.startsWith('AIzaSy')) {
+      if (!resolvedNvidiaKey) resolvedNvidiaKey = legacyKey;
+    } else {
+      if (!resolvedGeminiKey) resolvedGeminiKey = legacyKey;
+    }
+  }
   
   let apiUrl = import.meta.env.VITE_API_URL || '';
   if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
@@ -111,14 +127,23 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 240000); // 240 sec timeout (acomoda síntese densa e contingência multi-provedor)
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    if (resolvedNvidiaKey) {
+      headers['x-nvidia-key'] = resolvedNvidiaKey;
+      headers['nvidia-api-key'] = resolvedNvidiaKey;
+      headers['authorization'] = `Bearer ${resolvedNvidiaKey}`;
+    }
+    if (resolvedGeminiKey) {
+      headers['x-gemini-key'] = resolvedGeminiKey;
+    }
+
     response = await fetch(`${apiUrl}/api/ai/generate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(userKey ? { 'X-Gemini-Key': userKey, 'X-Nvidia-Key': userKey } : {})
-      },
+      headers,
       body: JSON.stringify({
-        model: model || 'gemini-3.8-flash',
+        model: model || 'meta/llama-3.3-70b-instruct',
         contents,
         config
       }),
@@ -163,7 +188,7 @@ const callGeminiApi = async (model: string, contents: string, config?: any) => {
 };
 
 export default function App() {
-  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('parvus_key') || '');
+  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('nvidia_api_key') || localStorage.getItem('NVIDIA_API_KEY') || localStorage.getItem('parvus_key') || '');
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [session, setSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -260,7 +285,7 @@ export default function App() {
     active: false,
     progress: 0,
     message: '',
-    model: 'Gemini 3.8 Flash / NVIDIA NIM',
+    model: 'NVIDIA NIM (Llama 3.3 / Nemotron) & Fallback Gemini',
     type: 'software',
     title: ''
   });
@@ -408,8 +433,12 @@ export default function App() {
   useEffect(() => {
     if (apiKey) {
       localStorage.setItem('parvus_key', apiKey);
+      localStorage.setItem('nvidia_api_key', apiKey);
+      localStorage.setItem('NVIDIA_API_KEY', apiKey);
     } else {
       localStorage.removeItem('parvus_key');
+      localStorage.removeItem('nvidia_api_key');
+      localStorage.removeItem('NVIDIA_API_KEY');
     }
   }, [apiKey]);
 
@@ -628,7 +657,7 @@ Analise o problema abaixo e retorne APENAS um JSON válido seguindo estritamente
 
 Problema: ${descToUse}`;
 
-      const response = await callGeminiApi('gemini-3.8-flash', prompt, {
+      const response = await callGeminiApi('meta/llama-3.3-70b-instruct', prompt, {
         temperature: 0.1,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -759,7 +788,7 @@ Problema: ${descToUse}`;
       active: true,
       progress: 10,
       message: 'Iniciando engenharia e arquitetura de solução...',
-      model: 'Gemini 3.8 Flash / NVIDIA NIM',
+      model: 'NVIDIA NIM (Llama 3.3 / Nemotron) & Fallback Gemini',
       type: isHardwareOrHybrid ? 'iot' : 'software',
       title: problemDescription.substring(0, 40)
     });
@@ -831,7 +860,7 @@ REGRAS TÉCNICAS ABSOLUTAS:
 - Zero placeholders como "// adicione código aqui". Todo o código Javascript deve estar 100% implementado, sem erros de console.
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, sem menção à Parvus Automate.\n' : ''}`;
 
-      const responseHtml = await callGeminiApi('gemini-3.8-flash', frontendPrompt, {
+      const responseHtml = await callGeminiApi('meta/llama-3.3-70b-instruct', frontendPrompt, {
         temperature: 0.2
       });
       
@@ -895,7 +924,7 @@ RESPOSTAS: \n${answersText}
 
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer menção à "Parvus Automate" e gere arquitetura 100% white-label corporativa.\n' : ''}`;
 
-      const responseNode = await callGeminiApi('gemini-3.8-flash', backendPrompt, {
+      const responseNode = await callGeminiApi('meta/llama-3.3-70b-instruct', backendPrompt, {
         temperature: 0.2,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -964,7 +993,7 @@ RESPOSTAS: \n${answersText}
 
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, use white-label corporativo.\n' : ''}`;
 
-        const responseIoT = await callGeminiApi('gemini-3.8-flash', iotPrompt, {
+        const responseIoT = await callGeminiApi('meta/llama-3.3-70b-instruct', iotPrompt, {
           temperature: 0.2,
           responseMimeType: 'application/json',
           responseSchema: {
@@ -1039,7 +1068,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         active: false,
         progress: 100,
         message: 'Sistema gerado com sucesso!',
-        model: 'Gemini 3.8 Flash / NVIDIA NIM',
+        model: 'NVIDIA NIM (Llama 3.3 / Nemotron) & Fallback Gemini',
         type: isHardwareOrHybrid ? 'iot' : 'software',
         title: problemDescription.substring(0, 40)
       });
@@ -1528,7 +1557,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
       active: true,
       progress: 15,
       message: `Iniciando compilação do template ${template.nome}...`,
-      model: 'Gemini 3.8 Flash / NVIDIA NIM',
+      model: 'NVIDIA NIM (Llama 3.3 / Nemotron) & Fallback Gemini',
       type: isHardwareOrHybrid ? 'iot' : 'software',
       title: template.nome
     });
@@ -1605,7 +1634,7 @@ REGRAS TÉCNICAS ABSOLUTAS:
 - Zero placeholders como "// adicione código aqui". Todo o código Javascript deve estar 100% implementado, sem erros de console.
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Construa o código 100% white-label, sem menção à Parvus Automate.\n' : ''}`;
 
-      const responseHtml = await callGeminiApi('gemini-3.8-flash', frontendPrompt, {
+      const responseHtml = await callGeminiApi('meta/llama-3.3-70b-instruct', frontendPrompt, {
         temperature: 0.2
       });
       
@@ -1670,7 +1699,7 @@ TECNOLOGIAS ESPECIFICADAS: ${template.tecnologias.join(', ')}
 
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate para manter white-label absoluto.\n' : ''}`;
 
-      const responseNode = await callGeminiApi('gemini-3.8-flash', backendPrompt, {
+      const responseNode = await callGeminiApi('meta/llama-3.3-70b-instruct', backendPrompt, {
         temperature: 0.2,
         responseMimeType: 'application/json',
         responseSchema: {
@@ -1738,7 +1767,7 @@ Customização do Usuário: ${answersText}
 
 ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Parvus Automate ou a marcas específicas, use white-label e torne tudo vendível.\n' : ''}`;
 
-        const responseIoT = await callGeminiApi('gemini-3.8-flash', iotPrompt, {
+        const responseIoT = await callGeminiApi('meta/llama-3.3-70b-instruct', iotPrompt, {
           temperature: 0.2,
           responseMimeType: 'application/json',
           responseSchema: {
@@ -1864,7 +1893,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
         active: false,
         progress: 100,
         message: 'Template gerado com sucesso!',
-        model: 'Gemini 3.8 Flash / NVIDIA NIM',
+        model: 'NVIDIA NIM (Llama 3.3 / Nemotron) & Fallback Gemini',
         type: isHardwareOrHybrid ? 'iot' : 'software',
         title: template.nome
       });
@@ -1946,7 +1975,7 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
     `;
     
     try {
-      const response = await callGeminiApi('gemini-3.8-flash', promptInterpreter, { temperature: 0.4 });
+      const response = await callGeminiApi('meta/llama-3.3-70b-instruct', promptInterpreter, { temperature: 0.4 });
       const generatedPrompt = response.text;
       
       if (generatedPrompt) {
@@ -3858,7 +3887,7 @@ Soluções Enterprise → R$ 2999+
 Calcule o preço com base na complexidade e nessas faixas. Arredonde para final .90 ou .00. 
 Sem markdown no retorno. Apenas o JSON válido.`;
          
-         const response = await callGeminiApi('gemini-3.8-flash', prompt, {
+         const response = await callGeminiApi('meta/llama-3.3-70b-instruct', prompt, {
            temperature: 0.2,
            responseMimeType: "application/json"
          });

@@ -54,6 +54,35 @@ const normalizeProject = (savedData: any, hardware: string, nome: string, descri
   };
 };
 
+function getSavedIotHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  try {
+    const nvidiaKey =
+      localStorage.getItem('nvidia_api_key') ||
+      localStorage.getItem('NVIDIA_API_KEY') ||
+      localStorage.getItem('parvus_nvidia_key') ||
+      '';
+    const legacyKey = localStorage.getItem('parvus_key') || '';
+    const geminiKey = localStorage.getItem('gemini_api_key') || '';
+
+    const resolvedNvidia = nvidiaKey || (legacyKey && !legacyKey.startsWith('AIzaSy') ? legacyKey : '');
+    const resolvedGemini = geminiKey || (legacyKey && legacyKey.startsWith('AIzaSy') ? legacyKey : '');
+
+    if (resolvedNvidia) {
+      headers['x-nvidia-key'] = resolvedNvidia;
+      headers['authorization'] = `Bearer ${resolvedNvidia}`;
+    }
+    if (resolvedGemini) {
+      headers['x-gemini-key'] = resolvedGemini;
+    }
+  } catch {
+    // fallback silencioso
+  }
+  return headers;
+}
+
 export interface IotMonitorProps {
   onBack?: () => void;
   onGenerationStart?: (info: { title: string; placa: string }) => void;
@@ -536,18 +565,13 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
       onGenerationProgress?.(55, 'Projetando circuito de hardware, firmware C++ e BOM...');
       let apiUrl = import.meta.env.VITE_API_URL || '';
       if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
-      const userKey = localStorage.getItem('parvus_key') || '';
-      
       let req;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 300000); // 300 segundos limite
       try {
         req = await fetch(`${apiUrl}/api/ai/generate-iot`, {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            ...(userKey ? { 'x-gemini-key': userKey, 'x-nvidia-key': userKey } : {})
-          },
+          headers: getSavedIotHeaders(),
           body: JSON.stringify({ prompt, placa: selectedPlaca }),
           signal: controller.signal
         });
@@ -660,18 +684,13 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
 
       let apiUrl = import.meta.env.VITE_API_URL || '';
       if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
-      const userKey = localStorage.getItem('parvus_key') || '';
-      
       let req;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 300000);
       try {
         req = await fetch(`${apiUrl}/api/ai/generate-iot`, {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            ...(userKey ? { 'x-gemini-key': userKey, 'x-nvidia-key': userKey } : {})
-          },
+          headers: getSavedIotHeaders(),
           body: JSON.stringify({ prompt, placa: projeto.placa }),
           signal: controller.signal
         });
@@ -767,13 +786,9 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
     try {
       let apiUrl = import.meta.env.VITE_API_URL || '';
       if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
-      const userKey = localStorage.getItem('parvus_key') || '';
       const req = await fetch(`${apiUrl}/api/ai/simulate-iot`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(userKey ? { 'x-gemini-key': userKey, 'x-nvidia-key': userKey } : {})
-        },
+        headers: getSavedIotHeaders(),
         body: JSON.stringify({ 
           codigo: projeto.codigo.codigo_completo,
           linguagem: projeto.codigo.linguagem,
