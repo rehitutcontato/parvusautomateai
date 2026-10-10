@@ -74,7 +74,10 @@ export function generateWokwiDiagram(projeto: any): WokwiBundle {
     let partType = 'wokwi-led';
     let defaultAttrs: Record<string, any> = {};
 
-    if (nome.includes('dht') || nome.includes('temperatura') || nome.includes('umidade')) {
+    if (nome.includes('hx711') || nome.includes('balan') || nome.includes('peso') || nome.includes('carga') || nome.includes('load cell') || nome.includes('célula')) {
+      partType = 'wokwi-potentiometer'; // Simula a variação de deformação da célula de carga
+      defaultAttrs = { label: 'Célula HX711' };
+    } else if (nome.includes('dht') || nome.includes('temperatura') || nome.includes('umidade')) {
       partType = 'wokwi-dht22';
     } else if (nome.includes('bme280') || nome.includes('bmp280')) {
       partType = 'wokwi-bme280';
@@ -98,9 +101,9 @@ export function generateWokwiDiagram(projeto: any): WokwiBundle {
       partType = 'wokwi-potentiometer';
     } else if (nome.includes('ldr') || nome.includes('luminosidade') || nome.includes('fotoresistor')) {
       partType = 'wokwi-photoresistor-sensor';
-    } else if (nome.includes('botao') || nome.includes('botão') || nome.includes('switch') || nome.includes('pushbutton')) {
+    } else if (nome.includes('botao') || nome.includes('botão') || nome.includes('switch') || nome.includes('pushbutton') || nome.includes('tara') || nome.includes('tare')) {
       partType = 'wokwi-pushbutton';
-      defaultAttrs = { color: 'green' };
+      defaultAttrs = { color: 'blue', label: 'Tara' };
     } else if (nome.includes('led') || nome.includes('lampada') || nome.includes('lâmpada')) {
       partType = 'wokwi-led';
       defaultAttrs = { color: index % 2 === 0 ? 'red' : 'green' };
@@ -122,8 +125,9 @@ export function generateWokwiDiagram(projeto: any): WokwiBundle {
 
     const pin = comp.pino_sugerido || (comp.pinout ? comp.pinout.toString() : '');
     if (pin) {
-      const cleanPin = pin.replace(/[^0-9A-Za-z]/g, '');
-      const boardPin = cleanPin ? (cleanPin.startsWith('GPIO') ? cleanPin.replace('GPIO', '') : cleanPin) : '2';
+      // Extrai de forma limpa o número do pino GPIO (ex: "GPIO 19 (DT) e GPIO 18 (SCK)" -> "19", "D4" -> "4")
+      const pinMatch = pin.match(/(?:GPIO\s*(\d+)|(?:^|[^\w])D(\d+)|(?:^|[^\w])(\d+)(?:[^\w]|$))/i);
+      const boardPin = pinMatch ? (pinMatch[1] || pinMatch[2] || pinMatch[3]) : '4';
 
       if (partType === 'wokwi-led') {
         connections.push([`esp:${boardPin}`, `${id}:A`, 'green', ['v0']]);
@@ -144,6 +148,10 @@ export function generateWokwiDiagram(projeto: any): WokwiBundle {
       } else if (partType === 'wokwi-servo') {
         connections.push([`esp:${boardPin}`, `${id}:PWM`, 'orange', ['v0']]);
         connections.push(['esp:5V', `${id}:V+`, 'red', ['v0']]);
+        connections.push(['esp:GND.1', `${id}:GND`, 'black', ['v0']]);
+      } else if (partType === 'wokwi-potentiometer') {
+        connections.push(['esp:3V3', `${id}:VCC`, 'red', ['v0']]);
+        connections.push([`esp:${boardPin || '19'}`, `${id}:SIG`, 'green', ['v0']]);
         connections.push(['esp:GND.1', `${id}:GND`, 'black', ['v0']]);
       } else if (partType === 'wokwi-pushbutton') {
         connections.push([`esp:${boardPin}`, `${id}:1.l`, 'blue', ['v0']]);

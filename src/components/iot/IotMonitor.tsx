@@ -9,6 +9,8 @@ import { WebSerialTerminal } from './WebSerialTerminal';
 import { useAutoSaveDraft } from '../../lib/hooks/useAutoSaveDraft';
 import { safeJsonParseWithRepair } from '../../lib/jsonRepairHelper';
 import { ErrorRecoveryModal } from '../modals/ErrorRecoveryModal';
+import { renderCyberSchematicSvg } from '../../lib/schematicSvgHelper';
+import { repairIncompleteIotProject, sanitizeFirmwareCode } from '../../lib/iotRepairHelper';
 import { Lock, AlertTriangle, ShieldAlert, CheckSquare, Search, Copy, Download, Code2, Play, Square, Save, Cpu, Layers, ExternalLink, X, Radio, ArrowLeft, Loader2, Info, Terminal, Trash2, Usb, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react';
 
 const PLACAS = [
@@ -145,6 +147,7 @@ export function IotMonitor({
 
   // Simulation States
   const [isSimulating, setIsSimulating] = useState(false);
+  const [isSimRunning, setIsSimRunning] = useState(false);
   const [simTerminal, setSimTerminal] = useState<string[]>([]);
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
@@ -364,23 +367,38 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
   "titulo": "Nome profissional do projeto IoT",
   "descricao_tecnica": "Resumo de engenharia de 2 a 3 linhas destacando arquitetura e protocolos",
   "placa": "${selectedPlaca}",
-  "imagem_placa_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80",
+  "codigo": {
+    "linguagem": "C++",
+    "arquivo_principal": "main.cpp",
+    "codigo_completo": "CÓDIGO C++ INTEGRAL DE PRODUÇÃO INDUSTRIAL NÃO-BLOQUEANTE (com millis()), ricamente documentado em português, com configuração de Wi-Fi, telemetria MQTT/HTTP em formato JSON, leitura real estável de sensores com filtro de ruído, controle de atuadores, watchdog timer e logs a 115200 baud. PROIBIDO deixar incompleto ou usar placeholders.",
+    "dependencias": ["PubSubClient@^2.8", "ArduinoJson@^6.21.3"],
+    "instrucoes_upload": "Guia detalhado: seleção de placa na Arduino IDE / VSCode PlatformIO, velocidade de upload 115200 baud, partição SPIFFS/LittleFS, e pressionar botão BOOT no início do flash se necessário."
+  },
+  "telemetria_definicao": [
+    {
+      "id": "identificador_da_metrica (ex: peso, temperatura, corrente)",
+      "label": "Nome Amigável",
+      "unidade": "g ou kg ou °C ou V",
+      "tipo": "number",
+      "destaque": true
+    }
+  ],
   "analise_briefing": "Diagnóstico de engenharia em 3-4 linhas com cálculo de viabilidade elétrica e taxa de transmissão",
   "decisoes_pinagem": [
     {
       "pino": "GPIO 4",
-      "funcao": "Trigger do Módulo Relé 1",
-      "justificativa": "Pino sem restrição de boot, nível lógico limpo em 3.3V com pull-down externo"
+      "funcao": "Entrada / Saída do Periférico",
+      "justificativa": "Pino sem restrição de strapping boot, nível lógico limpo em 3.3V"
     }
   ],
   "alertas_tecnicos": [
-    "Aviso técnico de limite de corrente (máx 12mA por GPIO no ESP32), necessidade de optoacoplador para cargas indutivas"
+    "Aviso técnico de limite de corrente e tensão por GPIO no microcontrolador"
   ],
   "componentes": [
     {
-      "nome": "Nome do componente (ex: Sensor DHT22 / AM2302)",
+      "nome": "Nome do componente (ex: Célula de Carga com HX711 / Sensor DHT22)",
       "quantidade": 1,
-      "especificacao": "Part number exato, faixa de tensão (ex: 3.3V - 5.5V DC)",
+      "especificacao": "Part number exato, faixa de tensão de operação",
       "pino_sugerido": "GPIO 4",
       "preco_estimado_brl": 28.50,
       "onde_comprar": "FilipeFlop / Baú da Eletrônica / Mercado Livre",
@@ -389,13 +407,8 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
   ],
   "preco_total_estimado_brl": 165.00,
   "esquema_ligacao": {
-    "descricao_textual": "Instruções didáticas passo a passo fio a fio: especifique exatamente de qual pino da placa sai o cabo, a cor recomendada do fio (vermelho para VCC, preto para GND, amarelo/verde para sinal), e em qual borne ou pino do módulo se conecta. Destaque se o sensor opera em 3.3V ou 5V para evitar queima.",
+    "descricao_textual": "Instruções didáticas passo a passo fio a fio: especifique exatamente de qual pino da placa sai o cabo, a cor recomendada do fio, e em qual borne ou pino do módulo se conecta.",
     "conexoes": [
-      {
-        "de": "ESP32 GPIO 4",
-        "para": "IN1 do Módulo Relé",
-        "via": "Conexão direta fêmea-fêmea"
-      },
       {
         "de": "ESP32 3V3",
         "para": "VCC do Sensor",
@@ -407,30 +420,23 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
         "via": "Linha negativa da protoboard"
       }
     ],
-    "pinout_svg": "CÓDIGO SVG DO DIAGRAMA DE LIGAÇÃO. Gere um diagrama visualmente incrível e de alta precisão técnica semelhante a uma planta blueprint cibernética. Use viewBox='0 0 1000 600', width='100%', height='100%', fundo dark (#0a0d14), componentes estilizados em caixas modulares com cantos arredondados, trilhas de conexão bem traçadas com cores padrão (VCC: #ef4444, GND: #374151, SINAL: #00d4ff, DADOS: #10b981), labels legíveis com fonte monospace e pinos numerados. Retorne a string literal puramente SVG sem crases ou markdown."
-  },
-  "codigo": {
-    "linguagem": "C++",
-    "arquivo_principal": "main.cpp",
-    "codigo_completo": "Código C++ de nível industrial completo, não-bloqueante (com millis()), documentado e comentado em português, com configuração de Wi-Fi, MQTT/HTTP, leitura de sensores filtrada, controle de atuadores, watchdog e logs em 115200 baud. Zero placeholders.",
-    "dependencias": ["PubSubClient@^2.8", "ArduinoJson@^6.21.3", "DHT sensor library@^1.4.4"],
-    "instrucoes_upload": "Guia detalhado: seleção de placa na Arduino IDE / VSCode PlatformIO, velocidade de upload 921600, partição SPIFFS/LittleFS, e pressionar botão BOOT no início do flash se necessário."
+    "pinout_svg": ""
   },
   "aplicativo": {
     "framework": "React (Web Dashboard)",
     "arquivo_principal": "DashboardIot.jsx",
-    "codigo": "Código React completo com interface Dark luxuosa, cards de telemetria em tempo real, botões liga/desliga para relés com visual feedback e indicador de status de conexão WebSocket/MQTT.",
+    "codigo": "Código React completo com cards de telemetria em tempo real e indicador de status de conexão WebSocket/MQTT.",
     "instrucoes": "Como integrar este painel frontend ao broker MQTT ou backend REST para controle imediato."
   },
-  "comportamento_falha_implementado": "Descrição técnica do failsafe: desliga relés de alta potência em caso de perda de sinal por mais de 30s e aciona watchdog.",
+  "comportamento_falha_implementado": "Descrição técnica do failsafe: desliga atuadores de risco e aciona watchdog.",
   "avisos_seguranca": [
-    "⚠️ SEGURANÇA ELÉTRICA: Para chaveamento de 110V/220V AC, utilize obrigatoriamente relés com isolamento por optoacoplador e caixa de proteção antichamas com aterramento."
+    "⚠️ SEGURANÇA ELÉTRICA: Respeite os limites nominais de corrente e use aterramento comum."
   ],
   "referencias": [
     {
-      "titulo": "Datasheet Oficial do ESP32-WROOM-32",
-      "url": "https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32_datasheet_en.pdf",
-      "descricao": "Especificações elétricas de consumo, pinout e limites de corrente por GPIO."
+      "titulo": "Documentação Oficial da Placa ${selectedPlaca}",
+      "url": "https://docs.espressif.com",
+      "descricao": "Especificações elétricas e pinout oficial."
     }
   ],
   "proximos_passos": [
@@ -458,12 +464,27 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
   "titulo": "Nome técnico e comercial do projeto",
   "descricao_tecnica": "Resumo de engenharia em 2-3 linhas destacando arquitetura e funcionamento",
   "placa": "${selectedPlaca}",
-  "imagem_placa_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80",
+  "codigo": {
+    "linguagem": "C++",
+    "arquivo_principal": "main.cpp",
+    "codigo_completo": "CÓDIGO C++ INTEGRAL DE PRODUÇÃO INDUSTRIAL NÃO-BLOQUEANTE (com millis()), ricamente documentado em português, com configuração de Wi-Fi, telemetria MQTT/HTTP em formato JSON, leitura real estável de sensores com filtro de ruído, controle de atuadores, watchdog timer e logs a 115200 baud. PROIBIDO deixar incompleto ou usar placeholders.",
+    "dependencias": ["PubSubClient@^2.8", "ArduinoJson@^6.21.3"],
+    "instrucoes_upload": "Guia de upload detalhado para Arduino IDE ou PlatformIO: porta COM, velocidade de baud 115200 e modo de flash."
+  },
+  "telemetria_definicao": [
+    {
+      "id": "identificador_da_metrica (ex: peso, temperatura)",
+      "label": "Nome Amigável",
+      "unidade": "g ou kg ou °C",
+      "tipo": "number",
+      "destaque": true
+    }
+  ],
   "componentes": [
     {
-      "nome": "Nome claro do componente (ex: Sensor DHT22 / Módulo Relé 2 Canais)",
+      "nome": "Nome claro do componente (ex: Célula de Carga com HX711 / Sensor DHT22)",
       "quantidade": 1,
-      "especificacao": "Part number e especificações elétricas exatas (ex: Tensão 3.3V-5V, I2C/Digital)",
+      "especificacao": "Part number e especificações elétricas exatas",
       "pino_sugerido": "GPIO 4",
       "preco_estimado_brl": 24.90,
       "onde_comprar": "FilipeFlop / Mercado Livre / Baú da Eletrônica",
@@ -472,13 +493,8 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
   ],
   "preco_total_estimado_brl": 145.00,
   "esquema_ligacao": {
-    "descricao_textual": "Passo a passo didático e ultra minucioso de cada conexão fio a fio: de onde sai cada cabo, cor sugerida (VCC vermelho, GND preto, Dados verde/amarelo), borne de destino e advertências de tensão (3.3V vs 5V).",
+    "descricao_textual": "Passo a passo didático e minucioso de cada conexão fio a fio: de onde sai cada cabo, cor sugerida (VCC vermelho, GND preto, Dados verde/amarelo), borne de destino e advertências de tensão.",
     "conexoes": [
-      {
-        "de": "${selectedPlaca} GPIO 4",
-        "para": "Pino Sinal do Sensor",
-        "via": "Resistor Pull-up 4.7kΩ para 3.3V"
-      },
       {
         "de": "${selectedPlaca} 3V3",
         "para": "VCC do Sensor",
@@ -490,14 +506,7 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
         "via": "Trilha de terra comum"
       }
     ],
-    "pinout_svg": "CÓDIGO SVG DO DIAGRAMA DE LIGAÇÃO. Gere um diagrama visualmente impactante estilo blueprint dark com viewBox='0 0 1000 600', width='100%', height='100%', fundo dark (#0a0d14), nós e circuitos bem destacados com cabos coloridos (#ef4444 para VCC, #374151 para GND, #00d4ff para Dados), caixas modulares para os componentes e labels nítidas. Retorne a string literal puramente SVG sem crases markdown."
-  },
-  "codigo": {
-    "linguagem": "C++",
-    "arquivo_principal": "main.cpp",
-    "codigo_completo": "Código C++ completo, industrial, não-bloqueante (usando millis()), ricamente comentado em português, com configuração de Wi-Fi, telemetria MQTT/HTTP em formato JSON, leitura estável de sensores com filtro e controle de atuadores. Zero placeholders.",
-    "dependencias": ["PubSubClient@^2.8", "ArduinoJson@^6.21.3"],
-    "instrucoes_upload": "Guia de upload detalhado para Arduino IDE ou PlatformIO: porta COM, velocidade de baud 115200 e modo de flash."
+    "pinout_svg": ""
   },
   "aplicativo": {
     "framework": "React (Web Dashboard)",
@@ -506,11 +515,11 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
     "instrucoes": "Como executar o dashboard e conectar ao broker MQTT ou API REST."
   },
   "avisos_seguranca": [
-    "⚠️ Atenção aos limites de tensão: Não alimente pinos analógicos ou digitais com mais de 3.3V sem divisor resistivo."
+    "⚠️ Atenção aos limites nominais de tensão e corrente do circuito."
   ],
   "referencias": [
     {
-      "titulo": "Documentação e Pinout da Placa ${selectedPlaca}",
+      "titulo": "Documentação Oficial da Placa ${selectedPlaca}",
       "url": "https://docs.espressif.com",
       "descricao": "Guia oficial com tabela de pinos seguros e funções de multiplexação."
     }
@@ -562,6 +571,15 @@ Retorne EXCLUSIVAMENTE um JSON válido com esta estrutura estrita:
       if (!data || data.error) {
         throw new Error(data?.error || "Erro ao gerar o projeto com a IA.");
       }
+
+      // Sanitiza e repara o firmware se vier incompleto ou truncado
+      if (data.codigo?.codigo_completo) {
+        data.codigo.codigo_completo = sanitizeFirmwareCode(data.codigo.codigo_completo);
+      }
+      const contextPromptText = iotConstructionMode === 'agency' 
+        ? `${iotBriefing.hardware} ${iotBriefing.objetivo}` 
+        : descricao;
+      data = repairIncompleteIotProject(data, contextPromptText, selectedPlaca);
 
       setProjeto(data);
       setActiveTab('VISÃO GERAL');
@@ -678,6 +696,12 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
         throw new Error(data?.error || "Erro ao editar projeto com a IA.");
       }
 
+      // Sanitiza e repara o firmware se vier incompleto ou truncado
+      if (data.codigo?.codigo_completo) {
+        data.codigo.codigo_completo = sanitizeFirmwareCode(data.codigo.codigo_completo);
+      }
+      data = repairIncompleteIotProject(data, editPrompt, projeto?.placa || selectedPlaca);
+
       setProjeto(data);
       setEditPrompt(""); // Clear input on success
       onGenerationProgress?.(100, 'Revisão concluída com sucesso!');
@@ -737,6 +761,7 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
   const simulateExecution = async () => {
     if (!projeto?.codigo?.codigo_completo) return;
     setIsSimulating(true);
+    setIsSimRunning(true);
     setSimTerminal(['>_ Iniciando sistema IoT Emulator...', `>_ Target: ${projeto.placa}`, '>_ Compilando payload...']);
     
     try {
@@ -766,16 +791,17 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
       if (data && data.output) {
         const lines = data.output.split('\n');
         for (let i = 0; i < lines.length; i++) {
-          await new Promise(resolve => setTimeout(resolve, 300));
+          await new Promise(resolve => setTimeout(resolve, 200));
           setSimTerminal(prev => [...prev, lines[i]]);
         }
+        setSimTerminal(prev => [...prev, '', '>_ Simulação concluída com sucesso. Conexão mantida.']);
       } else {
         setSimTerminal(prev => [...prev, '>_ Serviço temporariamente indisponível.', '>_ Simulação abortada.']);
       }
     } catch (err) {
       setSimTerminal(prev => [...prev, '>_ [ERROR] Falha de comunicação com o cluster de simulação.']);
     } finally {
-      setTimeout(() => setIsSimulating(false), 500);
+      setIsSimRunning(false);
     }
   };
 
@@ -821,8 +847,9 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
 
     // Add schema
     if (projeto.esquema_ligacao) {
-      if (projeto.esquema_ligacao.pinout_svg) {
-        zip.file('esquema.svg', projeto.esquema_ligacao.pinout_svg);
+      const svgContent = renderCyberSchematicSvg(projeto);
+      if (svgContent) {
+        zip.file('esquema.svg', svgContent);
       }
       if (projeto.esquema_ligacao.descricao_textual) {
         zip.file('LIGACOES.md', projeto.esquema_ligacao.descricao_textual);
@@ -1558,95 +1585,95 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
                   </div>
                 )}
 
-                {/* 2. ESQUEMA */}
-                {activeTab === 'ESQUEMA' && (
-                  <div className="animate-in fade-in duration-300">
-                     <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest">&gt;_ Mapeamento de Pinos</h3>
-                        <button onClick={() => downloadFile('esquema.svg', projeto?.esquema_ligacao?.pinout_svg || '')} className="flex items-center gap-2 text-[#00d4ff] border border-[#00d4ff]/30 px-4 py-2 rounded text-xs uppercase hover:bg-[#00d4ff]/10">
-                          <Download size={14} /> Baixar SVG
-                        </button>
-                     </div>
-                     <div className="bg-[#050505] border border-[#333] rounded-lg p-6 mb-8 flex items-center justify-center overflow-x-auto" 
-                          dangerouslySetInnerHTML={{ __html: (projeto?.esquema_ligacao?.pinout_svg || '').replace(/<style.*?>.*?<\/style>/is, '') }} />
-                     
-                     <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest mb-4">&gt;_ Conexões Físicas</h3>
-                     <div className="markdown-body mb-6">
-                       <ReactMarkdown>{projeto?.esquema_ligacao?.descricao_textual || 'Sem descrição.'}</ReactMarkdown>
-                     </div>
-                     
-                     <div className="overflow-x-auto w-full border border-[#222] rounded-lg">
-                       <table className="w-full text-sm text-left">
-                         <thead className="text-xs text-gray-500 uppercase bg-[#111]">
-                           <tr>
-                             <th className="px-6 py-3">Origem (DE)</th>
-                             <th className="px-6 py-3">Destino (PARA)</th>
-                             <th className="px-6 py-3">Intermediário (VIA)</th>
-                           </tr>
-                         </thead>
-                         <tbody>
-                           {projeto?.esquema_ligacao?.conexoes?.map((c: any, i: number) => (
-                             <tr key={i} className="bg-[#0a0a0a] border-b border-[#222] last:border-b-0">
-                               <td className="px-6 py-4 font-bold text-white">{c.de}</td>
-                               <td className="px-6 py-4 text-gray-300">{c.para}</td>
-                               <td className="px-6 py-4 text-[#ffaa00]">{c.via}</td>
-                             </tr>
-                           ))}
-                         </tbody>
-                       </table>
-                     </div>
-                  </div>
-                )}
+                 {/* 2. ESQUEMA */}
+                 {activeTab === 'ESQUEMA' && (
+                   <div className="animate-in fade-in duration-300">
+                      <div className="flex justify-between items-center mb-6">
+                         <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest">&gt;_ Mapeamento de Pinos e Blueprint Eletrônico</h3>
+                         <button onClick={() => downloadFile('esquema.svg', renderCyberSchematicSvg(projeto))} className="flex items-center gap-2 text-[#00d4ff] border border-[#00d4ff]/30 px-4 py-2 rounded text-xs uppercase hover:bg-[#00d4ff]/10">
+                           <Download size={14} /> Baixar SVG
+                         </button>
+                      </div>
+                      <div className="bg-[#050505] border border-[#333] rounded-lg p-4 mb-8 flex items-center justify-center overflow-x-auto min-h-[420px]" 
+                           dangerouslySetInnerHTML={{ __html: renderCyberSchematicSvg(projeto).replace(/<style.*?>.*?<\/style>/is, '') }} />
+                      
+                      <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest mb-4">&gt;_ Conexões Físicas</h3>
+                      <div className="markdown-body mb-6">
+                        <ReactMarkdown>{projeto?.esquema_ligacao?.descricao_textual || 'Sem descrição.'}</ReactMarkdown>
+                      </div>
+                      
+                      <div className="overflow-x-auto w-full border border-[#222] rounded-lg">
+                        <table className="w-full text-sm text-left">
+                          <thead className="text-xs text-gray-500 uppercase bg-[#111]">
+                            <tr>
+                              <th className="px-6 py-3">Origem (DE)</th>
+                              <th className="px-6 py-3">Destino (PARA)</th>
+                              <th className="px-6 py-3">Intermediário (VIA)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {projeto?.esquema_ligacao?.conexoes?.map((c: any, i: number) => (
+                              <tr key={i} className="bg-[#0a0a0a] border-b border-[#222] last:border-b-0">
+                                <td className="px-6 py-4 font-bold text-white">{c.de}</td>
+                                <td className="px-6 py-4 text-gray-300">{c.para}</td>
+                                <td className="px-6 py-4 text-[#ffaa00]">{c.via}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                   </div>
+                 )}
 
-                {/* 3. CÓDIGO */}
-                {activeTab === 'CÓDIGO' && (
-                  <div className="animate-in fade-in duration-300 h-full flex flex-col">
-                     <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-                        <div className="flex items-center gap-4">
-                          <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest flex items-center gap-2">
-                             <Code2 size={16} /> Firmware — {projeto?.codigo?.arquivo_principal || 'main.cpp'}
-                          </h3>
-                          <button 
-                            onClick={() => setIsEditingCode(!isEditingCode)} 
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-colors border ${
-                              isEditingCode 
-                                ? 'bg-[#00d4ff]/20 text-[#00d4ff] border-[#00d4ff]/50 shadow-[0_0_10px_rgba(0,212,255,0.2)]' 
-                                : 'bg-[#111] text-gray-400 border-[#333] hover:text-white hover:border-gray-500'
-                            }`}
-                          >
-                            {isEditingCode ? <Save size={14} /> : <Code2 size={14} />}
-                            {isEditingCode ? 'Concluir Edição' : 'Editar Manualmente'}
-                          </button>
-                        </div>
-                        <div className="flex gap-2">
-                          <button onClick={simulateExecution} disabled={isSimulating} className="flex items-center gap-2 text-black font-bold bg-[#00ff88] px-4 py-2 rounded text-xs uppercase hover:bg-[#00cc66] shadow-[0_0_15px_rgba(0,255,136,0.2)]">
-                            <Play size={14} fill="currentColor" /> Simular Execução
-                          </button>
-                          <button onClick={() => copyToClipboard(projeto?.codigo?.codigo_completo || '')} className="flex items-center gap-2 text-white border border-[#333] px-3 py-2 rounded text-xs hover:bg-[#222]">
-                            <Copy size={14} />
-                          </button>
-                          <button onClick={() => downloadFile(projeto?.codigo?.arquivo_principal || 'main.cpp', projeto?.codigo?.codigo_completo || '')} className="flex items-center gap-2 text-white border border-[#333] px-3 py-2 rounded text-xs hover:bg-[#222]">
-                            <Download size={14} />
-                          </button>
-                        </div>
-                     </div>
-                       
-                     <div className="flex-1 bg-[#050505] border border-[#333] rounded overflow-hidden relative flex flex-col">
-                       {isEditingCode ? (
-                         <textarea
-                           value={projeto?.codigo?.codigo_completo || ''}
-                           onChange={(e) => handleCodeChange(e.target.value)}
-                           className="w-full h-full bg-[#0a0a0a] text-gray-200 font-mono text-sm p-4 outline-none resize-none custom-scrollbar focus:ring-1 focus:ring-[#00d4ff]/50"
-                           spellCheck={false}
-                         />
-                       ) : (
-                         <pre className="p-4 text-sm font-mono leading-relaxed h-full overflow-auto">
-                           <code className={`language-${(projeto?.codigo?.linguagem || '').toLowerCase().includes('python') ? 'python' : 'cpp'}`}>
-                             {projeto?.codigo?.codigo_completo || '// Código não fornecido.'}
-                           </code>
-                         </pre>
-                       )}
-                     </div>
+                 {/* 3. CÓDIGO */}
+                 {activeTab === 'CÓDIGO' && (
+                   <div className="animate-in fade-in duration-300 h-full flex flex-col">
+                      <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+                         <div className="flex items-center gap-4">
+                           <h3 className="text-[#00d4ff] font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                              <Code2 size={16} /> Firmware — {projeto?.codigo?.arquivo_principal || 'main.cpp'}
+                           </h3>
+                           <button 
+                             onClick={() => setIsEditingCode(!isEditingCode)} 
+                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-colors border ${
+                               isEditingCode 
+                                 ? 'bg-[#00d4ff]/20 text-[#00d4ff] border-[#00d4ff]/50 shadow-[0_0_10px_rgba(0,212,255,0.2)]' 
+                                 : 'bg-[#111] text-gray-400 border-[#333] hover:text-white hover:border-gray-500'
+                             }`}
+                           >
+                             {isEditingCode ? <Save size={14} /> : <Code2 size={14} />}
+                             {isEditingCode ? 'Concluir Edição' : 'Editar Manualmente'}
+                           </button>
+                         </div>
+                         <div className="flex gap-2">
+                           <button onClick={simulateExecution} disabled={isSimRunning} className="flex items-center gap-2 text-black font-bold bg-[#00ff88] px-4 py-2 rounded text-xs uppercase hover:bg-[#00cc66] shadow-[0_0_15px_rgba(0,255,136,0.2)]">
+                             <Play size={14} fill="currentColor" /> Simular Execução
+                           </button>
+                           <button onClick={() => copyToClipboard(sanitizeFirmwareCode(projeto?.codigo?.codigo_completo || ''))} className="flex items-center gap-2 text-white border border-[#333] px-3 py-2 rounded text-xs hover:bg-[#222]">
+                             <Copy size={14} />
+                           </button>
+                           <button onClick={() => downloadFile(projeto?.codigo?.arquivo_principal || 'main.cpp', sanitizeFirmwareCode(projeto?.codigo?.codigo_completo || ''))} className="flex items-center gap-2 text-white border border-[#333] px-3 py-2 rounded text-xs hover:bg-[#222]">
+                             <Download size={14} />
+                           </button>
+                         </div>
+                      </div>
+                        
+                      <div className="flex-1 bg-[#050505] border border-[#333] rounded overflow-hidden relative flex flex-col">
+                        {isEditingCode ? (
+                          <textarea
+                            value={projeto?.codigo?.codigo_completo || ''}
+                            onChange={(e) => handleCodeChange(e.target.value)}
+                            className="w-full h-full bg-[#0a0a0a] text-gray-200 font-mono text-sm p-4 outline-none resize-none custom-scrollbar focus:ring-1 focus:ring-[#00d4ff]/50"
+                            spellCheck={false}
+                          />
+                        ) : (
+                          <pre className="p-4 text-sm font-mono leading-relaxed h-full overflow-auto">
+                            <code className={`language-${(projeto?.codigo?.linguagem || '').toLowerCase().includes('python') ? 'python' : 'cpp'}`}>
+                              {sanitizeFirmwareCode(projeto?.codigo?.codigo_completo) || '// Código não fornecido.'}
+                            </code>
+                          </pre>
+                        )}
+                      </div>
 
                      <div className="mt-6 bg-[#111] p-4 border border-[#333] rounded">
                        <h4 className="text-gray-400 text-xs font-bold uppercase mb-2">Instruções de Upload</h4>
@@ -1894,7 +1921,14 @@ Retorne EXCLUSIVAMENTE o novo JSON completo e atualizado, estritamente válido e
                  <div className="text-xs text-gray-400 mb-3">{p.hardware} · <span className="text-[#00ff88]">R$ {(p.dados_atuais?.preco_total || p.dados_atuais?.preco_total_estimado_brl || 0).toFixed(2)}</span></div>
                  <div className="text-[10px] text-gray-600 mb-3 uppercase tracking-wider">Criado em: {new Date(p.created_at).toLocaleDateString()}</div>
                  <div className="flex gap-2">
-                    <button onClick={() => { setProjeto(normalizeProject(p.dados_atuais, p.hardware, p.nome, p.descricao)); setActiveTab('VISÃO GERAL'); setSelectedPlaca(p.hardware); setShowSidebar(false); }} className="flex-1 border border-[#00d4ff]/30 text-[#00d4ff] hover:bg-[#00d4ff]/10 py-2 rounded text-xs transition-colors uppercase font-bold tracking-wider">Carregar</button>
+                    <button onClick={() => { 
+                      const norm = normalizeProject(p.dados_atuais, p.hardware, p.nome, p.descricao);
+                      setProjeto(norm); 
+                      setActiveTab('VISÃO GERAL'); 
+                      setSelectedPlaca(p.hardware); 
+                      setShowSidebar(false); 
+                      if (norm) onGenerationComplete?.(norm);
+                    }} className="flex-1 border border-[#00d4ff]/30 text-[#00d4ff] hover:bg-[#00d4ff]/10 py-2 rounded text-xs transition-colors uppercase font-bold tracking-wider">Carregar</button>
                     <button onClick={() => deleteProjeto(p.id)} className="px-3 border border-[#ff4444]/30 text-[#ff4444] hover:bg-[#ff4444]/10 rounded transition-colors"><Trash2 size={14}/></button>
                  </div>
                </div>

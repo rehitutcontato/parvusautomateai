@@ -9,6 +9,7 @@ import OpenAI from "openai";
 import { GoogleGenAI } from "@google/genai";
 import { jsonrepair } from "jsonrepair";
 import { safeJsonParseWithRepair, extractJsonString } from "./src/lib/jsonRepairHelper";
+import { repairIncompleteIotProject, sanitizeFirmwareCode } from "./src/lib/iotRepairHelper";
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
@@ -79,7 +80,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
         
         const genConfig: any = {
           temperature: config?.temperature !== undefined ? config.temperature : 0.2,
-          maxOutputTokens: config?.maxOutputTokens || 8192,
+          maxOutputTokens: config?.maxOutputTokens || 16384,
         };
         
         if (config?.responseMimeType === 'application/json' || config?.responseSchema) {
@@ -95,8 +96,8 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
           config: genConfig
         });
 
-        // Timeout gradual de 35s por modelo Gemini
-        const response: any = await withTimeout(callPromise, 35000, `Gemini (${geminiModel})`);
+        // Timeout gradual de 50s por modelo Gemini
+        const response: any = await withTimeout(callPromise, 50000, `Gemini (${geminiModel})`);
         if (response?.text) return response.text;
       } catch (err: any) {
         console.warn(`[REQ ${reqId}] Falha/Timeout no Gemini (${geminiModel}): ${err.message}.`);
@@ -126,7 +127,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
       const openai = new OpenAI({ 
         apiKey: nvidiaKey, 
         baseURL: "https://integrate.api.nvidia.com/v1",
-        timeout: 40000 
+        timeout: 50000 
       });
       
       let messages: any[] = [{ role: "user", content: prompt }];
@@ -152,7 +153,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
             messages,
             temperature: config?.temperature !== undefined ? config.temperature : 0.2,
             top_p: 1,
-            max_tokens: config?.max_tokens || 12288,
+            max_tokens: config?.max_tokens || 16384,
           };
           
           if (withResponseFormat) {
@@ -160,7 +161,7 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
           }
     
           const callPromise = openai.chat.completions.create(openAiConfig);
-          const response = await withTimeout(callPromise, 40000, `NVIDIA (${nvidiaModel})`);
+          const response = await withTimeout(callPromise, 50000, `NVIDIA (${nvidiaModel})`);
           const content = response.choices[0].message?.content;
           if (content) return content;
         } catch (err: any) {
@@ -202,6 +203,11 @@ async function executeGenerativeTask(prompt: string, config: any, userKey?: stri
   throw new Error(`Falha crítica em todos os provedores/modelos de contingência. Detalhes: ${errors.join(" | ")}`);
 }
 
+// Buffer em memória para telemetria de alta performance e baixo overhead
+const telemetryBuffer = new Map<string, any[]>();
+const globalRecentPackets: any[] = [];
+const deviceCommandBuffer = new Map<string, any[]>();
+
 app.post("/api/ai/generate-iot", async (req, res) => {
   const reqId = Math.random().toString(36).substring(7);
   console.log(`[REQ ${reqId}] POST /api/ai/generate-iot - Recebendo pedido para placa: ${req.body?.placa}`);
@@ -210,9 +216,11 @@ app.post("/api/ai/generate-iot", async (req, res) => {
     const { prompt, placa } = req.body;
     const userKey = (req.headers['x-gemini-key'] || req.headers['x-nvidia-key']) as string;
     
-    // Deixamos o motor responder dinamicamente de acordo com o esquema solicitado no prompt do IotMonitor.tsx
+    // Deixamos o motor responder dinamicamente com limite ampliado de tokens
     const config = {
-      responseMimeType: 'application/json'
+      responseMimeType: 'application/json',
+      maxOutputTokens: 16384,
+      max_tokens: 16384
     };
 
     res.setHeader('Content-Type', 'application/json');
@@ -233,6 +241,21 @@ app.post("/api/ai/generate-iot", async (req, res) => {
       } catch (parseErr: any) {
         throw new Error(`Falha ao converter e reparar resposta JSON da IA: ${parseErr.message}`);
       }
+
+      // Sanitiza e valida completude do código de firmware
+      if (parsedJson?.codigo) {
+        if (typeof parsedJson.codigo.codigo_completo === 'string') {
+          parsedJson.codigo.codigo_completo = sanitizeFirmwareCode(parsedJson.codigo.codigo_completo);
+        }
+      }
+
+      // Se o firmware veio truncado ou incompleto (ex: sem loop ou sem setup), repara imediatamente
+      const codeStr = parsedJson?.codigo?.codigo_completo || '';
+      const isIncomplete = !codeStr || !codeStr.includes('void loop') || !codeStr.includes('void setup') || codeStr.length < 250;
+      if (isIncomplete) {
+        console.warn(`[REQ ${reqId}] Firmware truncado ou incompleto detectado. Acionando síntese de engenharia industrial...`);
+        parsedJson = repairIncompleteIotProject(parsedJson, prompt, placa);
+      }
       
       res.write(JSON.stringify(parsedJson));
       res.end();
@@ -250,6 +273,108 @@ app.post("/api/ai/generate-iot", async (req, res) => {
       res.end();
     }
   }
+});
+
+// ENDPOINTS REAIS DE TELEMETRIA IOT INTEGRADOS COM BANCO DE DADOS
+app.post(["/api/iot/telemetry", "/api/v1/iot/telemetry"], async (req, res) => {
+  const reqId = Math.random().toString(36).substring(7);
+  try {
+    const body = req.body || {};
+    const deviceId = body.device_id || body.deviceId || 'esp32_scale_01';
+    const tenant = body.tenant || 'enterprise-corp';
+    
+    const packet = {
+      id: 'pkt_' + Math.random().toString(36).substring(2, 8),
+      device_id: deviceId,
+      tenant,
+      timestamp: body.timestamp || new Date().toISOString(),
+      ...body
+    };
+
+    if (!telemetryBuffer.has(deviceId)) {
+      telemetryBuffer.set(deviceId, []);
+    }
+    const history = telemetryBuffer.get(deviceId)!;
+    history.push(packet);
+    if (history.length > 50) history.shift();
+
+    globalRecentPackets.push(packet);
+    if (globalRecentPackets.length > 100) globalRecentPackets.shift();
+
+    console.log(`[REQ ${reqId}] Telemetria ingerida de ${deviceId}:`, JSON.stringify(packet).substring(0, 120));
+
+    // Persistência no Supabase se configurado
+    if (process.env.SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)) {
+      try {
+        const { createClient } = await import('@supabase/supabase-js');
+        const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!);
+        await sb.from('iot_devices').update({
+          dados_atuais: packet,
+          ultimo_ping: new Date().toISOString(),
+          status: 'online'
+        }).or(`token_dispositivo.eq.${deviceId},nome.ilike.%${deviceId}%`);
+      } catch (dbErr: any) {
+        // Falha silenciosa defensiva
+      }
+    }
+
+    res.json({ success: true, timestamp: packet.timestamp, packet });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get(["/api/iot/telemetry", "/api/iot/telemetry/:deviceId"], async (req, res) => {
+  const targetId = req.params.deviceId;
+  let history: any[] = [];
+
+  if (targetId && targetId !== 'latest' && targetId !== 'all') {
+    history = telemetryBuffer.get(targetId) || [];
+  }
+
+  // Fallback para buffer global se o dispositivo específico não tiver histórico
+  if (history.length === 0 && globalRecentPackets.length > 0) {
+    history = [...globalRecentPackets];
+  }
+
+  // Fallback para Supabase se o buffer em memória estiver vazio
+  if (history.length === 0 && process.env.SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)) {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!);
+      const { data } = await sb.from('iot_devices')
+        .select('dados_atuais, ultimo_ping, nome, hardware')
+        .order('updated_at', { ascending: false })
+        .limit(25);
+      if (data && data.length > 0) {
+        history = data
+          .map(d => d.dados_atuais)
+          .filter(Boolean);
+      }
+    } catch {
+      // Ignora falha de DB defensivamente
+    }
+  }
+
+  const latest = history[history.length - 1] || null;
+  res.json({ success: true, latest, history });
+});
+
+app.post("/api/iot/command", (req, res) => {
+  const { device_id, command, params } = req.body;
+  const cmd = {
+    id: 'cmd_' + Math.random().toString(36).substring(2, 8),
+    device_id,
+    command,
+    params,
+    timestamp: new Date().toISOString()
+  };
+  if (!deviceCommandBuffer.has(device_id)) {
+    deviceCommandBuffer.set(device_id, []);
+  }
+  deviceCommandBuffer.get(device_id)!.push(cmd);
+  console.log(`[IOT CMD] Comando enfileirado para ${device_id}: ${command}`);
+  res.json({ success: true, cmd });
 });
 
 app.post("/api/ai/simulate-iot", async (req, res) => {

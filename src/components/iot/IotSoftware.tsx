@@ -5,6 +5,7 @@ import {
   ExternalLink, Layers, Database, Lock, Sliders, Webhook
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { detectDeviceCategory, formatSafeTimestamp } from '../../lib/iotRepairHelper';
 
 interface IotSoftwareProps {
   onNavigateToMonitor?: () => void;
@@ -45,56 +46,161 @@ export function IotSoftware({
   const [brokerHost, setBrokerHost] = useState('broker.parvusautomate.com');
   const [brokerPort, setBrokerPort] = useState(1883);
 
-  // Test Packet States
-  const [testPayload, setTestPayload] = useState({
-    temperatura: 25.4,
-    umidade: 62.0,
-    rele_1: false,
-    rssi: -58,
-    bateria_mv: 4120
+  const isScale = detectDeviceCategory(currentHardwareProject) === 'scale';
+
+  // Test Packet States adaptativo
+  const [testPayload, setTestPayload] = useState<any>(() => {
+    if (isScale) {
+      return {
+        peso: 1250.4,
+        unidade: 'g',
+        tara: 0.0,
+        adc_raw: 842100,
+        estavel: true,
+        rssi: -58,
+        bateria_mv: 4120
+      };
+    }
+    return {
+      temperatura: 25.4,
+      umidade: 62.0,
+      rele_1: false,
+      rssi: -58,
+      bateria_mv: 4120
+    };
   });
+
   const [dispatchStatus, setDispatchStatus] = useState<string | null>(null);
   const [logs, setLogs] = useState<Array<{ time: string; msg: string; type: 'info' | 'success' | 'warn' }>>([
     { time: '14:20:01', msg: 'IoT Cloud Gateway inicializado em porta 8883 (MQTTS) e 443 (HTTPS).', type: 'info' },
     { time: '14:20:05', msg: 'Tópicos pub/sub registrados no tenant default.', type: 'info' }
   ]);
 
-  // Automation Rules
-  const [rules, setRules] = useState<AutomationRule[]>([
-    {
-      id: 'rule_1',
-      name: 'Resfriamento Crítico (Temp > 30°C)',
-      conditionSensor: 'temperatura',
-      conditionOperator: '>',
-      conditionValue: 30,
-      actionType: 'MQTT_COMMAND',
-      actionTarget: 'parvus/enterprise-corp/esp32_node_01/commands {"rele_1": true}',
-      active: true,
-      lastTriggered: '10 min atrás'
-    },
-    {
-      id: 'rule_2',
-      name: 'Alerta de Umidade Baixa (< 30%)',
-      conditionSensor: 'umidade',
-      conditionOperator: '<',
-      conditionValue: 30,
-      actionType: 'WEBHOOK_POST',
-      actionTarget: 'https://api.empresa.com/webhooks/alertas-ambiente',
-      active: true,
-      lastTriggered: 'Nunca'
-    },
-    {
-      id: 'rule_3',
-      name: 'Snapshot em Banco Supabase a cada 60s',
-      conditionSensor: 'temperatura',
-      conditionOperator: '>',
-      conditionValue: -50,
-      actionType: 'DATABASE_LOG',
-      actionTarget: 'supabase.table("iot_telemetry")',
-      active: true,
-      lastTriggered: 'Há 5 segundos'
+  // Automation Rules adaptativas ao projeto
+  const [rules, setRules] = useState<AutomationRule[]>(() => {
+    if (isScale) {
+      return [
+        {
+          id: 'rule_1',
+          name: 'Alerta de Sobrecarga (Peso > 5000g)',
+          conditionSensor: 'peso',
+          conditionOperator: '>',
+          conditionValue: 5000,
+          actionType: 'MQTT_COMMAND',
+          actionTarget: `parvus/${tenantName}/${deviceId}/commands {"alarme": true}`,
+          active: true,
+          lastTriggered: 'Nunca'
+        },
+        {
+          id: 'rule_2',
+          name: 'Notificação de Pesagem Estabilizada',
+          conditionSensor: 'estavel',
+          conditionOperator: '==',
+          conditionValue: 1,
+          actionType: 'WEBHOOK_POST',
+          actionTarget: 'https://api.empresa.com/webhooks/pesagem-estavel',
+          active: true,
+          lastTriggered: '10 min atrás'
+        },
+        {
+          id: 'rule_3',
+          name: 'Snapshot em Banco Supabase a cada Pesagem',
+          conditionSensor: 'peso',
+          conditionOperator: '>',
+          conditionValue: 0,
+          actionType: 'DATABASE_LOG',
+          actionTarget: 'supabase.table("iot_devices")',
+          active: true,
+          lastTriggered: 'Há 5 segundos'
+        }
+      ];
     }
-  ]);
+    return [
+      {
+        id: 'rule_1',
+        name: 'Resfriamento Crítico (Temp > 30°C)',
+        conditionSensor: 'temperatura',
+        conditionOperator: '>',
+        conditionValue: 30,
+        actionType: 'MQTT_COMMAND',
+        actionTarget: `parvus/${tenantName}/${deviceId}/commands {"rele_1": true}`,
+        active: true,
+        lastTriggered: '10 min atrás'
+      },
+      {
+        id: 'rule_2',
+        name: 'Alerta de Umidade Baixa (< 30%)',
+        conditionSensor: 'umidade',
+        conditionOperator: '<',
+        conditionValue: 30,
+        actionType: 'WEBHOOK_POST',
+        actionTarget: 'https://api.empresa.com/webhooks/alertas-ambiente',
+        active: true,
+        lastTriggered: 'Nunca'
+      },
+      {
+        id: 'rule_3',
+        name: 'Snapshot em Banco Supabase a cada 60s',
+        conditionSensor: 'temperatura',
+        conditionOperator: '>',
+        conditionValue: -50,
+        actionType: 'DATABASE_LOG',
+        actionTarget: 'supabase.table("iot_telemetry")',
+        active: true,
+        lastTriggered: 'Há 5 segundos'
+      }
+    ];
+  });
+
+  // Atualiza payload e regras ao trocar projeto ativo
+  useEffect(() => {
+    if (isScale) {
+      setTestPayload({
+        peso: 1250.4,
+        unidade: 'g',
+        tara: 0.0,
+        adc_raw: 842100,
+        estavel: true,
+        rssi: -58,
+        bateria_mv: 4120
+      });
+      setRules([
+        {
+          id: 'rule_1',
+          name: 'Alerta de Sobrecarga (Peso > 5000g)',
+          conditionSensor: 'peso',
+          conditionOperator: '>',
+          conditionValue: 5000,
+          actionType: 'MQTT_COMMAND',
+          actionTarget: `parvus/${tenantName}/${deviceId}/commands {"alarme": true}`,
+          active: true,
+          lastTriggered: 'Nunca'
+        },
+        {
+          id: 'rule_2',
+          name: 'Notificação de Pesagem Estabilizada',
+          conditionSensor: 'estavel',
+          conditionOperator: '==',
+          conditionValue: 1,
+          actionType: 'WEBHOOK_POST',
+          actionTarget: 'https://api.empresa.com/webhooks/pesagem-estavel',
+          active: true,
+          lastTriggered: 'Recente'
+        },
+        {
+          id: 'rule_3',
+          name: 'Snapshot em Banco Supabase a cada Pesagem',
+          conditionSensor: 'peso',
+          conditionOperator: '>',
+          conditionValue: 0,
+          actionType: 'DATABASE_LOG',
+          actionTarget: 'supabase.table("iot_devices")',
+          active: true,
+          lastTriggered: 'Há 2 segundos'
+        }
+      ]);
+    }
+  }, [isScale]);
 
   const copyText = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -128,7 +234,21 @@ const char* TOPIC_COMMANDS  = "${topicCommands}";
 
 // Exemplo de Envio no Loop com ArduinoJson:
 /*
-void enviarTelemetria(float temp, float umid) {
+${isScale ? `void enviarTelemetria(float peso, long adcRaw, bool estavel) {
+  StaticJsonDocument<256> doc;
+  doc["device_id"] = DEVICE_ID;
+  doc["peso"] = peso;
+  doc["unidade"] = "g";
+  doc["tara"] = 0.0;
+  doc["estavel"] = estavel;
+  doc["adc_raw"] = adcRaw;
+  doc["timestamp"] = millis();
+  
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(TOPIC_TELEMETRY, buffer);
+  Serial.println("[MQTT] Pesagem despachada com sucesso!");
+}` : `void enviarTelemetria(float temp, float umid) {
   StaticJsonDocument<256> doc;
   doc["device_id"] = DEVICE_ID;
   doc["temperatura"] = temp;
@@ -139,38 +259,57 @@ void enviarTelemetria(float temp, float umid) {
   serializeJson(doc, buffer);
   client.publish(TOPIC_TELEMETRY, buffer);
   Serial.println("[MQTT] Telemetria despachada com sucesso!");
-}
+}`}
 */`;
 
   const handleSendTestTelemetry = () => {
     setDispatchStatus('enviando');
-    const timeNow = new Date().toLocaleTimeString('pt-BR');
+    const timeNow = formatSafeTimestamp();
     
     setTimeout(() => {
       const packet = {
         device_id: deviceId,
         tenant: tenantName,
         timestamp: new Date().toISOString(),
-        data: testPayload
+        data: testPayload,
+        ...testPayload
       };
+
+      // Ingestão no backend real HTTP
+      let apiUrl = import.meta.env.VITE_API_URL || '';
+      if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
+      fetch(`${apiUrl}/api/iot/telemetry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(packet)
+      }).catch(e => console.warn("Aviso envio HTTP:", e));
 
       // Dispara callback para alimentar o IoT Monitor
       if (onDispatchTelemetry) {
         onDispatchTelemetry(packet);
       }
 
+      const summary = isScale
+        ? `Peso: ${testPayload.peso}g, ADC: ${testPayload.adc_raw}, Estável: ${testPayload.estavel ? 'SIM' : 'NÃO'}`
+        : `Temp: ${testPayload.temperatura}°C, Umid: ${testPayload.umidade}%`;
+
       // Adiciona aos logs locais
       setLogs(prev => [
         { 
           time: timeNow, 
-          msg: `[INGESTION] Pacote recebido de ${deviceId} em ${topicTelemetry} -> Temp: ${testPayload.temperatura}°C, Umid: ${testPayload.umidade}%`, 
+          msg: `[INGESTION] Pacote recebido de ${deviceId} em ${topicTelemetry} -> ${summary}`, 
           type: 'success' 
         },
         ...prev
       ]);
 
       // Verifica regras de automação
-      if (testPayload.temperatura > 30) {
+      if (isScale && testPayload.peso > 5000) {
+        setLogs(prev => [
+          { time: timeNow, msg: `[TRIGGER] Regra "Alerta de Sobrecarga" disparada! Comando enviado para ${topicCommands}`, type: 'warn' },
+          ...prev
+        ]);
+      } else if (!isScale && testPayload.temperatura > 30) {
         setLogs(prev => [
           { time: timeNow, msg: `[TRIGGER] Regra "Resfriamento Crítico" disparada! Comando enviado para ${topicCommands}`, type: 'warn' },
           ...prev
@@ -548,25 +687,150 @@ void enviarTelemetria(float temp, float umid) {
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-                    <div className="bg-[#0b0d14] p-2.5 rounded-lg border border-white/10">
-                      <span className="text-gray-400 block text-[10px]">Temperatura:</span>
-                      <span className="text-white font-bold text-sm">{testPayload.temperatura} °C</span>
-                    </div>
-                    <div className="bg-[#0b0d14] p-2.5 rounded-lg border border-white/10">
-                      <span className="text-gray-400 block text-[10px]">Umidade:</span>
-                      <span className="text-white font-bold text-sm">{testPayload.umidade} %</span>
-                    </div>
-                    <div className="bg-[#0b0d14] p-2.5 rounded-lg border border-white/10">
-                      <span className="text-gray-400 block text-[10px]">RSSI Wi-Fi:</span>
-                      <span className="text-[#00d4ff] font-bold text-sm">{testPayload.rssi} dBm</span>
-                    </div>
-                    <div className="bg-[#0b0d14] p-2.5 rounded-lg border border-white/10">
-                      <span className="text-gray-400 block text-[10px]">Relé 1:</span>
-                      <span className={testPayload.rele_1 ? "text-[#00ff88] font-bold text-sm" : "text-gray-400 font-bold text-sm"}>
-                        {testPayload.rele_1 ? "LIGADO" : "DESLIGADO"}
-                      </span>
-                    </div>
+                    {isScale ? (
+                      <>
+                        <div className="bg-[#0b0d14] p-2.5 rounded-lg border border-white/10 focus-within:border-[#00ff88]/50">
+                          <span className="text-gray-400 block text-[10px]">Peso Líquido (g):</span>
+                          <div className="flex items-center gap-1">
+                            <input 
+                              type="number"
+                              step="0.1"
+                              value={testPayload.peso ?? 0}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setTestPayload((prev: any) => ({
+                                  ...prev,
+                                  peso: val,
+                                  adc_raw: Math.round(840000 + val * 420.5)
+                                }));
+                              }}
+                              className="bg-transparent text-white font-bold text-sm w-full outline-none"
+                            />
+                            <span className="text-[#00ff88]">g</span>
+                          </div>
+                        </div>
+                        <div className="bg-[#0b0d14] p-2.5 rounded-lg border border-white/10 focus-within:border-amber-400/50">
+                          <span className="text-gray-400 block text-[10px]">Tara / Zero (g):</span>
+                          <div className="flex items-center gap-1">
+                            <input 
+                              type="number"
+                              step="0.1"
+                              value={testPayload.tara ?? 0}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setTestPayload((prev: any) => ({ ...prev, tara: val }));
+                              }}
+                              className="bg-transparent text-white font-bold text-sm w-full outline-none"
+                            />
+                            <span className="text-amber-400">g</span>
+                          </div>
+                        </div>
+                        <div className="bg-[#0b0d14] p-2.5 rounded-lg border border-white/10">
+                          <span className="text-gray-400 block text-[10px]">ADC HX711 (Counts):</span>
+                          <span className="text-cyan-300 font-bold text-sm block mt-1">
+                            {(testPayload.adc_raw ?? Math.round(840000 + (testPayload.peso ?? 0) * 420.5)).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                        <div className="bg-[#0b0d14] p-2.5 rounded-lg border border-white/10 flex flex-col justify-between">
+                          <span className="text-gray-400 block text-[10px]">Estabilidade:</span>
+                          <button
+                            type="button"
+                            onClick={() => setTestPayload((prev: any) => ({ ...prev, estavel: !prev.estavel }))}
+                            className={`px-2 py-0.5 rounded text-xs font-bold transition-colors cursor-pointer w-fit ${
+                              testPayload.estavel ? "bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/40" : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                            }`}
+                          >
+                            {testPayload.estavel ? "● ESTÁVEL" : "◌ OSCILANDO"}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="bg-[#0b0d14] p-2.5 rounded-lg border border-white/10 focus-within:border-amber-400/50">
+                          <span className="text-gray-400 block text-[10px]">Temperatura (°C):</span>
+                          <div className="flex items-center gap-1">
+                            <input 
+                              type="number"
+                              step="0.1"
+                              value={testPayload.temperatura ?? 25}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setTestPayload((prev: any) => ({ ...prev, temperatura: val }));
+                              }}
+                              className="bg-transparent text-white font-bold text-sm w-full outline-none"
+                            />
+                            <span className="text-amber-400">°C</span>
+                          </div>
+                        </div>
+                        <div className="bg-[#0b0d14] p-2.5 rounded-lg border border-white/10 focus-within:border-[#00d4ff]/50">
+                          <span className="text-gray-400 block text-[10px]">Umidade (%):</span>
+                          <div className="flex items-center gap-1">
+                            <input 
+                              type="number"
+                              step="0.1"
+                              value={testPayload.umidade ?? 60}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setTestPayload((prev: any) => ({ ...prev, umidade: val }));
+                              }}
+                              className="bg-transparent text-white font-bold text-sm w-full outline-none"
+                            />
+                            <span className="text-[#00d4ff]">%</span>
+                          </div>
+                        </div>
+                        <div className="bg-[#0b0d14] p-2.5 rounded-lg border border-white/10">
+                          <span className="text-gray-400 block text-[10px]">RSSI Wi-Fi:</span>
+                          <span className="text-[#00d4ff] font-bold text-sm block mt-1">{testPayload.rssi ?? -58} dBm</span>
+                        </div>
+                        <div className="bg-[#0b0d14] p-2.5 rounded-lg border border-white/10 flex flex-col justify-between">
+                          <span className="text-gray-400 block text-[10px]">Relé 1:</span>
+                          <button
+                            type="button"
+                            onClick={() => setTestPayload((prev: any) => ({ ...prev, rele_1: !prev.rele_1 }))}
+                            className={`px-2 py-0.5 rounded text-xs font-bold transition-colors cursor-pointer w-fit ${
+                              testPayload.rele_1 ? "bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/40" : "bg-gray-800 text-gray-400 border border-gray-700"
+                            }`}
+                          >
+                            {testPayload.rele_1 ? "LIGADO (ON)" : "DESLIGADO (OFF)"}
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
+
+                  {isScale && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-mono">
+                      <span className="text-gray-500">Cargas Rápidas de Teste:</span>
+                      <button
+                        type="button"
+                        onClick={() => setTestPayload((prev: any) => ({ ...prev, peso: 0.0, adc_raw: 840000, estavel: true }))}
+                        className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 cursor-pointer"
+                      >
+                        0g (Vazia)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTestPayload((prev: any) => ({ ...prev, peso: 500.0, adc_raw: 1050250, estavel: true }))}
+                        className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 cursor-pointer"
+                      >
+                        500g (Padrão)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTestPayload((prev: any) => ({ ...prev, peso: 2500.0, adc_raw: 1891250, estavel: true }))}
+                        className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 cursor-pointer"
+                      >
+                        2500g (Carga Média)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTestPayload((prev: any) => ({ ...prev, peso: 5500.0, adc_raw: 3152750, estavel: false }))}
+                        className="px-2 py-0.5 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 font-bold cursor-pointer"
+                      >
+                        ⚠ 5500g (Sobrecarga)
+                      </button>
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap items-center gap-3 pt-2">
                     <button

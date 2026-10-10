@@ -48,6 +48,7 @@ import { safeJsonParseWithRepair } from './lib/jsonRepairHelper';
 import { ErrorRecoveryModal } from './components/modals/ErrorRecoveryModal';
 import { IotSoftware } from './components/iot/IotSoftware';
 import { IotTelemetryMonitor, TelemetryPacket } from './components/iot/IotTelemetryMonitor';
+import { formatSafeTimestamp, detectDeviceCategory } from './lib/iotRepairHelper';
 import { VirtualSandboxRunner } from './components/sandbox/VirtualSandboxRunner';
 import { ArchitectureFlowCanvas } from './components/canvas/ArchitectureFlowCanvas';
 
@@ -310,21 +311,56 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('preview');
   const [isFullscreen, setIsFullscreen] = useState(false);
   
-  // Active IoT project for preloading into IoT Studio
-  const [activeIotProject, setActiveIotProject] = useState<any>(null);
+  // Active IoT project for preloading into IoT Studio (with local storage persistence)
+  const [activeIotProject, setActiveIotProject] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('parvus_active_iot_project');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const updateActiveIotProject = (proj: any) => {
+    setActiveIotProject(proj);
+    try {
+      if (proj) {
+        localStorage.setItem('parvus_active_iot_project', JSON.stringify(proj));
+      } else {
+        localStorage.removeItem('parvus_active_iot_project');
+      }
+    } catch (e) {
+      console.warn("Storage error", e);
+    }
+  };
 
   const handleDispatchTelemetry = (packetData: any) => {
+    const rawTs = packetData.timestamp || packetData.data?.timestamp;
+    const formattedTs = formatSafeTimestamp(rawTs);
+    const isScaleDevice = detectDeviceCategory(activeIotProject) === 'scale' || 
+                          packetData.peso !== undefined || 
+                          packetData.data?.peso !== undefined;
+
     const norm: TelemetryPacket = {
       id: packetData.id || 'pkt_' + Math.random().toString(36).substring(2, 8),
-      device_id: packetData.device_id || activeIotProject?.placa || 'esp32_gateway_01',
+      device_id: packetData.device_id || activeIotProject?.placa || (isScaleDevice ? 'esp32_scale_01' : 'esp32_gateway_01'),
       tenant: packetData.tenant || 'enterprise-corp',
-      timestamp: packetData.timestamp ? new Date(packetData.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      temperatura: Number(packetData.data?.temperatura ?? packetData.temperatura ?? 25.4),
-      umidade: Number(packetData.data?.umidade ?? packetData.umidade ?? 61.2),
-      rele_1: Boolean(packetData.data?.rele_1 ?? packetData.rele_1),
+      timestamp: formattedTs,
+      // Se for balança, não injeta temperatura/umidade fictícia
+      ...(isScaleDevice ? {} : {
+        temperatura: Number(packetData.data?.temperatura ?? packetData.temperatura ?? 24.5),
+        umidade: Number(packetData.data?.umidade ?? packetData.umidade ?? 58.0),
+        rele_1: Boolean(packetData.data?.rele_1 ?? packetData.rele_1),
+      }),
       rssi: Number(packetData.data?.rssi ?? packetData.rssi ?? -56),
-      bateria_mv: Number(packetData.data?.bateria_mv ?? packetData.bateria_mv ?? 4110)
+      bateria_mv: Number(packetData.data?.bateria_mv ?? packetData.bateria_mv ?? 4110),
+      rawJson: packetData.rawJson || JSON.stringify(packetData.data || packetData),
+      // Preserva dinamicamente quaisquer métricas do hardware (peso, tara, adc_raw, etc.)
+      ...(packetData.data || {}),
+      ...packetData
     };
+    norm.id = packetData.id || norm.id || 'pkt_' + Math.random().toString(36).substring(2, 8);
+    norm.timestamp = formattedTs;
     setLatestTelemetryPacket(norm);
     setTelemetryHistory(prev => [...prev.slice(-24), norm]);
     showToast(`Pacote de ${norm.device_id} sincronizado com o IoT Monitor!`, 'success');
@@ -4006,7 +4042,7 @@ Sem markdown no retorno. Apenas o JSON válido.`;
               }));
             }}
             onGenerationComplete={(proj) => {
-              setActiveIotProject(proj);
+              updateActiveIotProject(proj);
               setBackgroundGen({
                 active: false,
                 progress: 100,
