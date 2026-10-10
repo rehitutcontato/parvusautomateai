@@ -323,14 +323,15 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                   Modelo Cognitivo de IA
                 </label>
                 <select
-                  value={config.aiModel || 'gemini-3.6-flash'}
+                  value={config.aiModel || 'gemini-3.8-flash'}
                   onChange={e => onUpdateConfig(id, { aiModel: e.target.value as any })}
                   className="w-full bg-[#111420] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white font-mono"
                 >
+                  <option value="gemini-3.8-flash">Google Gemini 3.8 Flash (Ultra Performance 2026)</option>
                   <option value="gemini-3.6-flash">Google Gemini 3.6 Flash (Ultrarrápido)</option>
                   <option value="gemini-3.5-flash">Google Gemini 3.5 Flash</option>
-                  <option value="nvidia/nemotron-3-super-120b-a12b">NVIDIA Nemotron 120B (Enterprise)</option>
-                  <option value="z-ai/glm-5.1">NVIDIA GLM-5.1 (Raciocínio Rápido)</option>
+                  <option value="meta/llama-3.3-70b-instruct">NVIDIA NIM - Llama 3.3 70B Instruct</option>
+                  <option value="nvidia/llama-3.1-nemotron-70b-instruct">NVIDIA NIM - Nemotron 70B Instruct</option>
                   <option value="deepseek-ai/deepseek-r1">DeepSeek R1 (Lógica e Dedução)</option>
                 </select>
               </div>

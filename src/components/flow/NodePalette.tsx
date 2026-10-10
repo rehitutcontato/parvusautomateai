@@ -123,7 +123,7 @@ const PALETTE_ITEMS: PaletteItem[] = [
     id: 'ai-gemini',
     type: 'service_ai',
     label: 'Motor de IA Gemini',
-    description: 'Inferência multimodal e geração com Google Gemini 3.6.',
+    description: 'Inferência multimodal e geração com Google Gemini 3.8.',
     badge: 'GEMINI',
     icon: Sparkles,
     colorClass: 'text-[#fbbf24]',
@@ -132,7 +132,7 @@ const PALETTE_ITEMS: PaletteItem[] = [
       label: 'Cognitive Engine Gemini',
       description: 'Análise semântica e tomada de decisão autônoma.',
       config: {
-        aiModel: 'gemini-3.6-flash',
+        aiModel: 'gemini-3.8-flash',
         temperature: 0.2,
         outputFormat: 'json'
       }
@@ -151,7 +151,7 @@ const PALETTE_ITEMS: PaletteItem[] = [
       label: 'NVIDIA Nemotron AI',
       description: 'Raciocínio complexo para regras industriais.',
       config: {
-        aiModel: 'nvidia/nemotron-3-super-120b-a12b',
+        aiModel: 'nvidia/llama-3.1-nemotron-70b-instruct',
         temperature: 0.1,
         outputFormat: 'json'
       }

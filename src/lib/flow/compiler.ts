@@ -122,7 +122,7 @@ export function generateAsciiFromGraph(nodes: FlowNode[], edges: FlowEdge[]): st
   if (aiNodes.length > 0) {
     lines.push('[SERVIÇOS COGNITIVOS DE IA]');
     aiNodes.forEach(ai => {
-      lines.push(`  +-- <IA: ${ai.data.label}> Modelo: ${ai.data.config.aiModel || 'gemini-3.6-flash'} (Temp: ${ai.data.config.temperature ?? 0.2})`);
+      lines.push(`  +-- <IA: ${ai.data.label}> Modelo: ${ai.data.config.aiModel || 'gemini-3.8-flash'} (Temp: ${ai.data.config.temperature ?? 0.2})`);
     });
     lines.push('       |');
     lines.push('       v');
@@ -525,13 +525,13 @@ console.log('[Pipeline] Processando evento:', event);`,
         category: 'service_ai',
         status: 'ready',
         config: {
-          aiModel: 'gemini-3.6-flash',
+          aiModel: 'gemini-3.8-flash',
           temperature: 0.2,
           outputFormat: 'json',
           systemPrompt: 'Você é um analisador autônomo. Extraia intenções, entidades e classifique a gravidade.'
         },
         codeSnippet: `const response = await ai.models.generateContent({
-  model: 'gemini-3.6-flash',
+  model: 'gemini-3.8-flash',
   contents: prompt
 });`,
         inputs: [

@@ -6,7 +6,7 @@ Esta documentação fornece uma visão técnica e funcional abrangente do **Parv
 
 ## 1. Visão Geral & Proposta de Valor
 
-O **Parvus Automate** é um ecossistema desenvolvido para acelerar a idealização e a engenharia de automações. Ele atua como um ponte entre engenheiros, agências, desenvolvedores de hardware/software e os modelos cognitivos de IA de última geração (arquitetura híbrida com **NVIDIA NIM** de alta capacidade — GLM-5.1/Nemotron/DeepSeek — e contingência resiliente via **Google Gemini 3.6/3.5-flash**).
+O **Parvus Automate** é um ecossistema desenvolvido para acelerar a idealização e a engenharia de automações. Ele atua como uma ponte entre engenheiros, agências, desenvolvedores de hardware/software e os modelos cognitivos de IA de última geração (arquitetura híbrida com **Google Gemini 3.8 / 3.6 Flash** de alta capacidade e contingência resiliente via **NVIDIA NIM** — Llama 3.3 / Nemotron 70B / DeepSeek R1).
 
 ### Os Três Pilares Funcionais:
 1. **Engine de Classificação e Viabilidade**: Processa descrições livres de negócios ou dores industriais, qualificando o problema entre **Software**, **Hardware**, **Sistema Híbrido** ou **Enterprise**, analisando a viabilidade técnica e sugerindo as melhores soluções de forma imediata.
@@ -34,8 +34,8 @@ O sistema segue as melhores práticas de engenharia de software full-stack moder
 * **Compilação de Servidor**: Empacotado usando o pipeline de alto desempenho do **esbuild** no estágio de build (`npm run build`), injetando imports de módulos nativos e resolvendo imports relativos no formato CommonJS (`.cjs`) para garantir inicialização limpa em ambiente Cloud Run.
 * **Segurança de API (Server-Side Proxy)**: Todas as requisições que envolvem chaves da API (NVIDIA e Gemini) são protegidas e processadas pelo backend. Nenhuma credencial de infraestrutura é exposta ao navegador do usuário.
 * **SDKs de IA & Engine Híbrida**: 
-  * **NVIDIA NIM API** (`https://integrate.api.nvidia.com/v1`) via cliente OpenAI oficial de alta performance, utilizando modelos `z-ai/glm-5.1`, `z-ai/glm-5.2`, `nvidia/nemotron-3-super-120b-a12b`, `deepseek-ai/deepseek-r1` e `meta/llama-3.3-70b-instruct`.
-  * **Google GenAI SDK** (`@google/genai`) como contingência automatizada e nativa de ultra velocidade, com suporte dinâmico a `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-2.5-flash` e `gemini-2.0-flash`.
+  * **NVIDIA NIM API** (`https://integrate.api.nvidia.com/v1`) via cliente OpenAI oficial de alta performance, utilizando modelos `meta/llama-3.3-70b-instruct`, `nvidia/llama-3.1-nemotron-70b-instruct`, `deepseek-ai/deepseek-r1` e `meta/llama-3.1-8b-instruct`.
+  * **Google GenAI SDK** (`@google/genai`) como motor cognitivo principal de ultra velocidade, com suporte dinâmico a `gemini-3.8-flash`, `gemini-3.6-flash` e `gemini-2.5-flash`, redirecionamento transparente de modelos legados e contingência automática.
   * **Extrator de JSON Inteligente**: Algoritmo de recuperação via `jsonrepair` com corte de preâmbulos para tolerância total a respostas não formatadas.
 
 ---

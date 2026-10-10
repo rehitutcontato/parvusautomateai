@@ -16,7 +16,7 @@ export function BackgroundGenerationWidget({
   progress,
   currentMessage,
   generationType = 'software',
-  activeModel = 'NVIDIA NIM GLM-5.1',
+  activeModel = 'Gemini 3.8 Flash / NVIDIA NIM',
   onReturnToBuild,
   isMainViewActive
 }: BackgroundGenerationWidgetProps) {

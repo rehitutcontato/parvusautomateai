@@ -61,7 +61,7 @@ export interface NodeConfig {
   enableAudit?: boolean;
 
   // Configurações para 'service_ai'
-  aiModel?: 'gemini-3.6-flash' | 'gemini-3.5-flash' | 'z-ai/glm-5.1' | 'nvidia/nemotron-3-super-120b-a12b' | 'deepseek-ai/deepseek-r1';
+  aiModel?: 'gemini-3.8-flash' | 'gemini-3.6-flash' | 'gemini-3.5-flash' | 'meta/llama-3.3-70b-instruct' | 'nvidia/llama-3.1-nemotron-70b-instruct' | 'deepseek-ai/deepseek-r1';
   systemPrompt?: string;
   temperature?: number;
   outputFormat?: 'json' | 'text' | 'stream';

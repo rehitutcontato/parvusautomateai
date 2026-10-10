@@ -103,7 +103,7 @@ export const CustomNode = memo(({ data, selected }: NodeProps<FlowNodeData>) => 
       return `${cfg.dbOperation || 'INSERT'} em "${cfg.dbTable || 'records'}"`;
     }
     if (category === 'service_ai') {
-      return `${cfg.aiModel || 'gemini-3.6-flash'} (T: ${cfg.temperature ?? 0.2})`;
+      return `${cfg.aiModel || 'gemini-3.8-flash'} (T: ${cfg.temperature ?? 0.2})`;
     }
     if (category === 'iot_device') {
       const pinCount = cfg.gpioPins?.length || 0;
