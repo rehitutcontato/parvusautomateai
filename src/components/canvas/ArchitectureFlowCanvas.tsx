@@ -411,7 +411,7 @@ export function ArchitectureFlowCanvas({
 
       {/* Collapsible Node Details Drawer */}
       {selectedNode && (
-        <div className="w-80 md:w-96 bg-[#0b0c14] border-l border-white/10 p-5 flex flex-col justify-between shrink-0 animate-in slide-in-from-right duration-200 z-10 overflow-y-auto">
+        <div className="fixed md:relative inset-y-0 right-0 w-full sm:w-80 md:w-96 bg-[#0b0c14] border-l border-white/10 p-5 flex flex-col justify-between shrink-0 animate-in slide-in-from-right duration-200 z-30 md:z-10 overflow-y-auto shadow-2xl">
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <span className="text-xs font-mono font-bold text-gray-400 uppercase">

@@ -351,7 +351,7 @@ export function IotTelemetryMonitor({
               </p>
             </div>
 
-            <div className="flex items-center gap-2 bg-black/40 p-1 rounded-xl border border-white/5">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-black/40 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar max-w-full">
               <button
                 onClick={() => setSelectedSensor('temperatura')}
                 className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all ${

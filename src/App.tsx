@@ -15,7 +15,8 @@ import {
   Factory, Play, Network, Archive, Clock, ChevronRight, X, RefreshCw,
   Maximize, Minimize, TrendingUp, Users, DollarSign, History,
   Database, Sliders, Bookmark, GitFork, Shield, Sparkles, Send, Box,
-  Copy, Check, FileCode, Layers, Cloud
+  Copy, Check, FileCode, Layers, Cloud, Menu, ChevronDown, ChevronUp,
+  MoreHorizontal, Wrench, Laptop
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -174,6 +175,25 @@ export default function App() {
   const [architectureViewMode, setArchitectureViewMode] = useState<'nodes' | 'canvas' | 'ascii'>('nodes');
   const [latestTelemetryPacket, setLatestTelemetryPacket] = useState<TelemetryPacket | null>(null);
   const [telemetryHistory, setTelemetryHistory] = useState<TelemetryPacket[]>([]);
+  
+  // Topic navigation & mobile responsive states
+  const [activeTopicDropdown, setActiveTopicDropdown] = useState<'software' | 'iot' | 'account' | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showToolsDropdown, setShowToolsDropdown] = useState(false);
+  const [mobileWorkspaceTab, setMobileWorkspaceTab] = useState<'prompt' | 'view'>('view');
+
+  // Fechar dropdowns ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-topic-dropdown]')) {
+        setActiveTopicDropdown(null);
+        setShowToolsDropdown(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
   const [selectedListing, setSelectedListing] = useState<any>(null);
   const [listings, setListings] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
@@ -1993,177 +2013,528 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
     );
   }
 
-  const renderTopbar = () => (
-    <header className="h-auto md:h-16 py-3 md:py-0 border-b border-white/10 flex flex-col md:flex-row items-center justify-between px-4 md:px-6 bg-[#07080c]/90 backdrop-blur-xl relative z-10 shrink-0 gap-3 overflow-x-auto no-scrollbar">
-      <div className="flex items-center gap-3 shrink-0">
-        <button onClick={() => setCurrentView('app')} className="group flex items-center gap-2.5 text-left cursor-pointer">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#00ff88] to-[#00d4ff] flex items-center justify-center font-black text-black text-base shadow-[0_0_15px_rgba(0,255,136,0.3)] group-hover:scale-105 transition-transform">
-            P
-          </div>
-          <div>
-            <div className="text-white text-base md:text-lg font-black tracking-tight font-display flex items-center gap-1 leading-none">
-              PARVUS<span className="text-[#00ff88]">AUTOMATE</span>
+  const renderTopbar = () => {
+    const isSoftwareTopicActive = currentView === 'app' || currentView === 'marketplace' || currentView === 'purchases';
+    const isIotTopicActive = currentView === 'iot-generator' || currentView === 'iot-software' || currentView === 'iot-monitor' || currentView === 'iot';
+
+    return (
+      <>
+        <header className="h-16 border-b border-white/10 flex items-center justify-between px-3 sm:px-6 bg-[#07080c]/95 backdrop-blur-xl relative z-40 shrink-0">
+          {/* Esquerda: Logo + AI Status */}
+          <div className="flex items-center gap-3 shrink-0">
+            <button 
+              onClick={() => { setCurrentView('app'); setMobileMenuOpen(false); }} 
+              className="group flex items-center gap-2.5 text-left cursor-pointer"
+            >
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#00ff88] to-[#00d4ff] flex items-center justify-center font-black text-black text-base shadow-[0_0_15px_rgba(0,255,136,0.3)] group-hover:scale-105 transition-transform">
+                P
+              </div>
+              <div>
+                <div className="text-white text-base md:text-lg font-black tracking-tight font-display flex items-center gap-1 leading-none">
+                  PARVUS<span className="text-[#00ff88]">AUTOMATE</span>
+                </div>
+                <div className="text-[9px] text-gray-500 font-mono tracking-wider uppercase">
+                  by Parvus Space
+                </div>
+              </div>
+            </button>
+            <div className="h-5 w-[1px] bg-white/10 hidden xl:block"></div>
+            <div className="hidden xl:flex items-center gap-2 text-[11px] text-gray-400 font-mono">
+              <div className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88] animate-pulse"></div>
+              AI CORE ONLINE
             </div>
-            <div className="text-[9px] text-gray-500 font-mono tracking-wider uppercase">
-              by Parvus Space
+          </div>
+
+          {/* Centro: Navegação Segmentada por Tópicos (Desktop / Tablet) */}
+          <div className="hidden md:flex items-center gap-2 text-xs">
+            {/* TÓPICO 1: SISTEMAS & WEB */}
+            <div className="relative" data-topic-dropdown>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTopicDropdown(prev => prev === 'software' ? null : 'software');
+                }}
+                className={`px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all font-mono text-[11px] uppercase tracking-wider cursor-pointer ${
+                  isSoftwareTopicActive
+                    ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 font-bold shadow-[0_0_10px_rgba(0,255,136,0.15)]'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                }`}
+              >
+                <Code2 size={14} className={isSoftwareTopicActive ? 'text-[#00ff88]' : 'text-gray-400'} />
+                <span>Sistemas & Web</span>
+                <ChevronDown size={12} className={`transition-transform duration-200 ${activeTopicDropdown === 'software' ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* DROPDOWN SOFTWARE */}
+              {activeTopicDropdown === 'software' && (
+                <div className="absolute top-full left-0 mt-2 w-72 bg-[#0c0e17] border border-white/15 rounded-xl shadow-2xl p-2 z-50 backdrop-blur-2xl">
+                  <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-gray-500 border-b border-white/5 mb-1 font-mono">
+                    Automação & Aplicações
+                  </div>
+                  <button
+                    onClick={() => { setCurrentView('app'); setActiveTopicDropdown(null); }}
+                    className={`w-full text-left p-2.5 rounded-lg flex items-start gap-3 transition-colors cursor-pointer ${
+                      currentView === 'app' ? 'bg-[#00ff88]/10 text-white border border-[#00ff88]/30' : 'hover:bg-white/5 text-gray-300'
+                    }`}
+                  >
+                    <div className="p-1.5 rounded bg-[#00ff88]/15 text-[#00ff88] mt-0.5 shrink-0">
+                      <Code2 size={15} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        Gerador de Sistemas
+                        {currentView === 'app' && <span className="text-[8px] bg-[#00ff88] text-black px-1.5 py-0.2 rounded font-bold">ATIVO</span>}
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-sans mt-0.5">SPAs completas, APIs Node.js e esquemas SQL</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => { setCurrentView('marketplace'); setActiveTopicDropdown(null); }}
+                    className={`w-full text-left p-2.5 rounded-lg flex items-start gap-3 transition-colors cursor-pointer ${
+                      currentView === 'marketplace' ? 'bg-[#00d4ff]/10 text-white border border-[#00d4ff]/30' : 'hover:bg-white/5 text-gray-300'
+                    }`}
+                  >
+                    <div className="p-1.5 rounded bg-[#00d4ff]/15 text-[#00d4ff] mt-0.5 shrink-0">
+                      <Globe size={15} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        Marketplace de Automações
+                        {currentView === 'marketplace' && <span className="text-[8px] bg-[#00d4ff] text-black px-1.5 py-0.2 rounded font-bold">ATIVO</span>}
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-sans mt-0.5">Explorar, comprar e publicar soluções</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => { setCurrentView('purchases'); setActiveTopicDropdown(null); }}
+                    className={`w-full text-left p-2.5 rounded-lg flex items-start gap-3 transition-colors cursor-pointer ${
+                      currentView === 'purchases' ? 'bg-purple-500/10 text-white border border-purple-500/30' : 'hover:bg-white/5 text-gray-300'
+                    }`}
+                  >
+                    <div className="p-1.5 rounded bg-purple-500/15 text-purple-400 mt-0.5 shrink-0">
+                      <Box size={15} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        Minhas Compras
+                        {currentView === 'purchases' && <span className="text-[8px] bg-purple-400 text-black px-1.5 py-0.2 rounded font-bold">ATIVO</span>}
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-sans mt-0.5">Projetos adquiridos e downloads autorizados</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* TÓPICO 2: ECOSSISTEMA IOT */}
+            <div className="relative" data-topic-dropdown>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTopicDropdown(prev => prev === 'iot' ? null : 'iot');
+                }}
+                className={`px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all font-mono text-[11px] uppercase tracking-wider cursor-pointer ${
+                  isIotTopicActive
+                    ? 'bg-[#ff6600]/15 text-[#ff6600] border border-[#ff6600]/30 font-bold shadow-[0_0_10px_rgba(255,102,0,0.15)]'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                }`}
+              >
+                <Cpu size={14} className={isIotTopicActive ? 'text-[#ff6600]' : 'text-gray-400'} />
+                <span>Ecossistema IoT</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#ff6600]/20 text-[#ff6600] font-bold">3 FASES</span>
+                <ChevronDown size={12} className={`transition-transform duration-200 ${activeTopicDropdown === 'iot' ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* DROPDOWN IOT */}
+              {activeTopicDropdown === 'iot' && (
+                <div className="absolute top-full left-0 mt-2 w-80 bg-[#0c0e17] border border-white/15 rounded-xl shadow-2xl p-2 z-50 backdrop-blur-2xl">
+                  <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-gray-500 border-b border-white/5 mb-1 font-mono">
+                    Conectividade Ciber-Física Completa
+                  </div>
+
+                  {/* FASE 1: HARDWARE */}
+                  <button
+                    onClick={() => { setCurrentView('iot-generator'); setActiveTopicDropdown(null); }}
+                    className={`w-full text-left p-2.5 rounded-lg flex items-start gap-3 transition-colors cursor-pointer ${
+                      currentView === 'iot-generator' || currentView === 'iot' ? 'bg-[#ff6600]/10 text-white border border-[#ff6600]/30' : 'hover:bg-white/5 text-gray-300'
+                    }`}
+                  >
+                    <div className="p-1.5 rounded bg-[#ff6600]/15 text-[#ff6600] mt-0.5 shrink-0">
+                      <Cpu size={15} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        1. Gerador IoT (Hardware)
+                        <span className="text-[8px] bg-[#ff6600]/20 text-[#ff6600] border border-[#ff6600]/40 px-1.5 py-0.2 rounded font-bold">WOKWI / BOM</span>
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-sans mt-0.5">ESP32, esquemas de pinagem, firmware C++ e simulador</div>
+                    </div>
+                  </button>
+
+                  {/* FASE 2: IOT SOFTWARE */}
+                  <button
+                    onClick={() => { setCurrentView('iot-software'); setActiveTopicDropdown(null); }}
+                    className={`w-full text-left p-2.5 rounded-lg flex items-start gap-3 transition-colors cursor-pointer ${
+                      currentView === 'iot-software' ? 'bg-[#00d4ff]/10 text-white border border-[#00d4ff]/30' : 'hover:bg-white/5 text-gray-300'
+                    }`}
+                  >
+                    <div className="p-1.5 rounded bg-[#00d4ff]/15 text-[#00d4ff] mt-0.5 shrink-0">
+                      <Cloud size={15} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        2. IoT Software (Cloud Brain)
+                        <span className="text-[8px] bg-[#00d4ff]/20 text-[#00d4ff] border border-[#00d4ff]/40 px-1.5 py-0.2 rounded font-bold">WIZARD</span>
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-sans mt-0.5">Provisionamento, chaves de API, webhooks e tópicos MQTT</div>
+                    </div>
+                  </button>
+
+                  {/* FASE 3: IOT MONITOR */}
+                  <button
+                    onClick={() => { setCurrentView('iot-monitor'); setActiveTopicDropdown(null); }}
+                    className={`w-full text-left p-2.5 rounded-lg flex items-start gap-3 transition-colors cursor-pointer ${
+                      currentView === 'iot-monitor' ? 'bg-[#00ff88]/10 text-white border border-[#00ff88]/30' : 'hover:bg-white/5 text-gray-300'
+                    }`}
+                  >
+                    <div className="p-1.5 rounded bg-[#00ff88]/15 text-[#00ff88] mt-0.5 shrink-0">
+                      <Network size={15} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        3. IoT Monitor (Telemetria)
+                        <span className="text-[8px] bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/40 px-1.5 py-0.2 rounded font-bold">AO VIVO</span>
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-sans mt-0.5">Gráficos de telemetria, medidores e sinais vitais</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* TÓPICO 3: WORKSPACE MODE (EXPRESS VS STUDIO) */}
+            <div className="flex items-center p-0.5 rounded-lg bg-white/[0.04] border border-white/10 shrink-0 ml-1">
+              <button 
+                onClick={() => setWorkspaceMode('express')}
+                className={`px-2.5 py-1 text-[10px] font-bold uppercase rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                  workspaceMode === 'express' ? 'bg-white/15 text-white shadow-sm' : 'text-[#888888] hover:text-white'
+                }`}
+                title="Modo Express (Geração Direta de Código)"
+              >
+                <Zap size={13} className="text-[#00ff88]" />
+                <span>Express</span>
+              </button>
+              <button 
+                onClick={() => {
+                  setWorkspaceMode('studio');
+                  if (generatedNode) {
+                    setActiveTab('architecture');
+                    setArchitectureViewMode('canvas');
+                  }
+                }}
+                className={`px-2.5 py-1 text-[10px] font-bold uppercase rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                  workspaceMode === 'studio' ? 'bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/40 shadow-sm' : 'text-[#888888] hover:text-white'
+                }`}
+                title="Modo Studio (Canvas de Nós ReactFlow)"
+              >
+                <Layers size={13} className="text-[#00d4ff]" />
+                <span>Studio</span>
+              </button>
             </div>
           </div>
-        </button>
-        <div className="h-5 w-[1px] bg-white/10 hidden md:block"></div>
-        <div className="hidden xl:flex items-center gap-2 text-[11px] text-gray-400 font-mono">
-          <div className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88] animate-pulse"></div>
-          AI CORE ONLINE
-        </div>
-      </div>
-      
-      <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-[#888888] shrink-0">
-        <button 
-          onClick={() => setCurrentView('app')} 
-          className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'app' ? 'text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30 font-bold' : 'hover:bg-white/5'}`}
-          title="Gerador de Automações"
-        >
-          <Code2 size={16} />
-          <span className="hidden xl:inline text-[11px]">GERADOR</span>
-        </button>
 
-        <button 
-          onClick={() => setCurrentView('iot-generator')} 
-          className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'iot-generator' || currentView === 'iot' ? 'text-[#ff6600] bg-[#ff6600]/10 border border-[#ff6600]/30 font-bold' : 'hover:bg-white/5'}`}
-          title="Gerador de Hardware IoT"
-        >
-          <Cpu size={16} className={currentView === 'iot-generator' || currentView === 'iot' ? 'text-[#ff6600]' : ''} />
-          <span className="hidden xl:inline text-[11px]">GERADOR IOT</span>
-          <span className="hidden 2xl:inline px-1 py-0.2 rounded bg-[#ff6600]/15 text-[#ff6600] text-[8px] font-bold">HW</span>
-        </button>
-
-        <button 
-          onClick={() => setCurrentView('iot-software')} 
-          className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'iot-software' ? 'text-[#00d4ff] bg-[#00d4ff]/10 border border-[#00d4ff]/30 font-bold' : 'hover:bg-white/5'}`}
-          title="IoT Software & Cloud Brain"
-        >
-          <Cloud size={16} className={currentView === 'iot-software' ? 'text-[#00d4ff]' : ''} />
-          <span className="hidden xl:inline text-[11px]">IOT SOFTWARE</span>
-          <span className="hidden 2xl:inline px-1 py-0.2 rounded bg-[#00d4ff]/15 text-[#00d4ff] text-[8px] font-bold">CLOUD</span>
-        </button>
-
-        <button 
-          onClick={() => setCurrentView('iot-monitor')} 
-          className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'iot-monitor' ? 'text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30 font-bold' : 'hover:bg-white/5'}`}
-          title="IoT Monitor & Telemetria"
-        >
-          <Network size={16} className={currentView === 'iot-monitor' ? 'text-[#00ff88]' : ''} />
-          <span className="hidden xl:inline text-[11px]">IOT MONITOR</span>
-          <span className="hidden 2xl:inline px-1 py-0.2 rounded bg-[#00ff88]/15 text-[#00ff88] text-[8px] font-bold">TELEMETRIA</span>
-        </button>
-
-        {session && (
-          <>
+          {/* Direita: Ações Rápidas & Menu Mobile */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* BOTÃO PLANOS */}
             <button 
-              onClick={() => setCurrentView('marketplace')} 
-              className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'marketplace' ? 'text-white bg-white/10 font-bold' : 'hover:bg-white/5'}`}
-              title="Marketplace"
+              onClick={() => setShowUpgradeModal(true)} 
+              className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-extrabold px-3 py-1.5 rounded-lg text-xs uppercase flex items-center gap-1.5 shadow-[0_0_14px_rgba(0,255,136,0.35)] hover:scale-105 transition-all cursor-pointer shrink-0"
+              title="Planos e Assinaturas"
             >
-              <Globe size={16} />
-              <span className="hidden xl:inline text-[11px]">MARKET</span>
+              <Sparkles size={14} fill="black" />
+              <span className="font-mono text-[11px]">PLANOS</span>
             </button>
-            <button 
-              onClick={() => setCurrentView('purchases')} 
-              className={`hover:text-white cursor-pointer transition-colors uppercase p-2 rounded-lg flex items-center gap-1.5 ${currentView === 'purchases' ? 'text-white bg-white/10 font-bold' : 'hover:bg-white/5'}`}
-              title="Minhas Compras"
+
+            {/* ADMIN (Se permitido) */}
+            {isAdmin && (
+              <button 
+                onClick={() => setCurrentView('admin')} 
+                className={`cursor-pointer transition-colors p-2 rounded-lg text-[#00ff88] hidden sm:flex items-center gap-1 ${
+                  currentView === 'admin' ? 'bg-[#00ff88]/20 border border-[#00ff88]/40 font-bold' : 'hover:bg-[#00ff88]/10'
+                }`}
+                title="Painel Admin"
+              >
+                <Shield size={15} />
+                <span className="text-[10px] font-mono hidden lg:inline">ADMIN</span>
+              </button>
+            )}
+
+            {/* CONFIGURAÇÕES E CONTA (Desktop) */}
+            <div className="hidden sm:flex items-center gap-1 border-l border-white/10 pl-2">
+              <button 
+                onClick={() => setShowLanding(true)} 
+                className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors cursor-pointer" 
+                title="Apresentação Institucional"
+              >
+                <Target size={16} />
+              </button>
+
+              <button 
+                onClick={() => setCurrentView('settings')} 
+                className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                  currentView === 'settings' ? 'text-white bg-white/15' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+                title="Configurações do Perfil"
+              >
+                <Settings size={16} />
+              </button>
+
+              {session && supabase ? (
+                <button 
+                  onClick={handleLogout} 
+                  className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                  title="Sair da Conta"
+                >
+                  <X size={16} />
+                </button>
+              ) : (
+                supabase && (
+                  <button 
+                    onClick={() => setShowLoginModal(true)} 
+                    className="px-2.5 py-1 text-[11px] rounded-lg text-[#00ff88] border border-[#00ff88]/30 bg-[#00ff88]/10 hover:bg-[#00ff88]/20 transition-colors uppercase font-bold shrink-0 font-mono cursor-pointer"
+                    title="Entrar ou Cadastrar"
+                  >
+                    ENTRAR
+                  </button>
+                )
+              )}
+            </div>
+
+            {/* BOTÃO MOBILE MENU (HAMBÚRGUER) */}
+            <button
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              className="md:hidden p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center"
+              title={mobileMenuOpen ? "Fechar Menu" : "Abrir Menu de Tópicos"}
             >
-              <Box size={16} />
-              <span className="hidden xl:inline text-[11px]">COMPRAS</span>
+              {mobileMenuOpen ? <X size={18} className="text-[#00ff88]" /> : <Menu size={18} />}
             </button>
-          </>
+          </div>
+        </header>
+
+        {/* DRAWER MOBILE LATERAL (OFF-CANVAS TOPIC NAVIGATION) */}
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md md:hidden flex justify-end animate-in fade-in duration-200">
+            <div className="w-[85%] max-w-sm h-full bg-[#090b11] border-l border-white/10 p-5 flex flex-col justify-between overflow-y-auto">
+              <div className="space-y-6">
+                {/* Header do Drawer */}
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#00ff88] to-[#00d4ff] flex items-center justify-center font-black text-black text-sm">
+                      P
+                    </div>
+                    <div>
+                      <div className="text-white text-sm font-black font-display">PARVUS AUTOMATE</div>
+                      <div className="text-[9px] text-gray-500 font-mono">NAVEGAÇÃO POR TÓPICOS</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-white"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Tópico: Sistemas & Web */}
+                <div className="space-y-2">
+                  <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#00ff88] flex items-center gap-1.5">
+                    <Code2 size={13} />
+                    Sistemas & Automação Web
+                  </div>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    <button
+                      onClick={() => { setCurrentView('app'); setMobileMenuOpen(false); }}
+                      className={`w-full text-left p-3 rounded-xl flex items-center justify-between transition-colors ${
+                        currentView === 'app' ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 font-bold' : 'bg-white/[0.03] text-gray-300 border border-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Code2 size={16} className="text-[#00ff88]" />
+                        <span className="text-xs">Gerador de Sistemas</span>
+                      </div>
+                      {currentView === 'app' && <span className="text-[9px] bg-[#00ff88] text-black px-1.5 py-0.2 rounded font-bold">ATIVO</span>}
+                    </button>
+
+                    <button
+                      onClick={() => { setCurrentView('marketplace'); setMobileMenuOpen(false); }}
+                      className={`w-full text-left p-3 rounded-xl flex items-center justify-between transition-colors ${
+                        currentView === 'marketplace' ? 'bg-[#00d4ff]/15 text-[#00d4ff] border border-[#00d4ff]/30 font-bold' : 'bg-white/[0.03] text-gray-300 border border-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Globe size={16} className="text-[#00d4ff]" />
+                        <span className="text-xs">Marketplace de Soluções</span>
+                      </div>
+                      {currentView === 'marketplace' && <span className="text-[9px] bg-[#00d4ff] text-black px-1.5 py-0.2 rounded font-bold">ATIVO</span>}
+                    </button>
+
+                    <button
+                      onClick={() => { setCurrentView('purchases'); setMobileMenuOpen(false); }}
+                      className={`w-full text-left p-3 rounded-xl flex items-center justify-between transition-colors ${
+                        currentView === 'purchases' ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30 font-bold' : 'bg-white/[0.03] text-gray-300 border border-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Box size={16} className="text-purple-400" />
+                        <span className="text-xs">Minhas Compras</span>
+                      </div>
+                      {currentView === 'purchases' && <span className="text-[9px] bg-purple-400 text-black px-1.5 py-0.2 rounded font-bold">ATIVO</span>}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tópico: Ecossistema IoT */}
+                <div className="space-y-2">
+                  <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#ff6600] flex items-center gap-1.5">
+                    <Cpu size={13} />
+                    Ecossistema IoT (Hardware & Nuvem)
+                  </div>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    <button
+                      onClick={() => { setCurrentView('iot-generator'); setMobileMenuOpen(false); }}
+                      className={`w-full text-left p-3 rounded-xl flex items-center justify-between transition-colors ${
+                        currentView === 'iot-generator' || currentView === 'iot' ? 'bg-[#ff6600]/15 text-[#ff6600] border border-[#ff6600]/30 font-bold' : 'bg-white/[0.03] text-gray-300 border border-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Cpu size={16} className="text-[#ff6600]" />
+                        <span className="text-xs">1. Gerador IoT (Hardware)</span>
+                      </div>
+                      <span className="text-[8px] bg-[#ff6600]/20 text-[#ff6600] px-1.5 py-0.2 rounded font-bold">WOKWI</span>
+                    </button>
+
+                    <button
+                      onClick={() => { setCurrentView('iot-software'); setMobileMenuOpen(false); }}
+                      className={`w-full text-left p-3 rounded-xl flex items-center justify-between transition-colors ${
+                        currentView === 'iot-software' ? 'bg-[#00d4ff]/15 text-[#00d4ff] border border-[#00d4ff]/30 font-bold' : 'bg-white/[0.03] text-gray-300 border border-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Cloud size={16} className="text-[#00d4ff]" />
+                        <span className="text-xs">2. IoT Software (Cloud Brain)</span>
+                      </div>
+                      <span className="text-[8px] bg-[#00d4ff]/20 text-[#00d4ff] px-1.5 py-0.2 rounded font-bold">MQTT</span>
+                    </button>
+
+                    <button
+                      onClick={() => { setCurrentView('iot-monitor'); setMobileMenuOpen(false); }}
+                      className={`w-full text-left p-3 rounded-xl flex items-center justify-between transition-colors ${
+                        currentView === 'iot-monitor' ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 font-bold' : 'bg-white/[0.03] text-gray-300 border border-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Network size={16} className="text-[#00ff88]" />
+                        <span className="text-xs">3. IoT Monitor (Telemetria)</span>
+                      </div>
+                      <span className="text-[8px] bg-[#00ff88]/20 text-[#00ff88] px-1.5 py-0.2 rounded font-bold">LIVE</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modo de Trabalho */}
+                <div className="space-y-2">
+                  <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400">
+                    Modo de Trabalho
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
+                    <button
+                      onClick={() => { setWorkspaceMode('express'); setMobileMenuOpen(false); }}
+                      className={`py-2 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                        workspaceMode === 'express' ? 'bg-white/15 text-white' : 'text-gray-400'
+                      }`}
+                    >
+                      <Zap size={14} className="text-[#00ff88]" /> Express
+                    </button>
+                    <button
+                      onClick={() => {
+                        setWorkspaceMode('studio');
+                        if (generatedNode) {
+                          setActiveTab('architecture');
+                          setArchitectureViewMode('canvas');
+                        }
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`py-2 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                        workspaceMode === 'studio' ? 'bg-[#00ff88]/20 text-[#00ff88]' : 'text-gray-400'
+                      }`}
+                    >
+                      <Layers size={14} className="text-[#00d4ff]" /> Studio
+                    </button>
+                  </div>
+                </div>
+
+                {/* Conta & Ajustes */}
+                <div className="space-y-1.5 pt-2 border-t border-white/10">
+                  <button
+                    onClick={() => { setShowUpgradeModal(true); setMobileMenuOpen(false); }}
+                    className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-extrabold text-xs flex items-center justify-center gap-2 uppercase tracking-wider"
+                  >
+                    <Sparkles size={14} fill="black" /> Ver Planos & Upgrades
+                  </button>
+
+                  <button
+                    onClick={() => { setCurrentView('settings'); setMobileMenuOpen(false); }}
+                    className="w-full p-2.5 rounded-xl hover:bg-white/5 text-gray-300 text-xs flex items-center gap-2.5 text-left"
+                  >
+                    <Settings size={15} /> Configurações da Conta
+                  </button>
+
+                  <button
+                    onClick={() => { setShowLanding(true); setMobileMenuOpen(false); }}
+                    className="w-full p-2.5 rounded-xl hover:bg-white/5 text-gray-300 text-xs flex items-center gap-2.5 text-left"
+                  >
+                    <Target size={15} /> Apresentação Institucional
+                  </button>
+
+                  {isAdmin && (
+                    <button
+                      onClick={() => { setCurrentView('admin'); setMobileMenuOpen(false); }}
+                      className="w-full p-2.5 rounded-xl bg-[#00ff88]/10 text-[#00ff88] text-xs flex items-center gap-2.5 text-left font-bold"
+                    >
+                      <Shield size={15} /> Painel Administrativo
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Rodapé do Drawer */}
+              <div className="pt-4 border-t border-white/10">
+                {session && supabase ? (
+                  <button
+                    onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                    className="w-full py-2.5 rounded-xl bg-red-500/10 text-red-400 text-xs font-bold flex items-center justify-center gap-2 hover:bg-red-500/20"
+                  >
+                    <X size={15} /> Sair da Conta
+                  </button>
+                ) : (
+                  supabase && (
+                    <button
+                      onClick={() => { setShowLoginModal(true); setMobileMenuOpen(false); }}
+                      className="w-full py-2.5 rounded-xl bg-[#00ff88]/20 border border-[#00ff88]/40 text-[#00ff88] text-xs font-bold uppercase tracking-wider"
+                    >
+                      Entrar / Cadastrar
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
         )}
-
-        {isAdmin && (
-          <button 
-            onClick={() => setCurrentView('admin')} 
-            className={`cursor-pointer transition-colors p-2 rounded-lg text-[#00ff88] flex items-center gap-1 ${currentView === 'admin' ? 'bg-[#00ff88]/20 border border-[#00ff88]/40 font-bold' : 'hover:bg-[#00ff88]/10'}`}
-            title="Painel Admin"
-          >
-            <Shield size={16} />
-            <span className="hidden xl:inline text-[11px]">ADMIN</span>
-          </button>
-        )}
-
-        {/* DUAL MODE SELECTOR COMPACTO */}
-        <div className="flex items-center p-0.5 rounded-lg bg-white/[0.04] border border-white/10 shrink-0">
-          <button 
-            onClick={() => setWorkspaceMode('express')}
-            className={`p-1.5 sm:px-2 sm:py-1 text-[10px] font-bold uppercase rounded-md transition-all flex items-center gap-1 ${workspaceMode === 'express' ? 'bg-white/15 text-white shadow-sm' : 'text-[#888888] hover:text-white'}`}
-            title="Modo Express (Geração Direta)"
-          >
-            <Zap size={14} className="text-[#00ff88]" />
-            <span className="hidden md:inline">Express</span>
-          </button>
-          <button 
-            onClick={() => {
-              setWorkspaceMode('studio');
-              if (generatedNode) {
-                setActiveTab('architecture');
-                setArchitectureViewMode('canvas');
-              }
-            }}
-            className={`p-1.5 sm:px-2 sm:py-1 text-[10px] font-bold uppercase rounded-md transition-all flex items-center gap-1 ${workspaceMode === 'studio' ? 'bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/40 shadow-sm' : 'text-[#888888] hover:text-white'}`}
-            title="Modo Studio (Canvas ReactFlow)"
-          >
-            <Layers size={14} className="text-[#00d4ff]" />
-            <span className="hidden md:inline">Studio</span>
-          </button>
-        </div>
-
-        {/* PLANOS */}
-        <button 
-          onClick={() => setShowUpgradeModal(true)} 
-          className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-extrabold p-2 sm:px-3 sm:py-1.5 rounded-lg text-xs uppercase flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,255,136,0.3)] hover:scale-105 transition-all cursor-pointer shrink-0"
-          title="Planos e Assinaturas"
-        >
-          <Sparkles size={14} fill="black" />
-          <span className="hidden sm:inline text-[10px]">PLANOS</span>
-        </button>
-
-        {/* APRESENTAÇÃO */}
-        <button 
-          onClick={() => setShowLanding(true)} 
-          className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors cursor-pointer" 
-          title="Apresentação / Landing"
-        >
-          <Target size={16} />
-        </button>
-
-        {/* CONFIGURAÇÕES */}
-        <button 
-          onClick={() => setCurrentView('settings')} 
-          className={`p-2 rounded-lg transition-colors cursor-pointer ${currentView === 'settings' ? 'text-white bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-          title="Configurações"
-        >
-          <Settings size={16} />
-        </button>
-        
-        {session && supabase ? (
-          <button 
-            onClick={handleLogout} 
-            className="p-2 rounded-lg text-[#ff6600] hover:bg-[#ff6600]/10 transition-colors cursor-pointer"
-            title="Sair da Conta"
-          >
-            <X size={16} />
-          </button>
-        ) : (
-          supabase && (
-            <button 
-              onClick={() => setShowLoginModal(true)} 
-              className="px-2.5 py-1 text-[11px] rounded-lg text-[#00ff88] border border-[#00ff88]/30 bg-[#00ff88]/10 hover:bg-[#00ff88]/20 transition-colors uppercase font-bold shrink-0"
-              title="Entrar ou Cadastrar"
-            >
-              ENTRAR
-            </button>
-          )
-        )}
-      </div>
-    </header>
-  );
+      </>
+    );
+  };
 
   const handleDeleteProject = async (e: React.MouseEvent, id: any) => {
     e.stopPropagation();
@@ -2603,99 +2974,159 @@ ${agencyMode ? '\nMODO AGÊNCIA ATIVADO: Remova qualquer referência à marca Pa
                 )}
               </div>
 
-              <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-                {/* Enterprise action buttons */}
-                <button 
-                  onClick={() => setShowWebhookModal(true)}
-                  className="text-[9px] sm:text-[10px] bg-[#ff6600]/10 border border-[#ff6600]/40 px-2 py-1.5 hover:bg-[#ff6600]/20 hover:border-[#ff6600] text-[#ff6600] rounded transition-colors uppercase tracking-wider whitespace-nowrap font-bold flex items-center gap-1"
-                  title="Simular e disparar webhooks com assinatura criptográfica HMAC-SHA256"
-                >
-                  <Zap size={11} /> WEBHOOK
-                </button>
-                <button 
-                  onClick={() => setShowSqlSchemaModal(true)}
-                  className="text-[9px] sm:text-[10px] bg-[#0066ff]/10 border border-[#0066ff]/40 px-2 py-1.5 hover:bg-[#0066ff]/20 hover:border-[#0066ff] text-[#0066ff] rounded transition-colors uppercase tracking-wider whitespace-nowrap font-bold flex items-center gap-1"
-                  title="Inspecionar e copiar esquema SQL de migração para Supabase / PostgreSQL"
-                >
-                  <Database size={11} /> ESQUEMA SQL
-                </button>
-                <button 
-                  onClick={() => setShowEnvConfigModal(true)}
-                  className="text-[9px] sm:text-[10px] bg-purple-500/10 border border-purple-500/40 px-2 py-1.5 hover:bg-purple-500/20 hover:border-purple-400 text-purple-400 rounded transition-colors uppercase tracking-wider whitespace-nowrap font-bold flex items-center gap-1"
-                  title="Gerenciar variáveis de ambiente e segredos .env"
-                >
-                  <Sliders size={11} /> .ENV
-                </button>
-                <button 
-                  onClick={handleSaveAsTemplate}
-                  className="text-[9px] sm:text-[10px] bg-amber-500/10 border border-amber-500/40 px-2 py-1.5 hover:bg-amber-500/20 hover:border-amber-400 text-amber-400 rounded transition-colors uppercase tracking-wider whitespace-nowrap font-bold flex items-center gap-1"
-                  title="Salvar projeto como template corporativo em Meus Templates"
-                >
-                  <Bookmark size={11} /> TEMPLATE
-                </button>
-                <button 
-                  onClick={handleForkProject}
-                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/20 px-2 py-1.5 hover:border-white hover:text-white text-[#888888] rounded transition-colors uppercase tracking-wider whitespace-nowrap font-bold flex items-center gap-1"
-                  title="Clonar / Fork deste projeto para criar uma nova variação"
-                >
-                  <GitFork size={11} /> FORK
-                </button>
+              <div className="flex items-center gap-1.5 shrink-0" data-topic-dropdown>
+                {/* 1. EXECUTAR NO NAVEGADOR (Com destaque) */}
                 <button 
                   onClick={() => setShowSandboxRunner(true)}
-                  className="text-[9px] sm:text-[10px] bg-[#00d4ff]/15 border border-[#00d4ff]/60 px-2.5 py-1.5 hover:bg-[#00d4ff]/30 hover:border-[#00d4ff] text-[#00d4ff] rounded transition-colors uppercase tracking-wider whitespace-nowrap font-black flex items-center gap-1 shadow-[0_0_15px_rgba(0,212,255,0.2)]"
-                  title="Executar aplicação completa em IDE virtual interativa no navegador (Sandbox com terminal e live API)"
+                  className="text-[9px] sm:text-[10px] bg-[#00d4ff]/15 border border-[#00d4ff]/60 px-2 sm:px-3 py-1.5 hover:bg-[#00d4ff]/30 hover:border-[#00d4ff] text-[#00d4ff] rounded-lg transition-all uppercase tracking-wider whitespace-nowrap font-black flex items-center gap-1 shadow-[0_0_12px_rgba(0,212,255,0.25)] cursor-pointer"
+                  title="Executar aplicação completa em IDE virtual interativa no navegador"
                 >
-                  <Play size={11} fill="currentColor" /> EXECUTAR NO NAVEGADOR
+                  <Play size={12} fill="currentColor" /> 
+                  <span className="hidden sm:inline">EXECUTAR NO NAVEGADOR</span>
+                  <span className="sm:hidden">RODAR</span>
                 </button>
+
+                {/* 2. EXPORTAR TUDO (ZIP) */}
                 <button 
                   onClick={handleExportAllZip}
-                  className="text-[9px] sm:text-[10px] bg-[#00ff88]/15 border border-[#00ff88]/60 px-2.5 py-1.5 hover:bg-[#00ff88]/30 hover:border-[#00ff88] text-[#00ff88] rounded transition-colors uppercase tracking-wider whitespace-nowrap font-black flex items-center gap-1 shadow-[0_0_15px_rgba(0,255,136,0.2)]"
+                  className="text-[9px] sm:text-[10px] bg-[#00ff88]/15 border border-[#00ff88]/60 px-2 sm:px-3 py-1.5 hover:bg-[#00ff88]/30 hover:border-[#00ff88] text-[#00ff88] rounded-lg transition-all uppercase tracking-wider whitespace-nowrap font-black flex items-center gap-1 shadow-[0_0_12px_rgba(0,255,136,0.25)] cursor-pointer"
                   title="Baixar pacote empresarial completo em arquivo ZIP (HTML, Node.js, SQL, Docker e Docs)"
                 >
-                  <Archive size={11} /> EXPORTAR TUDO
+                  <Archive size={12} /> 
+                  <span className="hidden sm:inline">EXPORTAR TUDO</span>
+                  <span className="sm:hidden">ZIP</span>
                 </button>
 
-                <div className="w-px h-5 bg-white/10 mx-1 hidden sm:block"></div>
-
-                <button 
-                  onClick={downloadHtml}
-                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-2 py-1.5 hover:border-[#00ff88] hover:text-[#00ff88] rounded transition-colors text-[#888888] uppercase tracking-wider whitespace-nowrap"
-                >
-                  HTML
-                </button>
-                <button 
-                  onClick={downloadNode}
-                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-2 py-1.5 hover:border-[#0066ff] hover:text-[#0066ff] rounded transition-colors text-[#888888] uppercase tracking-wider whitespace-nowrap"
-                >
-                  NODE.JS
-                </button>
-                <button 
-                  onClick={downloadDockerPkg}
-                  className="text-[9px] sm:text-[10px] bg-[#1a1a1a] border border-white/10 px-2 py-1.5 hover:border-[#00d4ff] hover:text-[#00d4ff] rounded transition-colors text-[#888888] uppercase tracking-wider whitespace-nowrap"
-                  title="Baixar pacote Docker, Compose e DevContainer"
-                >
-                  DOCKER
-                </button>
-                {(classification?.tipo === 'HARDWARE' || classification?.tipo === 'HIBRIDO') && (
+                {/* 3. MENU DROPDOWN DE FERRAMENTAS E EXPORTAÇÕES AVULSAS */}
+                <div className="relative">
                   <button 
-                    onClick={downloadTodosIoT}
-                    className="text-[9px] sm:text-[10px] bg-[#ff6600]/10 border border-[#ff6600]/50 px-2 py-1.5 hover:bg-[#ff6600]/20 hover:text-white rounded transition-colors text-[#ff6600] uppercase tracking-wider whitespace-nowrap font-bold"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowToolsDropdown(prev => !prev);
+                    }}
+                    className={`text-[9px] sm:text-[10px] px-2 sm:px-2.5 py-1.5 rounded-lg border transition-all uppercase tracking-wider whitespace-nowrap font-bold flex items-center gap-1 cursor-pointer ${
+                      showToolsDropdown 
+                        ? 'bg-white/20 border-white text-white' 
+                        : 'bg-white/5 border-white/10 hover:bg-white/10 text-gray-300 hover:text-white'
+                    }`}
+                    title="Menu de Ferramentas Enterprise e Exportação"
                   >
-                    IOT ZIP
+                    <Wrench size={12} />
+                    <span className="hidden md:inline">FERRAMENTAS</span>
+                    <ChevronDown size={11} className={`transition-transform duration-200 ${showToolsDropdown ? 'rotate-180' : ''}`} />
                   </button>
-                )}
-                <button 
-                  onClick={handlePublishToMarketplace}
-                  className="text-[9px] sm:text-[10px] bg-[#00ff88]/10 border border-[#00ff88]/50 px-2 py-1.5 hover:bg-[#00ff88]/20 hover:text-white rounded transition-colors text-[#00ff88] uppercase tracking-wider whitespace-nowrap font-bold"
-                >
-                  PUBLICAR
-                </button>
+
+                  {/* Dropdown de Ferramentas */}
+                  {showToolsDropdown && (
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-[#0c0e17] border border-white/15 rounded-xl shadow-2xl p-2 z-50 backdrop-blur-2xl animate-in fade-in zoom-in-95">
+                      <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-gray-500 border-b border-white/5 mb-1 font-mono">
+                        Ferramentas & Integrações
+                      </div>
+
+                      <button
+                        onClick={() => { setShowWebhookModal(true); setShowToolsDropdown(false); }}
+                        className="w-full text-left p-2 rounded-lg flex items-center gap-2.5 hover:bg-white/5 text-gray-300 hover:text-white text-xs transition-colors cursor-pointer"
+                      >
+                        <Zap size={14} className="text-[#ff6600]" />
+                        <div>
+                          <div className="font-bold text-[11px]">Simular Webhook</div>
+                          <div className="text-[9px] text-gray-400 font-sans">Assinatura HMAC-SHA256</div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => { setShowSqlSchemaModal(true); setShowToolsDropdown(false); }}
+                        className="w-full text-left p-2 rounded-lg flex items-center gap-2.5 hover:bg-white/5 text-gray-300 hover:text-white text-xs transition-colors cursor-pointer"
+                      >
+                        <Database size={14} className="text-[#0066ff]" />
+                        <div>
+                          <div className="font-bold text-[11px]">Esquema SQL (Supabase)</div>
+                          <div className="text-[9px] text-gray-400 font-sans">DDL, Índices e RLS</div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => { setShowEnvConfigModal(true); setShowToolsDropdown(false); }}
+                        className="w-full text-left p-2 rounded-lg flex items-center gap-2.5 hover:bg-white/5 text-gray-300 hover:text-white text-xs transition-colors cursor-pointer"
+                      >
+                        <Sliders size={14} className="text-purple-400" />
+                        <div>
+                          <div className="font-bold text-[11px]">Variáveis .ENV</div>
+                          <div className="text-[9px] text-gray-400 font-sans">Configuração de ambientes</div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => { handleSaveAsTemplate(); setShowToolsDropdown(false); }}
+                        className="w-full text-left p-2 rounded-lg flex items-center gap-2.5 hover:bg-white/5 text-gray-300 hover:text-white text-xs transition-colors cursor-pointer"
+                      >
+                        <Bookmark size={14} className="text-amber-400" />
+                        <div>
+                          <div className="font-bold text-[11px]">Salvar como Template</div>
+                          <div className="text-[9px] text-gray-400 font-sans">Guardar para reutilizar</div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => { handleForkProject(); setShowToolsDropdown(false); }}
+                        className="w-full text-left p-2 rounded-lg flex items-center gap-2.5 hover:bg-white/5 text-gray-300 hover:text-white text-xs transition-colors cursor-pointer"
+                      >
+                        <GitFork size={14} className="text-gray-300" />
+                        <div>
+                          <div className="font-bold text-[11px]">Clonar / Fork</div>
+                          <div className="text-[9px] text-gray-400 font-sans">Criar nova versão independente</div>
+                        </div>
+                      </button>
+
+                      <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-gray-500 border-b border-t border-white/5 my-1 font-mono">
+                        Downloads Avulsos & Deploy
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-1 px-1">
+                        <button
+                          onClick={() => { downloadHtml(); setShowToolsDropdown(false); }}
+                          className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-[10px] font-mono text-center text-gray-300 hover:text-white cursor-pointer"
+                        >
+                          HTML
+                        </button>
+                        <button
+                          onClick={() => { downloadNode(); setShowToolsDropdown(false); }}
+                          className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-[10px] font-mono text-center text-gray-300 hover:text-white cursor-pointer"
+                        >
+                          NODE
+                        </button>
+                        <button
+                          onClick={() => { downloadDockerPkg(); setShowToolsDropdown(false); }}
+                          className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-[10px] font-mono text-center text-gray-300 hover:text-white cursor-pointer"
+                        >
+                          DOCKER
+                        </button>
+                      </div>
+
+                      {(classification?.tipo === 'HARDWARE' || classification?.tipo === 'HIBRIDO') && (
+                        <button
+                          onClick={() => { downloadTodosIoT(); setShowToolsDropdown(false); }}
+                          className="w-full mt-1.5 p-2 rounded-lg bg-[#ff6600]/10 text-[#ff6600] text-xs font-bold flex items-center justify-center gap-2 hover:bg-[#ff6600]/20 cursor-pointer"
+                        >
+                          <Cpu size={13} /> BAIXAR PACOTE IOT (ZIP)
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => { handlePublishToMarketplace(); setShowToolsDropdown(false); }}
+                        className="w-full mt-1.5 p-2 rounded-lg bg-[#00ff88]/10 text-[#00ff88] text-xs font-bold flex items-center justify-center gap-2 hover:bg-[#00ff88]/20 cursor-pointer"
+                      >
+                        <Globe size={13} /> PUBLICAR NO MARKETPLACE
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 <div className="w-px h-5 bg-white/10 mx-1"></div>
 
                 <button 
                   onClick={() => setIsFullscreen(!isFullscreen)}
-                  className="text-[#888888] hover:text-white transition-colors flex items-center justify-center p-1.5 rounded hover:bg-white/5"
+                  className="text-[#888888] hover:text-white transition-colors flex items-center justify-center p-1.5 rounded hover:bg-white/5 cursor-pointer"
                   title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
                 >
                   {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
@@ -3550,9 +3981,9 @@ Sem markdown no retorno. Apenas o JSON válido.`;
       <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
       {!isFullscreen && renderTopbar()}
-      <main className="flex flex-1 overflow-hidden relative z-10 w-full">
+      <main className="flex flex-col md:flex-row flex-1 overflow-hidden relative z-10 w-full pb-14 md:pb-0">
         {/* Persistent IoT Monitor container so switching tabs doesn't destroy state */}
-        <div className={currentView === 'iot-generator' || currentView === 'iot' ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+        <div className={currentView === 'iot-generator' || currentView === 'iot' ? "flex-1 flex flex-col overflow-hidden w-full h-full" : "hidden"}>
           <IotMonitor 
             onBack={() => setCurrentView('app')} 
             initialProject={activeIotProject}
@@ -3595,7 +4026,6 @@ Sem markdown no retorno. Apenas o JSON válido.`;
 
         {currentView === 'app' ? (
           <>
-            {entryFlow === 'ai' && !isFullscreen && renderLeftPanel()}
             {entryFlow === 'selection' ? (
               <EntrySelection onSelect={handleSelectEntryFlow} />
             ) : entryFlow === 'templates' ? (
@@ -3611,9 +4041,41 @@ Sem markdown no retorno. Apenas o JSON válido.`;
                 onSubmit={handleBriefingSubmit}
               />
             ) : (
-              <section className="flex-1 flex flex-col bg-[#0a0a0a]">
-                {renderBuildArea()}
-              </section>
+              <div className="flex-1 flex flex-col md:flex-row overflow-hidden w-full h-full min-w-0">
+                {/* Mobile Workspace Toggle quando o projeto já está gerado */}
+                {phase === 'done' && !isFullscreen && (
+                  <div className="md:hidden flex items-center justify-between p-2 bg-[#090b10] border-b border-white/10 shrink-0 font-mono">
+                    <button 
+                      onClick={() => setMobileWorkspaceTab('prompt')}
+                      className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-colors text-center cursor-pointer ${
+                        mobileWorkspaceTab === 'prompt' ? 'bg-white/15 text-white border border-white/20' : 'text-gray-400'
+                      }`}
+                    >
+                      📝 Briefing & Config
+                    </button>
+                    <button 
+                      onClick={() => setMobileWorkspaceTab('view')}
+                      className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-colors text-center cursor-pointer ${
+                        mobileWorkspaceTab === 'view' ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30' : 'text-gray-400'
+                      }`}
+                    >
+                      🚀 Projeto ({activeTab.toUpperCase()})
+                    </button>
+                  </div>
+                )}
+
+                {/* Left Panel Container */}
+                {!isFullscreen && (
+                  <div className={phase === 'done' && mobileWorkspaceTab === 'view' ? "hidden md:flex w-full md:w-[320px] lg:w-[400px] shrink-0 h-full overflow-hidden" : "flex w-full md:w-[320px] lg:w-[400px] shrink-0 h-full overflow-hidden"}>
+                    {renderLeftPanel()}
+                  </div>
+                )}
+
+                {/* Build Area Container */}
+                <section className={phase === 'done' && mobileWorkspaceTab === 'prompt' ? "hidden md:flex flex-1 flex-col bg-[#0a0a0a] min-w-0 overflow-hidden h-full" : "flex-1 flex flex-col bg-[#0a0a0a] min-w-0 overflow-hidden h-full"}>
+                  {renderBuildArea()}
+                </section>
+              </div>
             )}
           </>
         ) : currentView === 'marketplace' ? (
@@ -3836,6 +4298,56 @@ Sem markdown no retorno. Apenas o JSON válido.`;
           }}
           onClose={() => setRecoveryError(null)}
         />
+      )}
+
+      {/* MOBILE BOTTOM NAVIGATION BAR (FIXO PARA SMARTPHONES) */}
+      {!isFullscreen && (
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-[#08090d]/95 backdrop-blur-xl border-t border-white/10 z-40 flex items-center justify-around px-2 font-mono shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+          <button
+            onClick={() => { setCurrentView('app'); setMobileMenuOpen(false); }}
+            className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg transition-colors cursor-pointer ${
+              currentView === 'app' ? 'text-[#00ff88]' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Code2 size={18} />
+            <span className="text-[9px] uppercase font-bold mt-0.5">Gerador</span>
+          </button>
+
+          <button
+            onClick={() => {
+              if (currentView === 'iot-generator') setCurrentView('iot-software');
+              else if (currentView === 'iot-software') setCurrentView('iot-monitor');
+              else setCurrentView('iot-generator');
+              setMobileMenuOpen(false);
+            }}
+            className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg transition-colors cursor-pointer ${
+              currentView === 'iot-generator' || currentView === 'iot-software' || currentView === 'iot-monitor' || currentView === 'iot'
+                ? 'text-[#ff6600]'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Cpu size={18} />
+            <span className="text-[9px] uppercase font-bold mt-0.5">IoT Hub</span>
+          </button>
+
+          <button
+            onClick={() => setShowUpgradeModal(true)}
+            className="flex flex-col items-center justify-center py-1 px-3 rounded-lg text-[#00ff88] hover:scale-105 transition-transform cursor-pointer"
+          >
+            <Sparkles size={18} fill="#00ff88" />
+            <span className="text-[9px] uppercase font-bold mt-0.5">Planos</span>
+          </button>
+
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg transition-colors cursor-pointer ${
+              mobileMenuOpen ? 'text-white' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Menu size={18} />
+            <span className="text-[9px] uppercase font-bold mt-0.5">Tópicos</span>
+          </button>
+        </nav>
       )}
     </div>
   );

@@ -73,6 +73,7 @@ export function VirtualSandboxRunner({
   const [terminalLogs, setTerminalLogs] = useState<Array<{ text: string; type: 'info' | 'success' | 'warn' | 'error' | 'cmd' }>>([]);
   const [terminalInput, setTerminalInput] = useState('');
   const [activeRightTab, setActiveRightTab] = useState<'preview' | 'terminal'>('preview');
+  const [mobileActiveTab, setMobileActiveTab] = useState<'editor' | 'preview' | 'terminal'>('preview');
   const [isExporting, setIsExporting] = useState(false);
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
@@ -312,10 +313,38 @@ export function VirtualSandboxRunner({
         </div>
       </div>
 
+      {/* Mobile Mode Switcher for Sandbox */}
+      <div className="md:hidden flex items-center justify-between p-1.5 bg-[#08090d] border-b border-white/10 shrink-0 font-mono text-xs gap-1">
+        <button
+          onClick={() => setMobileActiveTab('editor')}
+          className={`flex-1 py-1.5 rounded-lg text-center font-bold transition-all ${
+            mobileActiveTab === 'editor' ? 'bg-white/15 text-white shadow-sm' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          📝 Arquivos & Código
+        </button>
+        <button
+          onClick={() => { setMobileActiveTab('preview'); setActiveRightTab('preview'); }}
+          className={`flex-1 py-1.5 rounded-lg text-center font-bold transition-all ${
+            mobileActiveTab === 'preview' ? 'bg-[#00d4ff]/20 text-[#00d4ff] border border-[#00d4ff]/30 shadow-sm' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          🌐 Navegador
+        </button>
+        <button
+          onClick={() => { setMobileActiveTab('terminal'); setActiveRightTab('terminal'); }}
+          className={`flex-1 py-1.5 rounded-lg text-center font-bold transition-all ${
+            mobileActiveTab === 'terminal' ? 'bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/30 shadow-sm' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          🖥️ Terminal ({terminalLogs.length})
+        </button>
+      </div>
+
       {/* Main Workspace Split-View */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Left Panel: Files Tree & Editor */}
-        <div className="w-full md:w-5/12 border-r border-white/10 flex flex-col bg-[#07080c] overflow-hidden">
+        <div className={mobileActiveTab === 'editor' ? "w-full md:w-5/12 border-r border-white/10 flex flex-col bg-[#07080c] overflow-hidden h-full" : "hidden md:flex w-full md:w-5/12 border-r border-white/10 flex-col bg-[#07080c] overflow-hidden h-full"}>
           {/* File Explorer Header & Tabs */}
           <div className="h-9 bg-[#0b0c10] border-b border-white/10 flex items-center px-3 gap-1 overflow-x-auto no-scrollbar shrink-0">
             {files.map(f => (
@@ -360,7 +389,7 @@ export function VirtualSandboxRunner({
         </div>
 
         {/* Right Panel: Browser Live Preview & Virtual Terminal */}
-        <div className="w-full md:w-7/12 flex flex-col bg-[#050608] overflow-hidden">
+        <div className={mobileActiveTab !== 'editor' ? "w-full md:w-7/12 flex flex-col bg-[#050608] overflow-hidden h-full" : "hidden md:flex w-full md:w-7/12 flex-col bg-[#050608] overflow-hidden h-full"}>
           {/* Subtabs Preview vs Terminal */}
           <div className="h-9 bg-[#0b0c10] border-b border-white/10 flex items-center justify-between px-3 shrink-0">
             <div className="flex items-center gap-1">
